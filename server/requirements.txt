@@ -1,0 +1,3 @@
+# MATLAB Engine API for Python - the version must match your MATLAB release
+# (R2026a = 26.1.x, R2025b = 25.2.x, R2025a = 25.1.x, R2024b = 24.2.x, R2023b = 23.2.x)
+matlabengine==26.1.*

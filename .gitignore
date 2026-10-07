@@ -1,0 +1,9 @@
+.venv/
+frontend/node_modules/
+frontend/dist/
+runtime/
+reports/output/
+data/
+quizzes/leaderboard.mat
+*.asv
+__pycache__/
