@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt, toMatrix } from '../api'
+import Icon from '../components/Icon'
 import { Card, CodeModal, ImageView, KernelGrid, Note, Page, Tabs } from '../components/ui'
+
+const dueText = (due) => (due ? new Date(`${due}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '')
+// Assigned first (earliest due date first), locked last
+const order = (e) => (e.status === 'assigned' ? 0 : e.status === 'locked' ? 2 : 1)
 import QuizRunner from '../components/QuizRunner'
 import ReportForm from '../components/ReportForm'
 
@@ -33,11 +38,14 @@ function ExperimentDetail({ exp, onBack }) {
     if (qs) setQuiz(asArray(qs))
   }
   const howItWorks = asArray(exp.howItWorks)
+  const locked = exp.status === 'locked'
 
   return (
     <Page eyebrow="Experiment" title={`Experiment ${exp.number}: ${exp.title}`} subtitle={exp.aim}
       actions={<>{done && <span className="badge">Completed</span>}<button className="btn" onClick={onBack}>← All experiments</button></>}>
-      <Tabs tabs={TABS} active={tab} onChange={setTab} />
+      {exp.status === 'assigned' && <Note kind="warn"><b>Assigned by your teacher</b>{exp.due ? ` · due ${dueText(exp.due)}` : ''}{exp.teacherNote ? ` — ${exp.teacherNote}` : ''}</Note>}
+      {locked && <Note kind="error"><b>Locked by your teacher.</b> You can read the theory and code, but running it in MATLAB is disabled until it is unlocked.</Note>}
+      <div className={exp.status !== 'open' ? 'mt-sm' : ''}><Tabs tabs={TABS} active={tab} onChange={setTab} /></div>
       {tab === 'theory' && (
         <Card>
           <h3>Aim</h3><p>{exp.aim}</p>
@@ -65,7 +73,7 @@ function ExperimentDetail({ exp, onBack }) {
         <div className="stack">
           <Card>
             <div className="row">
-              <button className="btn btn-primary" onClick={execute}>▶ Run experiment in MATLAB</button>
+              <button className="btn btn-primary" onClick={execute} disabled={locked}>{locked ? <><Icon name="lock" size={16} /> Locked by your teacher</> : '▶ Run experiment in MATLAB'}</button>
               <label className="check"><input type="checkbox" checked={useWorkspace} disabled={!current} onChange={(e) => setUseWorkspace(e.target.checked)} /> Use the workspace image instead of {exp.defaultImage}</label>
             </div>
             {run?.parameters && <p className="small muted" style={{ marginTop: 8 }}>Parameters: {run.parameters}</p>}
@@ -128,14 +136,20 @@ export default function Experiments() {
     if (matlab.ok) call('experiments', {}, { label: 'Loading experiments' }).then((d) => d && setList(asArray(d)))
   }, [call, matlab.ok])
   const done = asArray(progress?.experimentsCompleted)
+  const sorted = list.slice().sort((a, b) => order(a) - order(b) || (a.due || '9').localeCompare(b.due || '9') || a.number - b.number)
 
   if (selected) return <ExperimentDetail exp={selected} onBack={() => setSelected(null)} />
   return (
     <Page eyebrow="Study" title="Experiments" subtitle={`University-style laboratory experiments · ${done.length} of 13 completed`}>
       <div className="tiles">
-        {list.map((e) => (
-          <button key={e.number} className="tile" style={{ textAlign: 'left', font: 'inherit', cursor: 'pointer' }} onClick={() => setSelected(e)}>
-            <span className="badge badge-navy">Experiment {e.number}</span> {done.includes(e.number) && <span className="badge">✓ done</span>}
+        {sorted.map((e) => (
+          <button key={e.number} className={`tile exp-tile ${e.status}`} style={{ textAlign: 'left', font: 'inherit', cursor: 'pointer' }} onClick={() => setSelected(e)}>
+            <span className="row" style={{ gap: 6 }}>
+              <span className="badge badge-navy">Experiment {e.number}</span>
+              {done.includes(e.number) && <span className="badge">✓ done</span>}
+              {e.status === 'assigned' && <span className="badge badge-warn">Assigned{e.due ? ` · due ${dueText(e.due)}` : ''}</span>}
+              {e.status === 'locked' && <span className="badge badge-locked"><Icon name="lock" size={12} /> Locked</span>}
+            </span>
             <b style={{ marginTop: 6 }}>{e.title}</b>
             <span>{e.aim}</span>
           </button>

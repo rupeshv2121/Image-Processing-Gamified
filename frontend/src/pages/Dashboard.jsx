@@ -28,15 +28,20 @@ const todayStr = () => {
 }
 
 export default function Dashboard() {
-  const { progress, refreshProgress, matlab, meta, loadSample } = useApp()
+  const { progress, refreshProgress, matlab, meta, loadSample, call } = useApp()
   const [tour, setTour] = useState(false)
+  const [assignedList, setAssignedList] = useState([])
   useEffect(() => { if (matlab.ok) refreshProgress() }, [matlab.ok, refreshProgress])
+  useEffect(() => {
+    if (matlab.ok) call('experiments', {}, { quiet: true }).then((d) => d && setAssignedList(asArray(d).filter((e) => e.status === 'assigned')))
+  }, [call, matlab.ok])
 
   const p = progress || {}
   const state = { imageLoaded: !!meta }
   const all = UNITS.flatMap((u) => u.missions)
   const doneCount = all.filter((m) => m.done(p, state)).length
   const next = nextMission(p, state)
+  const homework = assignedList.filter((e) => !asArray(p.experimentsCompleted).includes(e.number))
 
   const startDemo = async () => {
     setTour(false)
@@ -75,6 +80,20 @@ export default function Dashboard() {
         <span className="badge badge-warn">{p.dailyStreak || 0} day streak 🔥</span>
         <Icon name="arrow" />
       </a>
+
+      {homework.length > 0 && (
+        <Card title={<><Icon name="file" size={18} /> Assigned by your teacher</>} className="homework">
+          <div className="stack-sm" style={{ gap: 8 }}>
+            {homework.map((e) => (
+              <a key={e.number} className="mission" href="#experiments">
+                <span className="tick">{e.number}</span>
+                <span className="t small"><b>{e.title}</b>{e.teacherNote ? ` — ${e.teacherNote}` : ''}</span>
+                {e.due && <span className={`badge ${e.due < todayStr() ? 'badge-locked' : 'badge-warn'}`}>{e.due < todayStr() ? 'overdue' : `due ${e.due}`}</span>}
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {next && (
         <a className="next-mission" href={`#${next.mission.link}`} style={{ marginBottom: 28, color: 'inherit', textDecoration: 'none' }}>

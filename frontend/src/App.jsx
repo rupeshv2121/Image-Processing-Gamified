@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useApp } from './AppContext'
-import { imageUrl } from './api'
+import { cancelRun, imageUrl } from './api'
 import Icon from './components/Icon'
 import { ProfileMenu } from './components/Profiles'
 import ThemeToggle from './components/ThemeToggle'
@@ -34,6 +34,8 @@ const PAGES = {
   reports: lazy(() => import('./pages/Reports')),
   docs: lazy(() => import('./pages/Documentation')),
   about: lazy(() => import('./pages/About')),
+  teacher: lazy(() => import('./pages/Teacher')),
+  animate: lazy(() => import('./pages/Animations')),
 }
 
 const LAB_KEYS = UNITS.flatMap((u) => u.labs).filter((k) => k !== 'workspace')
@@ -84,6 +86,7 @@ function Sidebar({ route }) {
 
         <div className="nav-section">Study</div>
         <NavLink to="learn" icon="book" label="Learn" route={route} />
+        <NavLink to="animate" icon="play" label="Animations" route={route} />
         <button className={`nav-link ${labsOpen ? 'open' : ''} ${route === 'labs' ? 'active' : ''}`} onClick={() => setLabsOpen((o) => !o)}
           aria-expanded={labsOpen} aria-controls="nav-labs">
           <Icon name="flask" size={18} /> Labs <span className="chev"><Icon name="chevron" size={15} /></span>
@@ -110,6 +113,7 @@ function Sidebar({ route }) {
 
         <div className="nav-section">More</div>
         <NavLink to="reports" icon="download" label="Reports" route={route} />
+        <NavLink to="teacher" icon="lock" label="Teacher" route={route} />
         <NavLink to="docs" icon="help" label="Documentation" route={route} />
         <NavLink to="about" icon="info" label="About" route={route} />
       </nav>
@@ -174,7 +178,14 @@ export default function App() {
   const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify } = useApp()
   const [navOpen, setNavOpen] = useState(false)
   const [help, setHelp] = useState(false)
+  const [canCancel, setCanCancel] = useState(false)
   const main = useRef(null)
+  // Offer "Cancel" once a MATLAB call has been running for more than a second
+  useEffect(() => {
+    if (!busy) { setCanCancel(false); return }
+    const t = setTimeout(() => setCanCancel(true), 1000)
+    return () => clearTimeout(t)
+  }, [busy])
   useEffect(() => setNavOpen(false), [route])
 
   // Global keys: Esc closes the mobile menu, Ctrl+Z / Ctrl+Y undo and redo, ? lists shortcuts
@@ -198,7 +209,12 @@ export default function App() {
 
   const overlays = (
     <>
-      {busy && <div className="busy" role="status"><span className="spinner" aria-hidden="true" /> MATLAB · {busyLabel}…</div>}
+      {busy && (
+        <div className="busy" role="status">
+          <span className="spinner" aria-hidden="true" /> MATLAB · {busyLabel}…
+          {canCancel && <button className="busy-cancel" onClick={() => { setCanCancel(false); cancelRun() }}>Cancel</button>}
+        </div>
+      )}
       {toast && <div className="toast" role="status" aria-live="polite">{toast.text}</div>}
       {alertMsg && (
         <Modal title={alertMsg.title} onClose={() => setAlertMsg(null)}>

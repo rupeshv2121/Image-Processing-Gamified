@@ -79,12 +79,13 @@ export function AppProvider({ children }) {
     try {
       return await run(op, params)
     } catch (err) {
-      if (!quiet) setAlertMsg({ title: 'MATLAB says', text: err.message })
+      if (err.cancelled) notify('Cancelled — MATLAB stopped the computation', 'warn')
+      else if (!quiet) setAlertMsg({ title: 'MATLAB says', text: err.message })
       return null
     } finally {
       setBusy((b) => Math.max(0, b - 1))
     }
-  }, [])
+  }, [notify])
 
   const refreshProgress = useCallback(async () => {
     try {

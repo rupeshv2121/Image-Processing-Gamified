@@ -80,7 +80,7 @@ export default function HistogramLab() {
   )
 
   return (
-    <LabPage unit="Unit II · Enhancement" title="Histogram Lab" subtitle="Reshape the grey-level distribution to improve contrast."
+    <LabPage animation="histeq" unit="Unit II · Enhancement" title="Histogram Lab" subtitle="Reshape the grey-level distribution to improve contrast."
       theory={theory} controls={controls} panelTitle="Method"
       code={{ functions: m.fn, snippets: [{ title: 'MATLAB', code: m.code }] }}>
       {!res ? (

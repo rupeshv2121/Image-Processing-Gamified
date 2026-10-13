@@ -97,7 +97,7 @@ export default function SpatialFilters() {
   )
 
   return (
-    <LabPage unit="Unit II · Enhancement" title="Spatial Filters" subtitle="Smooth an image with linear and non-linear filters, using the MATLAB toolbox or a hand-written loop."
+    <LabPage animation="median" unit="Unit II · Enhancement" title="Spatial Filters" subtitle="Smooth an image with linear and non-linear filters, using the MATLAB toolbox or a hand-written loop."
       theory={theory} controls={controls} panelTitle="Filter"
       code={{ functions: f.fn, snippets: [{ title: 'Toolbox call', code: f.code }] }}>
       {!res ? (

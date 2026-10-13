@@ -21,12 +21,100 @@ try
     trackingEnabled(~(isfield(p, 'track') && isequal(p.track, false)));
     % Progress, XP and badges belong to the student profile chosen in the UI
     profileManager('use', char(P(p, 'profileId', 'default')));
-    data = route(op, p);
+    [data, cached] = cachedRoute(op, p);
     response = jsonencode(struct('ok', true, 'op', op, 'data', {data}, ...
-        'elapsedMs', 1000 * toc(t0)), 'ConvertInfAndNaN', true);
+        'elapsedMs', 1000 * toc(t0), 'cached', cached), 'ConvertInfAndNaN', true);
 catch err
     response = jsonencode(struct('ok', false, 'op', op, ...
         'error', friendlyMessage(err), 'errorId', err.identifier));
+end
+end
+
+% =========================================================================
+% Result cache: the same deterministic operation on the same image with the
+% same parameters returns the stored result instantly (image ids never change
+% their content). Entries whose output images were deleted are recomputed.
+function [data, hit] = cachedRoute(op, p)
+CACHEABLE = {'filter', 'histogram', 'sharpen', 'edges', 'segment', 'morphology', ...
+             'regions', 'errorMap', 'applyKernel', 'color', 'colorEnhance', 'histogramOf'};
+hit = false;
+if ~any(strcmp(op, CACHEABLE)) || isequal(P(p, 'noCache', false), true)
+    data = route(op, p);
+    return
+end
+q = rmfield(p, intersect(fieldnames(p), {'profileId', 'track', 'noCache'}));
+key = [op '|' jsonencode(q)];
+[found, data] = resultCache('get', key);
+if found && imagesExist(data)
+    hit = true;
+    replayActivity(op, p, data);        % XP / missions still count for this student
+    return
+end
+data = route(op, p);
+resultCache('put', key, data);
+end
+
+function varargout = resultCache(action, key, value)
+% Least-recently-used cache with at most 300 entries (kept in MATLAB memory)
+persistent store order
+if isempty(store), store = containers.Map('KeyType', 'char', 'ValueType', 'any'); order = {}; end
+switch action
+    case 'get'
+        if isKey(store, key)
+            varargout = {true, store(key)};
+            order = [order(~strcmp(order, key)), {key}];
+        else
+            varargout = {false, []};
+        end
+    case 'put'
+        store(key) = value;
+        order = [order(~strcmp(order, key)), {key}];
+        while numel(order) > 300
+            remove(store, order{1});
+            order(1) = [];
+        end
+    case 'clear'
+        store = containers.Map('KeyType', 'char', 'ValueType', 'any'); order = {};
+end
+end
+
+function ok = imagesExist(data)
+% True if every image id inside a result (fields id / ...Id) still exists
+ok = true;
+if iscell(data)
+    for k = 1:numel(data), ok = ok && imagesExist(data{k}); end
+elseif isstruct(data)
+    for k = 1:numel(data)
+        f = fieldnames(data(k));
+        for j = 1:numel(f)
+            v = data(k).(f{j});
+            if (strcmp(f{j}, 'id') || endsWith(f{j}, 'Id')) && ischar(v) && ~isempty(v)
+                ok = ok && ~isempty(regexp(v, '^[A-Za-z0-9_\-]+$', 'once')) && isfile(ilab_store('path', v));
+            elseif isstruct(v) || iscell(v)
+                ok = ok && imagesExist(v);
+            end
+            if ~ok, return; end
+        end
+    end
+end
+end
+
+function replayActivity(op, p, data)
+switch op
+    case 'filter',       activity('filters', char(P(p, 'name', 'mean')));
+    case 'histogram'
+        m = char(P(p, 'method', 'histeq'));
+        if ~strcmp(m, 'none'), activity('histogram', m); end
+    case 'sharpen',      activity('sharpening', char(P(p, 'method', 'laplacian')));
+    case 'edges'
+        ms = cellstr(P(p, 'methods', {'sobel'}));
+        for k = 1:numel(ms), activity('edges', ms{k}); end
+    case 'segment',      activity('segmentation', char(P(p, 'method', 'otsu')));
+    case 'morphology',   activity('morphology', char(P(p, 'operation', 'erode')));
+    case 'regions',      activity('regions', sprintf('conn%d', data.conn));
+    case 'applyKernel',  activity('tools', 'kernelPlayground');
+    case 'color',        activity('color', char(P(p, 'space', 'rgb')));
+    case 'colorEnhance', activity('color', 'enhance');
 end
 end
 
@@ -172,6 +260,21 @@ switch op
             data.maxDiffBuiltin = [];
         end
         activity('tools', mode);
+
+    % ------------------------------------------- step-by-step animations
+    case 'steps'
+        A = double(P(p, 'matrix', magic(5)));
+        switch char(P(p, 'algorithm', 'median'))
+            case 'median',     data = medianSteps(A, P(p, 'k', 3));
+            case 'histeq',     data = histeqSteps(A, P(p, 'levels', 8));
+            case 'morphology', data = morphologySteps(A, double(P(p, 'se', ones(3))), char(P(p, 'operation', 'erode')));
+            case 'regiongrow'
+                data = regionGrowingSteps(A, P(p, 'seedRow', 1), P(p, 'seedCol', 1), ...
+                    P(p, 'tolerance', 10), P(p, 'conn', 8));
+            otherwise
+                error('ImageLab:invalidParameter', 'Unknown animation "%s".', char(P(p, 'algorithm', '')));
+        end
+        activity('animations', char(P(p, 'algorithm', 'median')));
 
     case 'kernelPreset'
         [K, description] = kernelPresets(char(P(p, 'name', 'mean')), P(p, 'size', 3));
@@ -445,10 +548,39 @@ switch op
 
     % ------------------------------------------------------------ experiments
     case 'experiments'
-        data = lst(experimentCatalog());
+        E = experimentCatalog();
+        C = classroomManager('get');               % teacher's open / assigned / locked states
+        data = cell(1, numel(E));
+        for k = 1:numel(E)
+            e = E(k);
+            c = C.experiments{[cellfun(@(x) x.number, C.experiments)] == e.number};
+            e.status = c.status; e.due = c.due; e.teacherNote = c.note;
+            data{k} = e;
+        end
+
+    case 'classroom'
+        % Teacher view. Everything except 'get' needs the teacher PIN (if one is set).
+        action = char(P(p, 'action', 'get'));
+        pin = char(P(p, 'pin', ''));
+        if ~strcmp(action, 'get') && ~strcmp(action, 'setPin')
+            classroomManager('requirePin', pin);
+        end
+        switch action
+            case 'get',           data = classroomManager('get');
+            case 'unlock',        data = classroomManager('get');
+            case 'report',        data = classroomManager('report');
+            case 'export',        data = classroomManager('export');
+            case 'setPin',        data = classroomManager('setPin', pin, char(P(p, 'newPin', '')));
+            case 'setExperiment'
+                data = classroomManager('setExperiment', P(p, 'number', 0), char(P(p, 'status', 'open')), ...
+                    char(P(p, 'due', '')), char(P(p, 'note', '')));
+            otherwise
+                error('ImageLab:invalidParameter', 'Unknown classroom action "%s".', action);
+        end
 
     case 'runExperiment'
         n = P(p, 'number', 1);
+        classroomManager('assertRunnable', n);
         if isfield(p, 'id') && ~isempty(p.id)
             I = img(p.id);
         else

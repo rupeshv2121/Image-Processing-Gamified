@@ -30,8 +30,22 @@ export async function run(op, params = {}) {
   } catch {
     throw new Error('The ImageLab server returned an invalid response.')
   }
-  if (!json.ok) throw new Error(json.error || 'Unknown MATLAB error.')
+  if (!json.ok) {
+    const err = new Error(json.error || 'Unknown MATLAB error.')
+    err.cancelled = !!json.cancelled
+    throw err
+  }
   return json.data
+}
+
+// Interrupts the MATLAB computation that is running right now (server.py → engine cancel)
+export async function cancelRun() {
+  try {
+    const res = await fetch('/api/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    return (await res.json()).data
+  } catch {
+    return null
+  }
 }
 
 export async function serverStatus() {

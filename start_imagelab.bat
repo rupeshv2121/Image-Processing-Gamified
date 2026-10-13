@@ -4,7 +4,12 @@ REM MATLAB engine in the background and opens http://localhost:8765
 REM (Alternatively, open MATLAB in this folder and type:  ImageLab)
 cd /d "%~dp0"
 if not exist .venv\Scripts\python.exe (
-    echo Run setup_imagelab.bat first.
+    echo ImageLab is not set up yet. Run setup_imagelab.bat first.
+    pause
+    exit /b 1
+)
+if not exist frontend\dist\index.html (
+    echo The user interface is not built. Run setup_imagelab.bat ^(it needs Node.js 18+^).
     pause
     exit /b 1
 )

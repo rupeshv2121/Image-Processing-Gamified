@@ -1,0 +1,13 @@
+{
+  "name": "ImageLab – Interactive Image Processing Laboratory",
+  "short_name": "ImageLab",
+  "description": "Learn spatial-domain image processing with MATLAB.",
+  "start_url": "/#dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1d36",
+  "theme_color": "#0f2747",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

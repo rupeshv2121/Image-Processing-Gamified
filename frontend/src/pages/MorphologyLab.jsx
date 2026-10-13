@@ -123,7 +123,7 @@ export default function MorphologyLab() {
   )
 
   return (
-    <LabPage unit="Unit IV · Morphology" title="Morphology Lab" subtitle="Erode, dilate, open and close shapes with a structuring element you design — then extract boundaries and fill holes."
+    <LabPage animation="morphology" unit="Unit IV · Morphology" title="Morphology Lab" subtitle="Erode, dilate, open and close shapes with a structuring element you design — then extract boundaries and fill holes."
       theory={theory} controls={controls} panelTitle="Operation"
       code={{ functions: o.fn, snippets: [{ title: 'Toolbox call', code: `BW = imbinarize(rgb2gray(I));\nSE = logical([${se.map((r) => r.join(' ')).join('; ')}]);   % the element designed above\n${o.code}` }] }}>
       {!res ? (

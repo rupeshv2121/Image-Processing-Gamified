@@ -332,6 +332,8 @@ pre.code .cm { color: #8fd19e; }
    Busy / toast
    ========================================================================== */
 .busy { position: fixed; right: 24px; bottom: 24px; background: var(--navy-solid); color: #fff; padding: 12px 18px; border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; z-index: 60; box-shadow: var(--shadow-lg); }
+.busy-cancel { margin-left: 4px; border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.1); color: #fff; border-radius: 8px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.busy-cancel:hover { background: rgba(255, 255, 255, 0.2); }
 .spinner { width: 16px; height: 16px; border: 2.5px solid rgba(255, 255, 255, 0.3); border-top-color: var(--green-400); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 26px; padding: 11px 20px; border-radius: 12px; color: #fff; background: var(--navy-solid); z-index: 60; font-size: 14px; box-shadow: var(--shadow-lg); display: flex; gap: 10px; align-items: center; animation: pop 0.2s; }
@@ -731,6 +733,65 @@ table.data.compact th { text-transform: none; letter-spacing: 0; font-size: 12.5
 .restore-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 24px; align-items: start; }
 
 /* ==========================================================================
+   Step-by-step animations
+   ========================================================================== */
+.player { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.player-buttons { display: flex; align-items: center; gap: 4px; }
+.player-buttons .icon-btn { width: 34px; height: 34px; font-size: 13px; }
+.play-btn { min-width: 86px; }
+.player-scrub { flex: 1; min-width: 140px; }
+.player-count { color: var(--text-2); white-space: nowrap; }
+.player-speed { display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+.player-speed input { width: 90px; }
+.anim-grids { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.chips-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.chips-row .field-label { min-width: 130px; }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.chip { min-width: 40px; padding: 5px 8px; text-align: center; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); font-family: Consolas, monospace; font-size: 13px; }
+.chip.own { border-color: var(--amber-500); }
+.chip.win { background: var(--green-500); border-color: var(--green-500); color: #fff; font-weight: 700; }
+.chip.extreme { background: var(--red-100); border-color: var(--red-500); }
+.mini-hist { display: flex; align-items: flex-end; gap: 6px; height: 150px; padding: 6px 8px 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+.mini-bar-col { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 26px; }
+.mini-bar { width: 18px; background: var(--navy-600); border-radius: 4px 4px 0 0; transition: height 0.25s; min-height: 1px; }
+.mini-bar.after { position: absolute; bottom: 18px; width: 8px; right: -2px; background: var(--green-500); opacity: 0.85; }
+.mini-val { font-size: 11px; color: var(--text-2); }
+.mini-lab { font-size: 11px; color: var(--text-3); height: 18px; line-height: 18px; }
+.steps-table td, .steps-table th { text-align: center; }
+.queue-box { min-width: 220px; max-width: 360px; }
+
+/* ==========================================================================
+   Teacher area
+   ========================================================================== */
+.unlock { max-width: 460px; margin: 20px auto; text-align: center; }
+.unlock .ic { width: 60px; height: 60px; border-radius: 18px; background: var(--navy-100); color: var(--navy-600); display: grid; place-items: center; margin: 0 auto 12px; }
+.unlock p { margin-top: 6px; }
+table.heatmap { border-collapse: separate; border-spacing: 3px; font-size: 12.5px; }
+table.heatmap thead th { height: 120px; vertical-align: bottom; padding: 0 0 6px; font-weight: 600; color: var(--text-2); }
+table.heatmap thead th span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
+table.heatmap thead th:first-child { text-align: left; vertical-align: bottom; }
+table.heatmap tbody th { text-align: left; font-weight: 600; white-space: nowrap; padding-right: 10px; color: var(--navy-800); }
+table.heatmap td { width: 40px; min-width: 40px; height: 32px; text-align: center; border-radius: 6px; background: var(--line-2); color: #fff; font-weight: 700; }
+.weak-list { display: flex; flex-direction: column; gap: 14px; }
+.weak-row { display: flex; gap: 14px; align-items: flex-start; }
+.weak-row .grow { flex: 1; min-width: 0; }
+.weak-rank { width: 28px; height: 28px; border-radius: 50%; background: var(--navy-100); color: var(--navy-600); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+.exp-table td { vertical-align: middle; }
+.exp-table .segmented button { padding: 5px 10px; font-size: 12.5px; }
+.assign-fields { display: flex; gap: 8px; min-width: 300px; }
+.assign-fields input[type='date'] { width: 150px; flex-shrink: 0; }
+.assign-fields input { padding: 6px 9px; font-size: 13px; }
+tr.muted-row td { opacity: 0.65; }
+tr.assigned-row td { background: var(--amber-100); }
+.pin-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; max-width: 620px; }
+.pin-form .row { grid-column: 1 / -1; }
+.badge-locked { background: var(--red-100); color: var(--red-500); }
+.exp-tile.assigned { border-color: var(--amber-500); box-shadow: inset 4px 0 0 var(--amber-500); }
+.exp-tile.locked { opacity: 0.7; }
+.homework { margin-bottom: 16px; border-color: var(--amber-500); }
+.homework .mission .tick { color: var(--navy-800); font-size: 12px; border-color: var(--amber-500); }
+
+/* ==========================================================================
    Daily challenge, camera
    ========================================================================== */
 .daily-head { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 14px; }
@@ -856,6 +917,8 @@ table.data.compact th { text-transform: none; letter-spacing: 0; font-size: 12.5
   .daily-stats { width: 100%; }
   .daily-stats div { flex: 1; min-width: 0; padding: 8px; }
   .add-student { grid-template-columns: 1fr; }
+  .pin-form { grid-template-columns: 1fr; }
+  .assign-fields { flex-direction: column; min-width: 180px; }
   .cmp-handle::after { width: 44px; height: 44px; }
   .podium .p1 { min-height: 160px; }
   .podium .p2 { min-height: 125px; }
