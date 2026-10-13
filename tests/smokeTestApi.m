@@ -94,6 +94,12 @@ d = call('dailyStart', struct('date', '2026-01-01'));
 call('pipelineRun', struct('problemId', d.data.problemId, 'cleanId', d.data.cleanId, ...
     'degradedId', d.data.degradedId, 'steps', {{'median'}}, 'daily', '2026-01-01'));
 
+call('steps', struct('algorithm', 'median', 'matrix', magic(5)));
+call('steps', struct('algorithm', 'histeq', 'matrix', [0 1 2; 3 2 1], 'levels', 4));
+call('steps', struct('algorithm', 'morphology', 'matrix', eye(5), 'se', ones(3), 'operation', 'dilate'));
+call('steps', struct('algorithm', 'regiongrow', 'matrix', magic(6), 'seedRow', 2, 'seedCol', 2, 'tolerance', 10));
+call('classroom', struct('action', 'get'));
+
 % expected errors
 expectError('morphology', struct('id', gid, 'se', zeros(3)));
 expectError('dailyStart', struct('date', 'not-a-date'));

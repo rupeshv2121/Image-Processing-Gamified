@@ -10,6 +10,7 @@ function out = progressManager(action, varargin)
 %   p = progressManager('reset')
 %   s = progressManager('peek', file)              short stats of any progress
 %                                                  file (read only)
+%   p = progressManager('raw', file)               full stored progress of any file (read only)
 %
 %   Progress belongs to the active student profile (see profileManager).
 %
@@ -19,6 +20,9 @@ function out = progressManager(action, varargin)
 
 if strcmp(action, 'peek')
     out = peek(loadProgress(varargin{1}));
+    return
+elseif strcmp(action, 'raw')                  % full stored struct of any file, read only
+    out = loadProgress(varargin{1});
     return
 end
 file = profileManager('file');

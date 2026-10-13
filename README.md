@@ -41,6 +41,7 @@ interaction**, and the Python server is only a bridge between the two.
 |---|---|
 | Dashboard | Current image, experiments completed, filters tested, quiz score, topics, XP, badges, demo flow |
 | Learn | 22 theory topics following the syllabus, each linked to a lab |
+| Animations | Step-by-step playback (play / pause / step / scrub) of the median filter, histogram equalisation, erosion & dilation and region growing — every step computed by MATLAB on a small matrix |
 | Image Workspace | Load / save / **webcam capture**, undo / redo (Ctrl+Z / Ctrl+Y), zoom, grayscale, image information, histogram |
 | Pixels & Sampling | N4 / ND / N8 / m-adjacency, De / D4 / D8 distances, sampling, quantisation |
 | Histogram Lab | Histogram, equalisation (toolbox + manual), CLAHE, stretching, gamma, log, negative, statistics |
@@ -58,10 +59,12 @@ interaction**, and the Python server is only a bridge between the two.
 | Experiments | 13 experiments with aim, theory, algorithm, MATLAB code (toolbox / manual), run, observation, conclusion, quiz |
 | Quiz & games | Daily Challenge (same “match the target” puzzle for everyone each day, streaks), Weak-Topic Practice (questions weighted by your error rate), Rapid Fire (10 s timer), Kernel Quiz, Guess the Filter, Build the Pipeline, Challenge Mode, Classroom Mode |
 | Students | Several student profiles on one computer, each with its own XP, badges, quiz history and streak (`data/profiles.mat`) |
+| Teacher | PIN-protected teacher area: class table, topic-accuracy heatmap per student, weakest topics of the class, open / assign (with due date and note) / lock each experiment, export to CSV and Excel (`data/classroom.mat`) |
 | Leaderboard | Quiz scores in `quizzes/leaderboard.mat` (MATLAB table) and a class ranking of all student profiles |
 | Reports | A4 PDF written by base MATLAB (`generateReportPdf`), HTML report, DOCX if MATLAB Report Generator is installed |
 | Every lab | Compare input and result **side by side, with a before/after slider or as an error heat map** (\|result − input\| with PSNR / SSIM); pixel inspector (value + 3×3 neighbourhood) on every image |
-| Interface | Responsive (phone to desktop), light / dark / system theme, keyboard shortcuts (press `?`), accessible focus outlines and labels, pages loaded on demand |
+| Interface | Responsive (phone to desktop), light / dark / system theme, keyboard shortcuts (press `?`), accessible focus outlines and labels, pages loaded on demand, works offline once loaded (service worker) |
+| Performance | MATLAB caches results of repeated operations (same image + parameters → instant), a **Cancel** button interrupts slow manual-loop runs, result images older than 24 h are deleted automatically |
 
 Frequency-domain filtering is intentionally **not** included (out of scope).
 
@@ -229,6 +232,7 @@ whole project.
 | Setting | Where | Effect |
 |---|---|---|
 | `IMAGELAB_PORT` | environment variable | HTTP port (default `8765`) |
+| `IMAGELAB_KEEP_HOURS` | environment variable | Delete result images in `runtime/images` older than this many hours, at start-up and hourly (default `24`, `0` = keep all) |
 | `IMAGELAB_NO_BROWSER` | environment variable | If set, the browser is not opened automatically |
 | `--no-browser` | `server.py` argument | Same as above |
 | `--connect <name>` | `server.py` argument | Attach to a shared MATLAB session instead of starting one (used by `ImageLab.m`) |
@@ -315,7 +319,8 @@ ImageLab/
 ├── ImageLab_Demonstration.mlx  Live Script walkthrough (+ .m source)
 ├── ilab_setup.m                adds project folders to the MATLAB path
 ├── run_tests.m                 runs the unit tests on both code paths
-├── setup_imagelab.bat          one-time setup (venv, matlabengine, UI build)
+├── setup_imagelab.bat / .ps1   one-click setup: finds MATLAB + a matching Python, installs matlabengine, builds the UI
+│                               (setup_imagelab.bat -CheckOnly only reports what is installed)
 ├── start_imagelab.bat          start without opening MATLAB
 ├── core/          toDouble, toGray, padImage, filter2D, neighborhoodStack, resizeImage, hasIPT …
 ├── algorithms/    mean, weighted, Gaussian, median, min, max, midpoint, order statistic, alpha-trimmed,
@@ -328,9 +333,10 @@ ImageLab/
 │                  region growing, split & merge, labelling, boundaries, region properties,
 │                  chain codes and chain-code descriptors
 ├── morphology/    structuring elements, erosion, dilation, opening, closing, boundary, hole filling
+├── steps/         step-by-step data for the animations (median, histeq, morphology, region growing)
 ├── color/         channels, RGB↔YCbCr, RGB↔Lab, enhancement
 ├── fundamentals/  sampling, quantisation, neighbourhoods, distances
-├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, pipeline problems
+├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, teacher settings, pipeline problems
 ├── experiments/   experimentCatalog, runExperiment
 ├── reports/       generateReport (HTML) + generateReportPdf (PDF) — output in reports/output/
 ├── api/           ilab_dispatch (single entry point), ilab_store (image store), samples, charts

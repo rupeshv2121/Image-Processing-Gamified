@@ -68,6 +68,10 @@ path. `help <function>` shows the full description.
 `regionProperties(L)`, `extractBoundary(BW)`, `[code,boundary,start] = chainCode(BW)` (Freeman 8-direction,
 Moore tracing), `chainCodeDescriptors(code)` (first difference, shape number, perimeter).
 
+## steps/
+`medianSteps(A,k)`, `histeqSteps(A,L)`, `morphologySteps(A,SE,op)`, `regionGrowingSteps(A,r,c,tol,conn)` —
+every intermediate step on a small matrix (≤ 12×12) for the animations; each checks itself against the real implementation.
+
 ## morphology/
 `structuringElement(shape,n)` (square, disk, diamond, cross, hline, vline), `validateSE(SE)`,
 `erodeImage(I,SE)`, `dilateImage(I,SE)` (imerode / imdilate or vectorised), `morphologyManual(I,SE,op)` (loops),
@@ -83,7 +87,7 @@ Moore tracing), `chainCodeDescriptors(code)` (first difference, shape number, pe
 
 ## quizzes/
 `questionBank()`, `quizEngine(action,…)`, `leaderboardManager(action,entry)`,
-`progressManager(action,…)` (incl. daily challenges), `profileManager(action,…)` (student profiles), `pipelineProblems()`, `applyBlock(I,block,params)`, `degradeImage(I,steps)`.
+`progressManager(action,…)` (incl. daily challenges), `profileManager(action,…)` (student profiles), `classroomManager(action,…)` (teacher PIN, experiment states, class report, CSV/XLSX export), `pipelineProblems()`, `applyBlock(I,block,params)`, `degradeImage(I,steps)`.
 
 ## experiments/ and reports/
 `experimentCatalog()`, `runExperiment(n,I)`, `generateReport(R)`, `generateReportPdf(R,file)`.

@@ -114,7 +114,7 @@ export default function SegmentationLab() {
   )
 
   return (
-    <LabPage unit="Unit IV · Segmentation" title="Segmentation" subtitle="Separate objects from the background with thresholds and region-based methods."
+    <LabPage animation="regiongrow" unit="Unit IV · Segmentation" title="Segmentation" subtitle="Separate objects from the background with thresholds and region-based methods."
       theory={theory} controls={controls} panelTitle="Method"
       code={{ functions: [...m.fn, 'labelComponents', 'regionProperties'], snippets: [{ title: 'MATLAB', code: m.code + "\n[L, n] = bwlabel(BW);\nstats = regionprops(L, 'Area', 'Centroid');" }] }}>
       {res && (

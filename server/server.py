@@ -3,8 +3,10 @@ ImageLab bridge server.
 
 This file does NO image processing. It only:
   1. starts a MATLAB session through the MATLAB Engine API for Python,
-  2. forwards every UI request to the MATLAB function ilab_dispatch.m,
-  3. serves the PNG images that MATLAB writes, and the built React UI.
+  2. forwards every UI request to the MATLAB function ilab_dispatch.m
+     (and can cancel the running request: POST /api/cancel),
+  3. serves the PNG images that MATLAB writes, and the built React UI,
+  4. deletes result images older than IMAGELAB_KEEP_HOURS (default 24 h).
 
 All algorithms live in the MATLAB .m files of this project.
 
@@ -32,6 +34,14 @@ UPLOAD_DIR = os.path.join(RUNTIME, "uploads")
 REPORT_DIR = os.path.join(ROOT, "reports", "output")
 FRONTEND_DIST = os.path.join(ROOT, "frontend", "dist")
 PORT = int(os.environ.get("IMAGELAB_PORT", "8765"))
+KEEP_HOURS = float(os.environ.get("IMAGELAB_KEEP_HOURS", "24"))
+# Windows sometimes maps .js to text/plain in the registry, which breaks
+# module scripts and the service worker - set the types explicitly.
+for _ext, _type in ((".js", "text/javascript"), (".mjs", "text/javascript"), (".css", "text/css"),
+                    (".svg", "image/svg+xml"), (".webmanifest", "application/manifest+json"),
+                    (".pdf", "application/pdf"), (".csv", "text/csv"),
+                    (".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")):
+    mimetypes.add_type(_type, _ext)
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 SAFE_NAME = re.compile(r"^[A-Za-z0-9_\-.]+$")
 # "--connect NAME": attach to a MATLAB session shared by ImageLab.m instead of
@@ -47,6 +57,8 @@ class Matlab:
         self.error = None
         self.ready = threading.Event()
         self.lock = threading.Lock()
+        self.current = None          # FutureResult of the running request
+        self.current_op = None
 
     def start(self):
         try:
@@ -86,14 +98,57 @@ class Matlab:
         if self.engine is None:
             return {"ok": False, "error": self.error or "MATLAB is not running."}
         with self.lock:
+            future = None
             try:
-                raw = self.engine.ilab_dispatch(json.dumps(request), nargout=1)
+                future = self.engine.ilab_dispatch(json.dumps(request), nargout=1, background=True)
+                self.current, self.current_op = future, request.get("op")
+                raw = future.result()
             except Exception as exc:
+                if future is not None and future.cancelled():
+                    return {"ok": False, "cancelled": True, "error": "Cancelled - MATLAB stopped the computation."}
                 return {"ok": False, "error": f"MATLAB engine error: {exc}"}
+            finally:
+                self.current, self.current_op = None, None
         return json.loads(raw)
+
+    def cancel(self):
+        """Interrupt the running MATLAB request (like Ctrl+C in MATLAB)."""
+        future = self.current
+        if future is None or future.done():
+            return {"ok": True, "data": {"cancelled": False, "message": "Nothing is running."}}
+        try:
+            cancelled = bool(future.cancel())
+        except Exception as exc:  # pragma: no cover - engine specific
+            return {"ok": False, "error": f"Could not cancel: {exc}"}
+        return {"ok": True, "data": {"cancelled": cancelled, "op": self.current_op}}
 
 
 MATLAB = Matlab()
+
+
+def cleanup_runtime(keep_hours=KEEP_HOURS):
+    """Delete result images older than keep_hours and stale temporary uploads."""
+    now = time.time()
+    removed = 0
+    for folder, max_age in ((IMAGE_DIR, keep_hours * 3600), (UPLOAD_DIR, 3600)):
+        if not os.path.isdir(folder):
+            continue
+        for entry in os.scandir(folder):
+            try:
+                if entry.is_file() and now - entry.stat().st_mtime > max_age:
+                    os.remove(entry.path)
+                    removed += 1
+            except OSError:
+                pass  # file in use - try again next time
+    return removed
+
+
+def cleanup_loop():
+    while True:
+        n = cleanup_runtime()
+        if n:
+            print(f"[ImageLab] Removed {n} result image(s) older than {KEEP_HOURS:g} h from runtime/")
+        time.sleep(3600)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -188,6 +243,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"ok": False, "error": f"Bad request: {exc}"}, 400)
             return
 
+        if path == "/api/cancel":
+            self.send_json(MATLAB.cancel())
+            return
+
         if path == "/api/run":
             op = body.get("op")
             if not isinstance(op, str):
@@ -231,6 +290,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     os.makedirs(IMAGE_DIR, exist_ok=True)
+    if KEEP_HOURS > 0:
+        threading.Thread(target=cleanup_loop, daemon=True).start()
     threading.Thread(target=MATLAB.start, daemon=True).start()
     httpd = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     url = f"http://localhost:{PORT}"

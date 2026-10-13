@@ -39,7 +39,7 @@ export function EmptyState({ icon = 'play', title, text, children }) {
 // Standard layout of every lab:
 //   header (unit eyebrow, title, one-line subtitle, Theory + Code buttons)
 //   left: compact settings panel     right: results
-export default function LabPage({ unit, title, subtitle, theory, code, controls, panelTitle = 'Settings', needImage = true, children }) {
+export default function LabPage({ unit, title, subtitle, theory, code, controls, panelTitle = 'Settings', needImage = true, animation, children }) {
   const [showTheory, setShowTheory] = useState(false)
   const body = (
     <div className="lab">
@@ -61,6 +61,7 @@ export default function LabPage({ unit, title, subtitle, theory, code, controls,
           {subtitle && <p className="subtitle">{subtitle}</p>}
         </div>
         <div className="page-actions">
+          {animation && <a className="btn" href={`#animate?algo=${animation}`}><Icon name="play" size={16} /> Step by step</a>}
           {theory && <button className="btn" onClick={() => setShowTheory(true)}><Icon name="book" size={17} /> Theory</button>}
           {code && <CodeButton functions={code.functions} snippets={code.snippets} />}
         </div>

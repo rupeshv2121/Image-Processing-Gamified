@@ -431,6 +431,43 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyError(@() errorMap(tc.Img, tc.ImgRGB), 'ImageLab:sizeMismatch');
         end
 
+        % -------------------------------------------------- step-by-step animations
+        function medianStepsMatchFilter(tc)
+            A = magic(6);
+            S = medianSteps(A, 3);
+            tc.verifyEqual(numel(S.steps), 36);
+            st = S.steps{8};
+            tc.verifyEqual(st.sorted, sort(st.values));
+            tc.verifyEqual(st.median, st.sorted(5));
+            tc.verifyEqual(S.output.data, num2cell(reshape(medianFilterManual(A, 3).', 1, [])));
+        end
+
+        function histeqStepsKnownExample(tc)
+            S = histeqSteps([0 0 1 1; 2 2 2 3], 4);
+            tc.verifyEqual(S.counts, [2 2 3 1]);
+            tc.verifyEqual(S.cdf, [0.25 0.5 0.875 1], 'AbsTol', 1e-12);
+            tc.verifyEqual(S.mapping, [1 2 3 3]);
+            tc.verifyError(@() histeqSteps([0 9], 8), 'ImageLab:invalidMatrix');
+        end
+
+        function morphologyStepsErodeAndDilate(tc)
+            A = zeros(5); A(2:4, 2:4) = 1;
+            E = morphologySteps(A, ones(3), 'erode');
+            tc.verifyEqual(cell2mat(E.output.data), [zeros(1, 12) 1 zeros(1, 12)]);
+            D = morphologySteps(A, ones(3), 'dilate');
+            tc.verifyEqual(sum(cell2mat(D.output.data)), 25);
+        end
+
+        function regionGrowingStepsRecordQueue(tc)
+            A = [10 12 50; 11 13 52; 90 14 15];
+            S = regionGrowingSteps(A, 1, 1, 5, 4);
+            tc.verifyEqual(S.events{1}.type, 'take');
+            tc.verifyEqual(S.size, 6);                         % 10 12 11 13 14 15
+            accepted = cellfun(@(e) strcmp(e.type, 'check') && e.accepted, S.events);
+            tc.verifyEqual(nnz(accepted), 5);
+            tc.verifyEqual(S.order.data{1}, 1);
+        end
+
         % -------------------------------------------------- quiz
         function weakTopicQuizFocusesOnWeakCategory(tc)
             stats = struct('name', {'Noise', 'Histogram'}, 'answered', {20, 20}, 'correct', {2, 20});
