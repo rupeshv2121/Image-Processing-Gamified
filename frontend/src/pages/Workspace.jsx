@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, downloadUrl, fmt } from '../api'
+import CameraCapture from '../components/CameraCapture'
 import Icon from '../components/Icon'
+import ImagePair from '../components/ImagePair'
 import { EmptyState } from '../components/LabPage'
-import { Card, CodeButton, Histogram, ImageView, Modal, Page, Tabs } from '../components/ui'
+import { Card, CodeButton, Histogram, Modal, Page, Tabs } from '../components/ui'
 
 export default function Workspace() {
   const app = useApp()
@@ -14,6 +16,7 @@ export default function Workspace() {
   const [info, setInfo] = useState(null)
   const [hist, setHist] = useState(null)
   const [tab, setTab] = useState('info')
+  const [camera, setCamera] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -46,18 +49,19 @@ export default function Workspace() {
         <div className="row">
           <button className="btn btn-primary" onClick={() => fileRef.current.click()} disabled={!app.matlab.ok}><Icon name="upload" size={17} /> Upload</button>
           <button className="btn" onClick={() => setShowSamples(true)} disabled={!app.matlab.ok}><Icon name="image" size={17} /> Samples</button>
+          <button className="btn" onClick={() => setCamera(true)} disabled={!app.matlab.ok}><Icon name="camera" size={17} /> Camera</button>
           <a className={`btn ${current ? '' : 'disabled'}`} href={current ? downloadUrl(current) : undefined}><Icon name="download" size={17} /> Save</a>
         </div>
         <div className="row">
           <div className="btn-group">
-            <button className="btn" onClick={app.undo} disabled={!app.canUndo} title="Undo"><Icon name="undo" size={17} /></button>
-            <button className="btn" onClick={app.redo} disabled={!app.canRedo} title="Redo"><Icon name="redo" size={17} /></button>
-            <button className="btn" onClick={app.reset} disabled={!current} title="Reset to original"><Icon name="reset" size={17} /></button>
+            <button className="btn" onClick={app.undo} disabled={!app.canUndo} title="Undo (Ctrl+Z)" aria-label="Undo" aria-keyshortcuts="Control+Z"><Icon name="undo" size={17} /></button>
+            <button className="btn" onClick={app.redo} disabled={!app.canRedo} title="Redo (Ctrl+Y)" aria-label="Redo" aria-keyshortcuts="Control+Y"><Icon name="redo" size={17} /></button>
+            <button className="btn" onClick={app.reset} disabled={!current} title="Reset to original" aria-label="Reset to original"><Icon name="reset" size={17} /></button>
           </div>
           <div className="btn-group">
-            <button className="btn" onClick={() => setZoom((z) => Math.max(1, z / 1.5))} disabled={!current} title="Zoom out"><Icon name="zoomout" size={17} /></button>
-            <button className="btn" onClick={() => setZoom(1)} disabled={!current} title="Fit">{Math.round(zoom * 100)}%</button>
-            <button className="btn" onClick={() => setZoom((z) => Math.min(8, z * 1.5))} disabled={!current} title="Zoom in"><Icon name="zoomin" size={17} /></button>
+            <button className="btn" onClick={() => setZoom((z) => Math.max(1, z / 1.5))} disabled={!current} title="Zoom out" aria-label="Zoom out"><Icon name="zoomout" size={17} /></button>
+            <button className="btn" onClick={() => setZoom(1)} disabled={!current} title="Fit to view" aria-label={`Zoom ${Math.round(zoom * 100)}%, fit to view`}>{Math.round(zoom * 100)}%</button>
+            <button className="btn" onClick={() => setZoom((z) => Math.min(8, z * 1.5))} disabled={!current} title="Zoom in" aria-label="Zoom in"><Icon name="zoomin" size={17} /></button>
           </div>
           <button className="btn" onClick={toGray} disabled={!current}>Grayscale</button>
           <button className="btn btn-navy" onClick={openInfo} disabled={!current}><Icon name="info" size={17} /> Image info</button>
@@ -69,14 +73,15 @@ export default function Workspace() {
           <div className="row center mt-sm">
             <button className="btn btn-primary" onClick={() => pickSample('peppers.png')} disabled={!app.matlab.ok}>Use peppers.png</button>
             <button className="btn" onClick={() => setShowSamples(true)} disabled={!app.matlab.ok}>Browse samples</button>
+            <button className="btn" onClick={() => setCamera(true)} disabled={!app.matlab.ok}><Icon name="camera" size={17} /> Take a photo</button>
           </div>
         </EmptyState>
       ) : (
         <>
-          <div className="grid-2">
-            <ImageView id={original} title="Original" height={460} zoom={zoom} pixelated={zoom > 2} />
-            <ImageView id={current} title="Current" badge={index > 0 ? `step ${index}` : null} height={460} zoom={zoom} pixelated={zoom > 2} />
-          </div>
+          <ImagePair height={460} zoom={zoom} pixelated={zoom > 2}
+            left={{ id: original, title: 'Original' }}
+            right={{ id: current, title: 'Current', badge: index > 0 ? `step ${index}` : null }} />
+          {index === 0 && <p className="tiny faint mt-sm">Slider and error map appear once a lab result has been sent to the workspace. Shortcuts: Ctrl+Z undo · Ctrl+Y redo.</p>}
 
           <div className="mt">
             <Tabs tabs={[{ key: 'info', label: 'Information' }, { key: 'hist', label: 'Histogram' }, { key: 'history', label: `History (${history.length})` }]} active={tab} onChange={setTab} />
@@ -134,6 +139,11 @@ export default function Workspace() {
             ))}
           </div>
         </Modal>
+      )}
+
+      {camera && (
+        <CameraCapture onClose={() => setCamera(false)}
+          onCapture={async (file) => { setCamera(false); await app.upload(file) }} />
       )}
 
       {info && (

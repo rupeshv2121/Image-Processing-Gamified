@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
+import ImagePair from '../components/ImagePair'
 import LabPage from '../components/LabPage'
 import { ImageView, Note, Segmented, Select, Slider, Tabs, UseButton } from '../components/ui'
 
@@ -96,11 +97,10 @@ export default function ColorLab() {
         </div>
       )}
       {tab === 'enhance' && (
-        <div className="grid-2">
-          <ImageView id={current} title="Before" height={420} />
-          <ImageView id={enh?.id || null} title={enh ? `After · ${enh.desc}` : 'After'} height={420} emptyText="Choose a channel or a preset"
-            actions={enh && <UseButton id={enh.id} label={`Colour: ${enh.desc}`} />} />
-        </div>
+        <ImagePair height={420}
+          left={{ id: current, title: 'Before' }}
+          right={{ id: enh?.id || null, title: enh ? `After · ${enh.desc}` : 'After', emptyText: 'Choose a channel or a preset',
+            actions: enh && <UseButton id={enh.id} label={`Colour: ${enh.desc}`} /> }} />
       )}
     </LabPage>
   )

@@ -44,6 +44,8 @@ path. `help <function>` shows the full description.
 | `logKernel(k,sigma)`, `logEdgeManual(I,sigma,thresh)` | LoG |
 | `[BW,thr,mag] = cannyManual(I,sigma,low,high)` | Canny |
 | `[BW,thr,mag,impl] = edgeDetect(I,method,thresh,sigma)` | edge() with fallback |
+| `[J,windowUsed] = adaptiveMedianFilter(I,Smax)` | adaptive median (stages A/B, window grows to Smax) |
+| `[J,noiseVar] = adaptiveLocalFilter(I,k,noiseVar)` | adaptive local noise reduction, like wiener2 |
 
 ## noise/
 `addGaussianNoise(I,mean,var)`, `addSaltPepperNoise(I,density)`, `addSpeckleNoise(I,var)`,
@@ -55,14 +57,21 @@ path. `help <function>` shows the full description.
 `gammaCorrection(I,gamma,c)`, `logTransform(I,k)`, `negativeTransform(I)`, `imageStatistics(I)`.
 
 ## metrics/
-`calculateMSE(A,ref)`, `calculatePSNR(A,ref)`, `calculateSSIM(A,ref)`, `imageQuality(A,ref)`.
+`calculateMSE(A,ref)`, `calculatePSNR(A,ref)`, `calculateSSIM(A,ref)`, `imageQuality(A,ref)`,
+`[H,E,stats] = errorMap(A,ref)` (|A − ref| as a turbo heat map with statistics).
 
 ## segmentation/
 `globalThreshold(I,T)`, `[BW,T,it] = iterativeThreshold(I)`, `[BW,level,eff] = otsuThreshold(I)`,
 `[BW,localMean] = adaptiveThreshold(I,win,offset)`, `[BW,R] = pointDetection(I,T)`,
 `[BW,R,K] = lineDetection(I,direction,T)`, `[BW,mean] = regionGrowing(I,r,c,tol,conn)`,
 `[L,meanImage,n] = splitAndMerge(I,stdT,minBlock,mergeT)`, `[L,n] = labelComponents(BW,conn)`,
-`regionProperties(L)`, `extractBoundary(BW)`.
+`regionProperties(L)`, `extractBoundary(BW)`, `[code,boundary,start] = chainCode(BW)` (Freeman 8-direction,
+Moore tracing), `chainCodeDescriptors(code)` (first difference, shape number, perimeter).
+
+## morphology/
+`structuringElement(shape,n)` (square, disk, diamond, cross, hline, vline), `validateSE(SE)`,
+`erodeImage(I,SE)`, `dilateImage(I,SE)` (imerode / imdilate or vectorised), `morphologyManual(I,SE,op)` (loops),
+`openImage(I,SE)`, `closeImage(I,SE)`, `morphBoundary(BW,SE)`, `[F,holes] = fillHoles(BW)`.
 
 ## color/
 `rgbToYCbCr`, `yCbCrToRgb`, `rgbToLab`, `labToRgb`, `[channels,names,converted] = colorChannels(I,space)`,
@@ -74,10 +83,10 @@ path. `help <function>` shows the full description.
 
 ## quizzes/
 `questionBank()`, `quizEngine(action,…)`, `leaderboardManager(action,entry)`,
-`progressManager(action,…)`, `pipelineProblems()`, `applyBlock(I,block,params)`, `degradeImage(I,steps)`.
+`progressManager(action,…)` (incl. daily challenges), `profileManager(action,…)` (student profiles), `pipelineProblems()`, `applyBlock(I,block,params)`, `degradeImage(I,steps)`.
 
 ## experiments/ and reports/
-`experimentCatalog()`, `runExperiment(n,I)`, `generateReport(R)`.
+`experimentCatalog()`, `runExperiment(n,I)`, `generateReport(R)`, `generateReportPdf(R,file)`.
 
 ## api/
 `ilab_dispatch(json)` (single UI entry point), `ilab_store(action,…)`, `ilab_runFilter(I,name,k,params,impl)`,

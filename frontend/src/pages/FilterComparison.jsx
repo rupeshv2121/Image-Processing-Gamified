@@ -13,7 +13,12 @@ const ALL = [
   { name: 'midpoint', label: 'Midpoint', k: 3 },
   { name: 'weighted', label: 'Weighted mean', k: 3 },
   { name: 'alphatrimmed', label: 'Alpha-trimmed', k: 3, d: 4 },
+  { name: 'adaptivemedian', label: 'Adaptive median', k: 7 },
+  { name: 'adaptivelocal', label: 'Adaptive local', k: 5 },
 ]
+// k for each filter: the Gaussian needs at least 5x5 and the adaptive median
+// uses k as its maximum window
+const sizeFor = (f, size) => (f.name === 'gaussian' ? Math.max(size, 5) : f.name === 'adaptivemedian' ? Math.max(size, 7) : size)
 
 export default function FilterComparison() {
   const { original, call } = useApp()
@@ -26,7 +31,7 @@ export default function FilterComparison() {
   const [tab, setTab] = useState('ranking')
 
   const run = async () => {
-    const filters = ALL.filter((f) => chosen[f.name]).map((f) => ({ name: f.name, k: f.name === 'gaussian' ? Math.max(size, 5) : size, sigma: f.sigma ?? 1, d: f.d ?? 2 }))
+    const filters = ALL.filter((f) => chosen[f.name]).map((f) => ({ name: f.name, k: sizeFor(f, size), sigma: f.sigma ?? 1, d: f.d ?? 2 }))
     if (!filters.length) return
     const d = await call('compare', { id: original, noiseType: noise, density, variance, filters, seed: 7 }, { label: `Comparing ${filters.length} filters` })
     if (d) {

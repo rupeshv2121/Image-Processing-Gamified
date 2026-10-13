@@ -30,23 +30,27 @@ export const UNITS = [
     ],
   },
   {
-    id: 'u3', num: 'III', title: 'Restoration & Colour', subtitle: 'Noise models, colour spaces', icon: 'palette', lab: 'noise',
+    id: 'u3', num: 'III', title: 'Restoration & Colour', subtitle: 'Noise models, adaptive filters, colour', icon: 'palette', lab: 'noise',
     labs: ['noise', 'compare', 'color'],
     missions: [
       { text: 'Add 2 different noise types', link: 'noise', done: (p) => count(p, 'noise') >= 2 },
+      { text: 'Restore noise with the adaptive median', link: 'noise', done: (p) => has(p, 'filters', 'adaptivemedian') },
       { text: 'Rank filters in a comparison', link: 'compare', done: (p) => has(p, 'tools', 'compare') },
       { text: 'Split an image into colour channels', link: 'color', done: (p) => asArray(p?.activities?.color).some((c) => c !== 'enhance') },
       { text: 'Enhance a colour channel', link: 'color', done: (p) => has(p, 'color', 'enhance') },
     ],
   },
   {
-    id: 'u4', num: 'IV', title: 'Segmentation', subtitle: 'Edges, thresholds, regions', icon: 'edges', lab: 'edges',
-    labs: ['edges', 'segmentation'],
+    id: 'u4', num: 'IV', title: 'Segmentation', subtitle: 'Edges, thresholds, morphology, regions', icon: 'edges', lab: 'edges',
+    labs: ['edges', 'segmentation', 'morphology', 'regions'],
     missions: [
       { text: 'Detect edges with Canny', link: 'edges', done: (p) => has(p, 'edges', 'canny') },
       { text: 'Compare 3 edge detectors', link: 'edges', done: (p) => count(p, 'edges') >= 3 },
       { text: "Threshold with Otsu's method", link: 'segmentation', done: (p) => has(p, 'segmentation', 'otsu') },
       { text: 'Grow a region from a seed', link: 'segmentation', done: (p) => has(p, 'segmentation', 'regiongrow') },
+      { text: 'Open or close a binary image', link: 'morphology', done: (p) => has(p, 'morphology', 'open') || has(p, 'morphology', 'close') },
+      { text: 'Fill the holes in an object', link: 'morphology', done: (p) => has(p, 'morphology', 'fill') },
+      { text: 'Read the chain code of a region', link: 'regions', done: (p) => count(p, 'regions') >= 1 },
     ],
   },
 ]
@@ -68,6 +72,7 @@ export const MEDALS = {
   filter_master: '🧪', noise_fighter: '🛡️', histogram_hero: '📊', convolution_expert: '🔄',
   edge_detective: '🔍', segmentation_pro: '🧩', colour_artist: '🎨', perfect_quiz: '💯',
   streak_master: '🔥', experimenter: '⚗️', scholar: '🎓', quiz_regular: '⚡',
+  morphologist: '🫧', shape_analyst: '📐', restorer: '🩹', daily_devotee: '📅',
 }
 
 // All labs with their navigation metadata
@@ -84,4 +89,6 @@ export const LABS = {
   color: { label: 'Color Processing', icon: 'palette', text: 'RGB, HSV, YCbCr and Lab channels and enhancement.' },
   edges: { label: 'Edge Detection', icon: 'edges', text: 'Roberts, Prewitt, Sobel, LoG and Canny.' },
   segmentation: { label: 'Segmentation', icon: 'scissors', text: 'Thresholds, Otsu, region growing, split & merge.' },
+  morphology: { label: 'Morphology Lab', icon: 'morph', text: 'Erosion, dilation, opening, closing, boundaries and hole filling.' },
+  regions: { label: 'Region Analysis', icon: 'regions', text: 'Connected components, chain codes, area, perimeter and centroid.' },
 }

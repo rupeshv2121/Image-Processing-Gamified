@@ -1,4 +1,4 @@
-function out = quizEngine(action, varargin)
+function [out, varargout] = quizEngine(action, varargin)
 %QUIZENGINE Question selection and scoring for the Rapid Fire Quiz.
 %
 %   qs  = quizEngine('select', difficulty, categories, n)
@@ -8,6 +8,11 @@ function out = quizEngine(action, varargin)
 %         Options are shuffled (answer index updated); true/false keep order.
 %
 %   qs  = quizEngine('kernel', n)       generated "identify the kernel" questions
+%   [qs, plan] = quizEngine('weak', stats, n)
+%         weak-topic practice: stats is the categoryStats struct array
+%         (name, answered, correct) of the student. Categories are drawn with
+%         a weight that grows with the error rate, so weak topics get more
+%         questions. plan lists every category with its accuracy and share.
 %   res = quizEngine('score', results)  results: struct array with fields
 %         correct (logical), timeLeft (s), difficulty, category
 %   c   = quizEngine('categories')      list of categories
@@ -16,7 +21,8 @@ switch action
     case 'categories'
         out = {'Fundamentals', 'Histogram', 'Spatial Filters', 'Linear Filters', ...
                'Non-Linear Filters', 'Noise', 'Correlation', 'Convolution', ...
-               'Sharpening', 'Edge Detection', 'Segmentation', 'Color Processing'};
+               'Sharpening', 'Edge Detection', 'Segmentation', 'Color Processing', ...
+               'Morphology', 'Representation'};
 
     case 'select'
         difficulty = argOr(varargin, 1, 'mixed');
@@ -26,6 +32,10 @@ switch action
 
     case 'kernel'
         out = kernelQuestions(argOr(varargin, 1, 10));
+
+    case 'weak'
+        [out, plan] = weakQuestions(argOr(varargin, 1, []), argOr(varargin, 2, 10));
+        varargout{1} = plan;
 
     case 'score'
         out = scoreQuiz(varargin{1});
@@ -60,6 +70,46 @@ qs = Q(chosen);
 for k = 1:numel(qs)
     qs(k) = shuffleOptions(qs(k));
 end
+end
+
+% -------------------------------------------------------------------------
+function [qs, plan] = weakQuestions(stats, n)
+% Weight of a category = estimated error rate, (wrong + 1) / (answered + 2).
+% The +1/+2 (Laplace smoothing) gives unseen categories a weight of 0.5 so
+% they are still practised, and stops one lucky answer from hiding a topic.
+% Squaring the weight makes the quiz focus clearly on the weakest topics.
+Q = questionBank();
+cats = unique({Q.category}, 'stable');
+w = zeros(1, numel(cats));
+acc = nan(1, numel(cats));
+answered = zeros(1, numel(cats));
+for k = 1:numel(cats)
+    a = 0; c = 0;
+    if ~isempty(stats)
+        idx = find(strcmp({stats.name}, cats{k}), 1);
+        if ~isempty(idx), a = double(stats(idx).answered); c = double(stats(idx).correct); end
+    end
+    answered(k) = a;
+    if a > 0, acc(k) = 100 * c / a; end
+    w(k) = ((a - c + 1) / (a + 2))^2;
+end
+
+% Weighted sampling WITHOUT replacement (Efraimidis-Spirakis):
+% key = u^(1/weight) for every question, keep the n largest keys.
+[~, catOf] = ismember({Q.category}, cats);
+keys = rand(1, numel(Q)) .^ (1 ./ w(catOf));
+[~, order] = sort(keys, 'descend');
+qs = Q(order(1:min(n, numel(order))));
+for k = 1:numel(qs)
+    qs(k) = shuffleOptions(qs(k));
+end
+
+share = w / sum(w);
+counts = arrayfun(@(k) nnz(strcmp({qs.category}, cats{k})), 1:numel(cats));
+plan = struct('category', cats, 'accuracy', num2cell(acc), 'answered', num2cell(answered), ...
+    'weight', num2cell(share), 'questions', num2cell(counts));
+[~, o] = sort([plan.weight], 'descend');
+plan = plan(o);
 end
 
 function q = shuffleOptions(q)

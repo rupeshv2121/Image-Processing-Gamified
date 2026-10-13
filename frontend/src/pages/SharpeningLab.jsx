@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../AppContext'
 import { fmt, toMatrix } from '../api'
+import ImagePair from '../components/ImagePair'
 import LabPage from '../components/LabPage'
 import { Card, ImageView, KernelGrid, Metrics, Segmented, Slider, UseButton } from '../components/ui'
 
@@ -72,17 +73,16 @@ export default function SharpeningLab() {
       theory={theory} controls={controls} panelTitle="Method"
       code={{ functions: m.fn, snippets: [{ title: 'MATLAB', code: m.code }] }}>
       <div className="stack">
-        <div className="grid-2">
-          <ImageView id={res?.input || current} title="Original" height={420} />
-          <ImageView id={res ? (view === 'sharp' ? res.id : res.detailId) : null} title={res ? (view === 'sharp' ? 'Sharpened' : METHODS[res.method].detail) : 'Sharpened'}
-            height={420} emptyText="Choose a method and press Sharpen"
-            actions={res && (
+        <ImagePair height={420}
+          left={{ id: res?.input || current, title: 'Original' }}
+          right={{ id: res ? (view === 'sharp' ? res.id : res.detailId) : null, title: res ? (view === 'sharp' ? 'Sharpened' : METHODS[res.method].detail) : 'Sharpened',
+            emptyText: 'Choose a method and press Sharpen',
+            actions: res && (
               <>
                 <Segmented value={view} onChange={setView} options={[{ value: 'sharp', label: 'Result' }, { value: 'detail', label: 'Detail' }]} />
                 <UseButton id={res.id} label={`${METHODS[res.method].label} sharpening`} />
               </>
-            )} />
-        </div>
+            ) }} />
         {res && (
           <div className="grid-2">
             <Metrics items={[

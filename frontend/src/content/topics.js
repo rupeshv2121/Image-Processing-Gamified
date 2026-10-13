@@ -169,14 +169,16 @@ export const TOPICS = [
     formula: 'g(x, y) = h(x, y) ★ f(x, y) + η(x, y)',
   },
   {
-    id: 'restoration', unit: 'Unit III', title: 'Restoration in the Presence of Noise', lab: 'compare', category: 'Noise',
+    id: 'restoration', unit: 'Unit III', title: 'Restoration in the Presence of Noise', lab: 'noise', category: 'Noise',
     summary: 'Recovering the original image using knowledge of the degradation.',
     body: [
       'Image RESTORATION tries to recover the original image using a model of the degradation — it is objective (measured with MSE / PSNR / SSIM), whereas enhancement is subjective.',
       'When noise is the only degradation (h = identity), restoration is done with spatial filters matched to the noise: arithmetic/geometric mean or Gaussian for Gaussian noise; median for impulse noise; max/min for pepper/salt; midpoint for uniform/Gaussian noise; alpha-trimmed mean for mixed noise; adaptive filters adjust to local statistics.',
+      'ADAPTIVE filters change their behaviour with the local statistics. The adaptive local noise-reduction (Wiener-style) filter computes f̂ = g − (σ²η/σ²L)(g − mL): where the local variance σ²L is close to the noise variance σ²η (a flat area) it outputs the local mean, and where σ²L is much larger (an edge) it keeps the pixel.',
+      'The ADAPTIVE MEDIAN filter grows its window from 3×3 up to Smax. Stage A checks that the median is not itself an impulse (zmin < zmed < zmax), otherwise the window grows; stage B keeps the pixel if it is not an impulse (zmin < zxy < zmax) and only otherwise outputs zmed. It removes dense salt & pepper noise while preserving detail that a plain median destroys.',
       'Quality measures: MSE = mean squared error; PSNR = 10 log10(MAX²/MSE) dB; SSIM compares luminance, contrast and structure (1 = identical).',
     ],
-    formula: 'PSNR = 10 · log10(MAX² / MSE)',
+    formula: 'PSNR = 10 · log10(MAX² / MSE)        f̂ = g − (σ²η / σ²L)(g − mL)',
   },
   {
     id: 'colour', unit: 'Unit III', title: 'Colour Fundamentals, Models & Enhancement', lab: 'color', category: 'Color Processing',
@@ -210,6 +212,30 @@ export const TOPICS = [
       'Variable / adaptive thresholding uses a different T for each pixel (e.g. the local mean) to handle uneven illumination.',
     ],
     formula: 'σ²_B(k) = [m_G·P1(k) − m(k)]² / (P1(k)·[1 − P1(k)])',
+  },
+  {
+    id: 'morphology', unit: 'Unit IV', title: 'Morphological Image Processing', lab: 'morphology', category: 'Morphology',
+    summary: 'Erosion, dilation, opening, closing, boundary extraction and hole filling with a structuring element.',
+    body: [
+      'Mathematical morphology analyses SHAPE. A small binary pattern, the structuring element (SE) B, is moved over the image; its origin (usually the centre) marks the output pixel. Typical SEs are squares, disks, diamonds and lines.',
+      'EROSION A ⊖ B keeps a pixel only if B fits completely inside the object at that position: objects shrink, thin connections break and specks smaller than B disappear. DILATION A ⊕ B turns a pixel on wherever the reflected SE touches the object: objects grow and small gaps are bridged. They are duals: (A ⊖ B)ᶜ = Aᶜ ⊕ B̂.',
+      'OPENING A ∘ B = (A ⊖ B) ⊕ B removes small objects and protrusions while keeping the size of large objects. CLOSING A • B = (A ⊕ B) ⊖ B fills small holes and gaps. Both are idempotent: doing them twice changes nothing.',
+      'BOUNDARY EXTRACTION β(A) = A − (A ⊖ B) keeps the outer layer that erosion removes. HOLE FILLING grows the background from the border with conditional dilation, Xk = (Xk−1 ⊕ B) ∩ Aᶜ; whatever background is never reached is a hole.',
+      'On grayscale images a flat SE turns erosion into a minimum filter and dilation into a maximum filter — the order-statistic filters of Unit II.',
+    ],
+    formula: 'A ⊖ B = { z | (B)z ⊆ A }      A ⊕ B = { z | (B̂)z ∩ A ≠ ∅ }',
+  },
+  {
+    id: 'chaincodes', unit: 'Unit IV', title: 'Representation: Chain Codes & Region Descriptors', lab: 'regions', category: 'Representation',
+    summary: 'Describing a region by its boundary (chain code, shape number) and by measurements (area, perimeter, centroid).',
+    body: [
+      'After segmentation every region must be represented in a form a computer can compare. A BOUNDARY representation describes the outline; a REGIONAL representation describes the pixels inside.',
+      'The Freeman CHAIN CODE follows the boundary pixel by pixel and stores the direction of each step: 0 = east, then anticlockwise in 45° steps (2 = north, 4 = west, 6 = south). Even codes are steps of length 1, odd codes are diagonal steps of length √2, so the perimeter is n_even + √2·n_odd.',
+      'The chain code depends on the starting pixel and the orientation. The FIRST DIFFERENCE (number of 45° turns between consecutive steps) removes the dependence on rotation, and the SHAPE NUMBER — the circular rotation of the first difference that forms the smallest number — also removes the dependence on the start point.',
+      'Connectivity matters: under 4-connectivity diagonal pixels do not touch, so a diagonal line falls apart into many regions; under 8-connectivity it is one region.',
+      'Simple descriptors: area (pixel count), centroid (mean x, mean y), bounding box, perimeter, equivalent diameter √(4A/π) and circularity 4πA/P², which is 1 for a circle and smaller for every other shape.',
+    ],
+    formula: 'perimeter = n_even + √2·n_odd        circularity = 4πA / P²',
   },
   {
     id: 'regions', unit: 'Unit IV', title: 'Region-Based Segmentation, Representation & Description', lab: 'segmentation', category: 'Segmentation',

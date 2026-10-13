@@ -1,39 +1,39 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useApp } from './AppContext'
 import { imageUrl } from './api'
 import Icon from './components/Icon'
+import { ProfileMenu } from './components/Profiles'
+import ThemeToggle from './components/ThemeToggle'
 import { Modal } from './components/ui'
 import { LABS, UNITS } from './content/missions'
 import Landing from './pages/Landing'
-import Dashboard from './pages/Dashboard'
-import Achievements from './pages/Achievements'
-import LabsHub from './pages/LabsHub'
-import Learn from './pages/Learn'
-import Workspace from './pages/Workspace'
-import NoiseLab from './pages/NoiseLab'
-import SpatialFilters from './pages/SpatialFilters'
-import HistogramLab from './pages/HistogramLab'
-import SharpeningLab from './pages/SharpeningLab'
-import CorrelationLab from './pages/CorrelationLab'
-import KernelPlayground from './pages/KernelPlayground'
-import EdgeLab from './pages/EdgeLab'
-import SegmentationLab from './pages/SegmentationLab'
-import ColorLab from './pages/ColorLab'
-import Fundamentals from './pages/Fundamentals'
-import FilterComparison from './pages/FilterComparison'
-import Experiments from './pages/Experiments'
-import QuizHub from './pages/QuizHub'
-import Leaderboard from './pages/Leaderboard'
-import Reports from './pages/Reports'
-import Documentation from './pages/Documentation'
-import About from './pages/About'
 
+// Every page except the landing page is loaded on demand (its own JS chunk)
 const PAGES = {
-  dashboard: Dashboard, achievements: Achievements, labs: LabsHub, learn: Learn, workspace: Workspace,
-  noise: NoiseLab, filters: SpatialFilters, histogram: HistogramLab, sharpening: SharpeningLab,
-  correlation: CorrelationLab, kernel: KernelPlayground, edges: EdgeLab, segmentation: SegmentationLab,
-  color: ColorLab, fundamentals: Fundamentals, compare: FilterComparison, experiments: Experiments,
-  quiz: QuizHub, leaderboard: Leaderboard, reports: Reports, docs: Documentation, about: About,
+  dashboard: lazy(() => import('./pages/Dashboard')),
+  achievements: lazy(() => import('./pages/Achievements')),
+  labs: lazy(() => import('./pages/LabsHub')),
+  learn: lazy(() => import('./pages/Learn')),
+  workspace: lazy(() => import('./pages/Workspace')),
+  noise: lazy(() => import('./pages/NoiseLab')),
+  filters: lazy(() => import('./pages/SpatialFilters')),
+  histogram: lazy(() => import('./pages/HistogramLab')),
+  sharpening: lazy(() => import('./pages/SharpeningLab')),
+  correlation: lazy(() => import('./pages/CorrelationLab')),
+  kernel: lazy(() => import('./pages/KernelPlayground')),
+  edges: lazy(() => import('./pages/EdgeLab')),
+  segmentation: lazy(() => import('./pages/SegmentationLab')),
+  morphology: lazy(() => import('./pages/MorphologyLab')),
+  regions: lazy(() => import('./pages/RegionLab')),
+  color: lazy(() => import('./pages/ColorLab')),
+  fundamentals: lazy(() => import('./pages/Fundamentals')),
+  compare: lazy(() => import('./pages/FilterComparison')),
+  experiments: lazy(() => import('./pages/Experiments')),
+  quiz: lazy(() => import('./pages/QuizHub')),
+  leaderboard: lazy(() => import('./pages/Leaderboard')),
+  reports: lazy(() => import('./pages/Reports')),
+  docs: lazy(() => import('./pages/Documentation')),
+  about: lazy(() => import('./pages/About')),
 }
 
 const LAB_KEYS = UNITS.flatMap((u) => u.labs).filter((k) => k !== 'workspace')
@@ -52,9 +52,11 @@ function useHashRoute() {
   return route
 }
 
+const isTyping = (el) => el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
+
 function NavLink({ to, icon, label, route }) {
   return (
-    <a href={`#${to}`} className={`nav-link ${route === to ? 'active' : ''}`}>
+    <a href={`#${to}`} className={`nav-link ${route === to ? 'active' : ''}`} aria-current={route === to ? 'page' : undefined}>
       <Icon name={icon} size={18} /> {label}
     </a>
   )
@@ -68,31 +70,32 @@ function Sidebar({ route }) {
     ['Unit I', ['fundamentals']],
     ['Unit II', ['histogram', 'filters', 'correlation', 'kernel', 'sharpening', 'compare']],
     ['Unit III', ['noise', 'color']],
-    ['Unit IV', ['edges', 'segmentation']],
+    ['Unit IV', ['edges', 'segmentation', 'morphology', 'regions']],
   ]
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" id="sidebar">
       <a className="brand" href="#home">
-        <span className="logo"><i /><i /><i /><i /></span>
+        <span className="logo" aria-hidden="true"><i /><i /><i /><i /></span>
         <span><b>ImageLab</b><small>Image Processing Laboratory</small></span>
       </a>
-      <nav>
+      <nav aria-label="Main">
         <NavLink to="dashboard" icon="dashboard" label="Dashboard" route={route} />
         <NavLink to="workspace" icon="image" label="Workspace" route={route} />
 
         <div className="nav-section">Study</div>
         <NavLink to="learn" icon="book" label="Learn" route={route} />
-        <button className={`nav-link ${labsOpen ? 'open' : ''} ${route === 'labs' ? 'active' : ''}`} onClick={() => setLabsOpen((o) => !o)}>
+        <button className={`nav-link ${labsOpen ? 'open' : ''} ${route === 'labs' ? 'active' : ''}`} onClick={() => setLabsOpen((o) => !o)}
+          aria-expanded={labsOpen} aria-controls="nav-labs">
           <Icon name="flask" size={18} /> Labs <span className="chev"><Icon name="chevron" size={15} /></span>
         </button>
         {labsOpen && (
-          <div className="nav-sub">
-            <a href="#labs" className={`nav-link ${route === 'labs' ? 'active' : ''}`}>All labs</a>
+          <div className="nav-sub" id="nav-labs">
+            <a href="#labs" className={`nav-link ${route === 'labs' ? 'active' : ''}`} aria-current={route === 'labs' ? 'page' : undefined}>All labs</a>
             {unitLabs.map(([unit, keys]) => (
-              <div key={unit}>
-                <div className="nav-unit">{unit}</div>
+              <div key={unit} role="group" aria-label={unit}>
+                <div className="nav-unit" aria-hidden="true">{unit}</div>
                 {keys.map((k) => (
-                  <a key={k} href={`#${k}`} className={`nav-link ${route === k ? 'active' : ''}`}>{LABS[k].label}</a>
+                  <a key={k} href={`#${k}`} className={`nav-link ${route === k ? 'active' : ''}`} aria-current={route === k ? 'page' : undefined}>{LABS[k].label}</a>
                 ))}
               </div>
             ))}
@@ -115,7 +118,7 @@ function Sidebar({ route }) {
   )
 }
 
-function TopBar({ onMenu }) {
+function TopBar({ onMenu, navOpen }) {
   const { matlab, meta, current, progress } = useApp()
   const xp = progress?.xp || 0
   const level = progress?.level || 1
@@ -123,9 +126,9 @@ function TopBar({ onMenu }) {
   const hi = level ** 2 * 100
   return (
     <header className="topbar">
-      <button className="icon-btn menu-btn" onClick={onMenu} aria-label="Menu"><Icon name="menu" /></button>
-      <span className="pill" title={matlab.ok ? (matlab.ipt ? 'Image Processing Toolbox functions are used' : 'Toolbox not installed — ImageLab uses its manual MATLAB implementations') : ''}>
-        <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} />
+      <button className="icon-btn menu-btn" onClick={onMenu} aria-label={navOpen ? 'Close menu' : 'Open menu'} aria-expanded={navOpen} aria-controls="sidebar"><Icon name="menu" /></button>
+      <span className="pill" role="status" title={matlab.ok ? (matlab.ipt ? 'Image Processing Toolbox functions are used' : 'Toolbox not installed — ImageLab uses its manual MATLAB implementations') : ''}>
+        <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} aria-hidden="true" />
         {matlab.ok ? <>MATLAB <b>{matlab.release}</b>{!matlab.ipt && <span className="faint">· manual mode</span>}</> : matlab.ready ? <span style={{ color: 'var(--red-500)' }}>MATLAB unavailable</span> : 'Starting MATLAB…'}
       </span>
       {meta && (
@@ -134,31 +137,76 @@ function TopBar({ onMenu }) {
         </a>
       )}
       <span className="spacer" />
-      <a className="level-chip" href="#achievements" title={`${xp} XP`}>
+      <ThemeToggle />
+      <ProfileMenu />
+      <a className="level-chip" href="#achievements" title={`${xp} XP`} aria-label={`Level ${level}, ${xp} XP — achievements`}>
         <span className="lv">{level}</span>
         <span>Level {level}</span>
-        <span className="xpbar"><i style={{ width: `${Math.min(100, ((xp - lo) / (hi - lo)) * 100)}%` }} /></span>
+        <span className="xpbar" aria-hidden="true"><i style={{ width: `${Math.min(100, ((xp - lo) / (hi - lo)) * 100)}%` }} /></span>
       </a>
     </header>
   )
 }
 
+function Shortcuts({ onClose }) {
+  const rows = [
+    ['Ctrl + Z', 'Undo the last workspace step'],
+    ['Ctrl + Y  /  Ctrl + Shift + Z', 'Redo'],
+    ['1 – 4  or  A – D', 'Answer a quiz question'],
+    ['Enter', 'Next quiz question'],
+    ['← / →  (Shift = bigger steps)', 'Move a before/after slider'],
+    ['Esc', 'Close a dialog, the theory panel or the menu'],
+    ['?', 'Show this list'],
+  ]
+  return (
+    <Modal title="Keyboard shortcuts" onClose={onClose}>
+      <table className="data"><tbody>{rows.map(([k, t]) => <tr key={k}><td><kbd>{k}</kbd></td><td>{t}</td></tr>)}</tbody></table>
+    </Modal>
+  )
+}
+
+function PageFallback() {
+  return <div className="page page-loading" aria-busy="true"><span className="spinner dark" /> Loading…</div>
+}
+
 export default function App() {
   const route = useHashRoute()
-  const { busy, busyLabel, alertMsg, setAlertMsg, toast } = useApp()
+  const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify } = useApp()
   const [navOpen, setNavOpen] = useState(false)
+  const [help, setHelp] = useState(false)
+  const main = useRef(null)
   useEffect(() => setNavOpen(false), [route])
+
+  // Global keys: Esc closes the mobile menu, Ctrl+Z / Ctrl+Y undo and redo, ? lists shortcuts
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && navOpen) { setNavOpen(false); return }
+      if (isTyping(e.target) || document.querySelector('.modal-backdrop')) return
+      const mod = e.ctrlKey || e.metaKey
+      const k = e.key.toLowerCase()
+      if (mod && k === 'z' && !e.shiftKey) {
+        if (canUndo) { e.preventDefault(); undo(); notify(`Undo: ${history[index]?.label}`) }
+      } else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) {
+        if (canRedo) { e.preventDefault(); redo(); notify(`Redo: ${history[index + 1]?.label}`) }
+      } else if (e.key === '?' && !mod) {
+        setHelp(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navOpen, canUndo, canRedo, undo, redo, history, index, notify])
 
   const overlays = (
     <>
-      {busy && <div className="busy"><span className="spinner" /> MATLAB · {busyLabel}…</div>}
-      {toast && <div className="toast">{toast.text}</div>}
+      {busy && <div className="busy" role="status"><span className="spinner" aria-hidden="true" /> MATLAB · {busyLabel}…</div>}
+      {toast && <div className="toast" role="status" aria-live="polite">{toast.text}</div>}
       {alertMsg && (
         <Modal title={alertMsg.title} onClose={() => setAlertMsg(null)}>
-          <p className="alert-text">{alertMsg.text}</p>
+          <p className="alert-text" role="alert">{alertMsg.text}</p>
           <div className="row right"><button className="btn btn-primary" onClick={() => setAlertMsg(null)}>OK</button></div>
         </Modal>
       )}
+      {help && <Shortcuts onClose={() => setHelp(false)} />}
     </>
   )
 
@@ -168,11 +216,16 @@ export default function App() {
   const PageComponent = PAGES[route]
   return (
     <div className={`app ${navOpen ? 'nav-open' : ''}`}>
+      <a className="skip-link" href="#main-content" onClick={(e) => { e.preventDefault(); main.current?.focus() }}>Skip to content</a>
       <Sidebar route={route} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="main-col">
-        <TopBar onMenu={() => setNavOpen((o) => !o)} />
-        <main className="main"><PageComponent key={route} /></main>
+        <TopBar onMenu={() => setNavOpen((o) => !o)} navOpen={navOpen} />
+        <main className="main" id="main-content" ref={main} tabIndex={-1}>
+          <Suspense fallback={<PageFallback />}>
+            <PageComponent key={route} />
+          </Suspense>
+        </main>
       </div>
       {overlays}
     </div>

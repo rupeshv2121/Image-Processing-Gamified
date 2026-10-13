@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
+import ImagePair from '../components/ImagePair'
 import LabPage from '../components/LabPage'
 import { Card, Histogram, ImageView, Metrics, Note, Segmented, Select, Slider, Tabs, UseButton } from '../components/ui'
 
@@ -126,18 +127,17 @@ export default function SegmentationLab() {
       <div className={res ? 'mt' : ''}>
         <Tabs tabs={[{ key: 'result', label: 'Result' }, { key: 'hist', label: 'Histogram' }, { key: 'regions', label: `Regions${res ? ` (${props.length})` : ''}` }]} active={tab} onChange={setTab} />
         {tab === 'result' && (
-          <div className="grid-2">
-            <ImageView id={res?.input || current} title={method === 'regiongrow' ? 'Input — click to set the seed' : 'Input'} height={400}
-              onPick={method === 'regiongrow' ? setSeed : undefined} />
-            <ImageView id={shownId} title="Segmentation" height={400}
-              emptyText={method === 'regiongrow' ? 'Click the input image to grow a region' : 'Press Segment'}
-              actions={res && (
+          <ImagePair height={400} modes={['side', 'slider']}
+            left={{ id: res?.input || current, title: method === 'regiongrow' ? 'Input — click to set the seed' : 'Input',
+              onPick: method === 'regiongrow' ? setSeed : undefined }}
+            right={{ id: shownId, title: 'Segmentation',
+              emptyText: method === 'regiongrow' ? 'Click the input image to grow a region' : 'Press Segment',
+              actions: res && (
                 <>
                   <Segmented value={view} onChange={setView} options={[{ value: 'overlay', label: 'Overlay' }, { value: 'binary', label: 'Binary' }, ...(res.extraId ? [{ value: 'extra', label: 'Response' }] : [])]} />
                   <UseButton id={res.id} label={`${m.label} segmentation`} />
                 </>
-              )} />
-          </div>
+              ) }} />
         )}
         {tab === 'hist' && (
           <Card>
@@ -163,7 +163,7 @@ export default function SegmentationLab() {
                 </tbody>
               </table>
             ) : <p className="muted">No regions yet.</p>}
-            <p className="small faint mt-sm">Largest 15 regions · bwlabel + regionprops equivalent · 8-connectivity.</p>
+            <p className="small faint mt-sm">Largest 15 regions · bwlabel + regionprops equivalent · 8-connectivity. For chain codes and 4- vs 8-connectivity open <a href="#regions">Region Analysis</a>.</p>
           </Card>
         )}
       </div>

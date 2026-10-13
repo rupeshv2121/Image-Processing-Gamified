@@ -6,8 +6,9 @@ import { Note } from './ui'
 // Builds the report payload and asks MATLAB (generateReport.m) to write it.
 export default function ReportForm({ experiment, run, quizScore }) {
   const { call } = useApp()
-  const [students, setStudents] = useState(() => localStorage.getItem('imagelab.students') || '')
-  const [rolls, setRolls] = useState(() => localStorage.getItem('imagelab.rolls') || '')
+  const { profile } = useApp()
+  const [students, setStudents] = useState(() => localStorage.getItem('imagelab.students') || profile?.name || '')
+  const [rolls, setRolls] = useState(() => localStorage.getItem('imagelab.rolls') || profile?.roll || '')
   const [link, setLink] = useState(null)
 
   const generate = async () => {
@@ -48,10 +49,11 @@ export default function ReportForm({ experiment, run, quizScore }) {
       {!run && <Note kind="warn">Run the experiment first so the report contains input/output images and metrics.</Note>}
       <div className="row">
         <button className="btn btn-primary" onClick={generate}>⎙ Generate report</button>
-        {link && <a className="btn btn-navy" href={`/reports/${link.name}`} target="_blank" rel="noreferrer">Open report (print → Save as PDF)</a>}
+        {link?.pdf && <a className="btn btn-navy" href={`/reports/${link.pdf}`} download>Download PDF</a>}
+        {link && <a className="btn" href={`/reports/${link.name}`} target="_blank" rel="noreferrer">Open HTML report</a>}
         {link?.docx && <a className="btn" href={`/reports/${link.docx}`}>Download .docx</a>}
       </div>
-      {link && <p className="small muted">Saved by MATLAB to reports/output/{link.name}</p>}
+      {link && <p className="small muted">Saved by MATLAB to reports/output/{link.pdf || link.name}{link.pdf ? ' (and the .html version)' : ''}</p>}
     </div>
   )
 }

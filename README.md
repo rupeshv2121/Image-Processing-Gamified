@@ -40,23 +40,28 @@ interaction**, and the Python server is only a bridge between the two.
 | Area | What you can do |
 |---|---|
 | Dashboard | Current image, experiments completed, filters tested, quiz score, topics, XP, badges, demo flow |
-| Learn | 20 theory topics following the syllabus, each linked to a lab |
-| Image Workspace | Load / save, undo / redo, zoom, grayscale, image information, histogram |
+| Learn | 22 theory topics following the syllabus, each linked to a lab |
+| Image Workspace | Load / save / **webcam capture**, undo / redo (Ctrl+Z / Ctrl+Y), zoom, grayscale, image information, histogram |
 | Pixels & Sampling | N4 / ND / N8 / m-adjacency, De / D4 / D8 distances, sampling, quantisation |
 | Histogram Lab | Histogram, equalisation (toolbox + manual), CLAHE, stretching, gamma, log, negative, statistics |
-| Spatial Filters | Mean, weighted mean, Gaussian, Laplacian, Sobel, Prewitt, median, min, max, midpoint, rank, alpha-trimmed — **toolbox vs manual, side by side** |
+| Spatial Filters | Mean, weighted mean, Gaussian, Laplacian, Sobel, Prewitt, median, min, max, midpoint, rank, alpha-trimmed, adaptive median, adaptive local (Wiener) — **toolbox vs manual, side by side** |
 | Correlation & Convolution | Step-by-step kernel movement, products and sums, kernel flipping, verification against `filter2` / `conv2` |
 | Kernel Playground | Editable 3×3 / 5×5 / 7×7 kernels, presets, live update, saved kernels |
 | Sharpening Lab | Laplacian, Sobel, Prewitt, unsharp masking, high-boost |
-| Noise Lab | Gaussian, salt & pepper, speckle, Poisson; MSE / PSNR / SSIM |
+| Noise Lab | Gaussian, salt & pepper, speckle, Poisson; MSE / PSNR / SSIM; **restore** with adaptive median, adaptive local (Wiener), median and mean |
 | Filter Comparison | Several filters on the same noisy image; metrics table and MATLAB `bar` charts |
 | Edge Detection | Roberts, Prewitt, Sobel, LoG, Canny; manual gradient images; edge count / density / time |
 | Segmentation | Global (live slider), iterative, Otsu, adaptive, point & line detection, region growing, split & merge, region properties |
+| Morphology Lab | Erosion, dilation, opening, closing, boundary extraction, hole filling; clickable structuring-element editor; binary and grayscale; fast vs manual loops; change map |
+| Region Analysis | Connected-component labelling (4 / 8-connectivity), Freeman chain codes, first difference, shape number, area, perimeter, centroid, circularity |
 | Color Processing | RGB, HSV, YCbCr, L\*a\*b\* channels; per-channel enhancement |
 | Experiments | 13 experiments with aim, theory, algorithm, MATLAB code (toolbox / manual), run, observation, conclusion, quiz |
-| Quiz & games | Rapid Fire (10 s timer), Kernel Quiz, Guess the Filter, Build the Pipeline, Challenge Mode, Classroom Mode |
-| Leaderboard | Stored in `quizzes/leaderboard.mat` (MATLAB table) |
-| Reports | HTML report (print to PDF / open in Word), DOCX if MATLAB Report Generator is installed |
+| Quiz & games | Daily Challenge (same “match the target” puzzle for everyone each day, streaks), Weak-Topic Practice (questions weighted by your error rate), Rapid Fire (10 s timer), Kernel Quiz, Guess the Filter, Build the Pipeline, Challenge Mode, Classroom Mode |
+| Students | Several student profiles on one computer, each with its own XP, badges, quiz history and streak (`data/profiles.mat`) |
+| Leaderboard | Quiz scores in `quizzes/leaderboard.mat` (MATLAB table) and a class ranking of all student profiles |
+| Reports | A4 PDF written by base MATLAB (`generateReportPdf`), HTML report, DOCX if MATLAB Report Generator is installed |
+| Every lab | Compare input and result **side by side, with a before/after slider or as an error heat map** (\|result − input\| with PSNR / SSIM); pixel inspector (value + 3×3 neighbourhood) on every image |
+| Interface | Responsive (phone to desktop), light / dark / system theme, keyboard shortcuts (press `?`), accessible focus outlines and labels, pages loaded on demand |
 
 Frequency-domain filtering is intentionally **not** included (out of scope).
 
@@ -318,14 +323,16 @@ ImageLab/
 │                  unsharp mask, high-boost …
 ├── noise/         Gaussian, salt & pepper, speckle, Poisson
 ├── histogram/     imhist, equalisation, CLAHE, stretching, gamma, log, negative, statistics
-├── metrics/       MSE, PSNR, SSIM
+├── metrics/       MSE, PSNR, SSIM, error heat map
 ├── segmentation/  global / iterative / Otsu / adaptive thresholds, point & line detection,
-│                  region growing, split & merge, labelling, boundaries, region properties
+│                  region growing, split & merge, labelling, boundaries, region properties,
+│                  chain codes and chain-code descriptors
+├── morphology/    structuring elements, erosion, dilation, opening, closing, boundary, hole filling
 ├── color/         channels, RGB↔YCbCr, RGB↔Lab, enhancement
 ├── fundamentals/  sampling, quantisation, neighbourhoods, distances
-├── quizzes/       question bank, quiz engine, leaderboard, progress, pipeline problems
+├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, pipeline problems
 ├── experiments/   experimentCatalog, runExperiment
-├── reports/       generateReport (output in reports/output/)
+├── reports/       generateReport (HTML) + generateReportPdf (PDF) — output in reports/output/
 ├── api/           ilab_dispatch (single entry point), ilab_store (image store), samples, charts
 ├── tests/         ImageLabTests (matlab.unittest), smokeTestApi
 ├── sample_images/ peppers.png + generated teaching images

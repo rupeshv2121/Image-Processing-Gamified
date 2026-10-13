@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../AppContext'
 import { fmt, fmtPsnr, toMatrix } from '../api'
+import ImagePair from '../components/ImagePair'
 import LabPage from '../components/LabPage'
 import { Card, ImageView, KernelGrid, Metrics, Note, Segmented, Slider, Tabs, UseButton } from '../components/ui'
 
@@ -16,6 +17,8 @@ export const FILTERS = {
   max: { group: 'nonlinear', label: 'Max', fn: ['maxFilter', 'orderStatisticFilter', 'orderStatisticFilterManual'], text: 'Rank N: the brightest neighbour. Removes pepper (black) noise, brightens/dilates bright objects.', code: 'J = ordfilt2(I, k*k, true(k));' },
   midpoint: { group: 'nonlinear', label: 'Midpoint', fn: ['midpointFilter'], text: '(min + max) / 2 — combines order statistics with averaging. Good for Gaussian/uniform noise, bad for impulses.', code: 'J = (ordfilt2(I,1,true(k)) + ordfilt2(I,k*k,true(k))) / 2;' },
   order: { group: 'nonlinear', label: 'Rank', fn: ['orderStatisticFilter', 'orderStatisticFilterManual'], text: 'General rank filter: sort the window and pick any position. Rank 1 = min, ⌈N/2⌉ = median, N = max.', code: 'J = ordfilt2(I, rank, true(k));' },
+  adaptivemedian: { group: 'nonlinear', label: 'Adaptive median', fn: ['adaptiveMedianFilter', 'neighborhoodStack'], text: 'Grows the window from 3×3 up to the chosen maximum and only replaces pixels that look like impulses (zxy = zmin or zmax). Removes dense salt & pepper noise while keeping fine detail that the plain median destroys.', code: '% no single toolbox call - see adaptiveMedianFilter.m\nJ = adaptiveMedianFilter(I, Smax);' },
+  adaptivelocal: { group: 'nonlinear', label: 'Adaptive local (Wiener)', fn: ['adaptiveLocalFilter', 'filter2D'], text: 'f̂ = g − (σ²η/σ²L)(g − mL). Smooths where the local variance is close to the noise variance (flat areas) and keeps the pixel where it is much larger (edges). σ²η is estimated from the image.', code: 'J = wiener2(I, [k k]);' },
   alphatrimmed: { group: 'nonlinear', label: 'Alpha-trimmed', fn: ['alphaTrimmedMeanFilter'], text: 'Drops the d/2 lowest and highest values, averages the rest. Between mean (d = 0) and median (d = N−1): good for mixed noise.', code: "S = sort(window(:));\nJ(i,j) = mean(S(d/2+1 : end-d/2));" },
 }
 
@@ -72,7 +75,7 @@ export default function SpatialFilters() {
           <button key={key} className={`choice ${name === key ? 'active' : ''}`} onClick={() => setName(key)}>{v.label}</button>
         ))}
       </div>
-      {!fixed3 && <Slider label="Kernel size" value={k} min={3} max={15} step={2} format={(v) => `${v}×${v}`} onChange={(v) => { setK(v); setRank(Math.ceil((v * v) / 2)) }} />}
+      {!fixed3 && <Slider label={name === 'adaptivemedian' ? 'Maximum window Smax' : 'Kernel size'} value={k} min={3} max={15} step={2} format={(v) => `${v}×${v}`} onChange={(v) => { setK(v); setRank(Math.ceil((v * v) / 2)) }} />}
       {name === 'gaussian' && <Slider label="Sigma σ" value={sigma} min={0.3} max={5} step={0.1} onChange={setSigma} />}
       {name === 'order' && (
         <>
@@ -106,12 +109,11 @@ export default function SpatialFilters() {
         <>
           <Tabs tabs={[{ key: 'result', label: 'Result' }, ...(runs[1] ? [{ key: 'compare', label: 'Toolbox vs manual' }] : []), { key: 'details', label: 'Kernel & metrics' }]} active={tab} onChange={setTab} />
           {tab === 'result' && (
-            <div className="grid-2">
-              <ImageView id={res.input} title={`Input · ${res.inputLabel}`} height={420} />
-              <ImageView id={runs[0].id} title={`${FILTERS[res.name].label} ${res.k}×${res.k}`} height={420}
-                badge={runs[0].psnr != null ? fmtPsnr(runs[0].psnr) : null}
-                actions={<UseButton id={runs[0].id} label={`${FILTERS[res.name].label} ${res.k}×${res.k}`} />} />
-            </div>
+            <ImagePair height={420}
+              left={{ id: res.input, title: `Input · ${res.inputLabel}` }}
+              right={{ id: runs[0].id, title: `${FILTERS[res.name].label} ${res.k}×${res.k}`,
+                badge: runs[0].psnr != null ? fmtPsnr(runs[0].psnr) : null,
+                actions: <UseButton id={runs[0].id} label={`${FILTERS[res.name].label} ${res.k}×${res.k}`} /> }} />
           )}
           {tab === 'compare' && runs[1] && (
             <div className="stack">
