@@ -160,7 +160,7 @@ export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, hei
 
 export function ImageGrid({ items, columns = 3, height = 240, pixelated }) {
   return (
-    <div className="img-grid" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${Math.floor(900 / columns)}px, 1fr))` }}>
+    <div className="img-grid" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${Math.floor(900 / columns)}px, 100%), 1fr))` }}>
       {items.filter(Boolean).map((it, i) => (
         <ImageView key={it.id || i} height={height} pixelated={pixelated} {...it} />
       ))}

@@ -142,7 +142,7 @@ export default function Fundamentals() {
       )}
       {tab === 'samp' && (
         <NeedImage>
-          <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+          <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))' }}>
             {sView === 'sampling'
               ? samp?.map((s) => <ImageView key={s.id} id={s.id} title={SAMPLE_NAMES[s.factor]} caption={`${s.width} × ${s.height} samples`} height={240} pixelated />)
               : quant?.map((x) => <ImageView key={x.id} id={x.id} title={`${x.bits} bit · ${x.levels} levels`} caption={`PSNR ${x.psnr == null ? '∞' : fmt(x.psnr, 1) + ' dB'}`} height={240} />)}

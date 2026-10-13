@@ -124,7 +124,7 @@ export default function Workspace() {
 
       {showSamples && (
         <Modal title="Sample images" onClose={() => setShowSamples(false)} wide>
-          <div className="tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+          <div className="tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))' }}>
             {samples.map((s) => (
               <button key={s.name} className="tile" onClick={() => pickSample(s.name)}>
                 <span className="ic"><Icon name="image" /></span>

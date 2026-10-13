@@ -18,13 +18,13 @@ export default function LabsHub() {
                 <h2>Unit {u.num} · {u.title}</h2>
                 <p className="muted small">{u.subtitle}</p>
               </div>
-              <div style={{ width: 180 }}>
+              <div className="unit-progress">
                 <div className="row between small"><span className="faint">Level progress</span><b>{pr.done}/{pr.total}</b></div>
                 <div className="progressbar" style={{ marginTop: 6 }}><div style={{ width: `${pr.ratio * 100}%` }} /></div>
               </div>
             </div>
-            <div className="grid-2" style={{ gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', alignItems: 'start' }}>
-              <div className="tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
+            <div className="unit-grid">
+              <div className="tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(230px, 100%), 1fr))' }}>
                 {u.labs.map((k) => (
                   <a key={k} className="tile" href={`#${k}`}>
                     <span className="ic"><Icon name={LABS[k].icon} size={22} /></span>

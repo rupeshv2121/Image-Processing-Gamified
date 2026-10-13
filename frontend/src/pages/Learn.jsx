@@ -35,8 +35,8 @@ export default function Learn() {
 
   return (
     <Page eyebrow="Study" title="Learn" subtitle={`Theory notes following the syllabus · ${done.length} of ${TOPICS.length} topics completed`}>
-      <div className="lab">
-        <Card>
+      <div className="lab learn">
+        <Card className="learn-topics">
           <div className="topic-list">
             {UNITS.map((u) => (
               <div key={u}>

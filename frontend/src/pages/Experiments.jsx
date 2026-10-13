@@ -72,7 +72,7 @@ function ExperimentDetail({ exp, onBack }) {
           </Card>
           {run && (
             <>
-              <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+              <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))' }}>
                 {asArray(run.images).map((im) => <ImageView key={im.id} id={im.id} title={im.label} height={210} />)}
               </div>
               <div className="grid-2">

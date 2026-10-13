@@ -73,7 +73,7 @@ export default function EdgeLab() {
         <>
           <Tabs tabs={[{ key: 'maps', label: 'Edge maps' }, { key: 'compare', label: 'Comparison' }, ...(res.manual ? [{ key: 'grad', label: 'Manual gradients' }] : [])]} active={tab} onChange={setTab} />
           {tab === 'maps' && (
-            <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+            <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))' }}>
               <ImageView id={res.input} title="Original" height={300} />
               {results.map((r) => (
                 <ImageView key={r.method} id={r.id} title={label(r.method)} height={300} badge={`${fmt(r.density, 1)}%`} />

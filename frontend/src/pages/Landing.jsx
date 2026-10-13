@@ -132,7 +132,7 @@ function LiveDemo() {
     <div className="grid-2" style={{ alignItems: 'center', gap: 56 }}>
       <div>
         <div className="eyebrow">Live · computed by MATLAB right now</div>
-        <h2 style={{ fontSize: 34 }}>Drag to see a filter clean an image</h2>
+        <h2 className="l-h2">Drag to see a filter clean an image</h2>
         <p className="muted" style={{ fontSize: 16.5, margin: '14px 0 26px' }}>
           8% of the pixels in this photo were replaced by salt & pepper noise. Choose a filter — MATLAB runs it and
           measures the result. Notice how the non-linear median filter wins.
@@ -241,7 +241,7 @@ export default function Landing() {
         <a className="l-link" href="#home" onClick={(e) => { e.preventDefault(); scrollTo('quest') }}>Quest</a>
         <a className="l-link" href="#home" onClick={(e) => { e.preventDefault(); scrollTo('arcade') }}>Arcade</a>
         <span className="spacer" />
-        <span className="pill" style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)', color: '#c9d4e5' }}>
+        <span className="pill l-status" style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)', color: '#c9d4e5' }}>
           <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} /> {matlab.ok ? `MATLAB ${matlab.release}` : matlab.ready ? 'MATLAB unavailable' : 'Starting MATLAB…'}
         </span>
         <a className="btn btn-primary" href="#dashboard">Enter the Lab</a>
@@ -371,7 +371,7 @@ export default function Landing() {
         <div className="l-inner grid-2" style={{ alignItems: 'center', gap: 56 }}>
           <div>
             <div className="eyebrow">The Arcade</div>
-            <h2 style={{ fontSize: 34 }}>Ten questions. Ten seconds each.</h2>
+            <h2 className="l-h2">Ten questions. Ten seconds each.</h2>
             <p className="muted" style={{ fontSize: 16.5, margin: '14px 0 28px' }}>
               Rapid Fire, Kernel Quiz, Guess the Filter, Build the Pipeline and a timed restoration challenge.
               Streaks multiply your score — the best make the podium.

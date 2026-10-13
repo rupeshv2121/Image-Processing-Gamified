@@ -169,6 +169,7 @@ export default function App() {
   return (
     <div className={`app ${navOpen ? 'nav-open' : ''}`}>
       <Sidebar route={route} />
+      {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="main-col">
         <TopBar onMenu={() => setNavOpen((o) => !o)} />
         <main className="main"><PageComponent key={route} /></main>

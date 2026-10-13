@@ -78,7 +78,7 @@ export default function PipelineGame() {
                 <button className="btn" onClick={() => { setSteps([]); setRes(null) }}>Clear</button>
               </div>
             </Card>
-            <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+            <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))' }}>
               <ImageView id={start.degradedId} title="Degraded input" height={200} caption={`PSNR ${fmtPsnr(start.psnr)} · SSIM ${fmt(start.ssim, 3)}`} />
               {resSteps.map((s, i) => (
                 <ImageView key={s.id} id={s.id} title={`${i + 1}. ${label(s.block)}`} height={200} caption={`PSNR ${fmtPsnr(s.psnr)} · SSIM ${fmt(s.ssim, 3)}`} />

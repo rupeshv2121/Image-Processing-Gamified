@@ -104,7 +104,7 @@ export default function FilterComparison() {
             </div>
           )}
           {tab === 'images' && (
-            <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+            <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))' }}>
               <ImageView id={res.cleanId} title="Original" height={250} />
               <ImageView id={res.noisyId} title="Noisy" height={250} badge={fmtPsnr(res.noisy.psnr)} />
               {results.map((r) => <ImageView key={r.id} id={r.id} title={r.label} height={250} badge={fmtPsnr(r.psnr)} />)}
