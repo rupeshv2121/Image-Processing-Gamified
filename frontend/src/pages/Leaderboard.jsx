@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
-import { Card, Modal, Page, Segmented } from '../components/ui'
+import { initials, StudentsModal } from '../components/Profiles'
+import { Card, Modal, Page, Segmented, Tabs } from '../components/ui'
 
 export default function Leaderboard() {
-  const { call, matlab } = useApp()
+  const { call, matlab, profiles, profileId, refreshProfiles } = useApp()
   const [rows, setRows] = useState([])
   const [mode, setMode] = useState('all')
   const [confirm, setConfirm] = useState(false)
+  const [tab, setTab] = useState('scores')
+  const [manage, setManage] = useState(false)
+  useEffect(() => { if (matlab.ok && tab === 'class') refreshProfiles() }, [matlab.ok, tab, refreshProfiles])
+  const klass = profiles.slice().sort((a, b) => b.xp - a.xp || b.bestScore - a.bestScore)
 
   const load = async () => {
     const d = await call('leaderboard', { action: 'get' }, { label: 'Loading leaderboard.mat' })
@@ -24,9 +29,31 @@ export default function Leaderboard() {
   const shown = rows.filter((r) => mode === 'all' || r.Mode === mode)
 
   return (
-    <Page eyebrow="Play" title="Leaderboard" subtitle="Top scores, stored by MATLAB in quizzes/leaderboard.mat."
-      actions={<><button className="btn" onClick={load}>Refresh</button><button className="btn btn-danger" onClick={() => setConfirm(true)} disabled={!rows.length}>Clear…</button></>}>
-      <Card>
+    <Page eyebrow="Play" title="Leaderboard" subtitle="Top quiz scores (quizzes/leaderboard.mat) and the class ranking of every student profile on this computer."
+      actions={tab === 'scores'
+        ? <><button className="btn" onClick={load}>Refresh</button><button className="btn btn-danger" onClick={() => setConfirm(true)} disabled={!rows.length}>Clear…</button></>
+        : <><button className="btn" onClick={refreshProfiles}>Refresh</button><button className="btn btn-navy" onClick={() => setManage(true)}>Manage students…</button></>}>
+      <Tabs tabs={[{ key: 'scores', label: 'Quiz scores' }, { key: 'class', label: `Class (${profiles.length})` }]} active={tab} onChange={setTab} />
+      {tab === 'class' && (
+        <Card>
+          <table className="data">
+            <thead><tr><th>Rank</th><th>Student</th><th>Roll no.</th><th>Level</th><th>XP</th><th>Badges</th><th>Quizzes</th><th>Accuracy</th><th>Best score</th><th>Daily streak</th></tr></thead>
+            <tbody>
+              {klass.map((s, i) => (
+                <tr key={s.id} className={s.id === profileId ? 'best' : ''}>
+                  <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
+                  <td><span className="avatar sm">{initials(s.name)}</span> <b>{s.name}</b>{s.id === profileId && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</td>
+                  <td>{s.roll || <span className="faint">—</span>}</td>
+                  <td>{s.level}</td><td><b>{s.xp}</b></td><td>{s.badges}</td><td>{s.quizzes}</td>
+                  <td>{s.quizzes ? `${fmt(s.accuracy, 0)}%` : '—'}</td><td>{s.bestScore}</td><td>{s.dailyStreak ? `${s.dailyStreak} 🔥` : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {profiles.length < 2 && <p className="small muted mt-sm">Only one student so far. Add classmates with <b>Manage students…</b> — each gets their own XP, badges and streak, and they all appear here.</p>}
+        </Card>
+      )}
+      {tab === 'scores' && <Card>
         {modes.length > 2 && <div style={{ marginBottom: 12 }}><Segmented value={mode} onChange={setMode} options={modes.map((m) => ({ value: m, label: m === 'all' ? 'All modes' : m }))} /></div>}
         {shown.length ? (
           <table className="data">
@@ -44,7 +71,8 @@ export default function Leaderboard() {
         ) : (
           <p className="muted">No scores yet. Play the <a href="#quiz">Rapid Fire Quiz</a> and enter your name to appear here.</p>
         )}
-      </Card>
+      </Card>}
+      {manage && <StudentsModal onClose={() => setManage(false)} />}
       {confirm && (
         <Modal title="Clear the leaderboard?" onClose={() => setConfirm(false)}>
           <p>All {rows.length} entries in leaderboard.mat will be deleted. This cannot be undone.</p>

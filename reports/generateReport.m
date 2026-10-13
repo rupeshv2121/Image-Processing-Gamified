@@ -13,6 +13,7 @@ function info = generateReport(R)
 %
 %   info.file / info.name  - the HTML report
 %   info.docx              - the Word report ('' if Report Generator is missing)
+%   info.pdf               - A4 PDF written with base MATLAB (generateReportPdf)
 
 root = fileparts(fileparts(mfilename('fullpath')));
 outDir = fullfile(root, 'reports', 'output');
@@ -114,8 +115,14 @@ fid = fopen(file, 'w', 'n', 'UTF-8');
 fprintf(fid, '%s\n', h{:});
 fclose(fid);
 
-info = struct('file', file, 'name', [base '.html'], 'docx', '');
+info = struct('file', file, 'name', [base '.html'], 'docx', '', 'pdf', '');
 info.docx = tryDocx(R, outDir, base);
+try
+    generateReportPdf(R, fullfile(outDir, [base '.pdf']));
+    info.pdf = [base '.pdf'];
+catch
+    info.pdf = '';                       % the HTML report is still available
+end
 end
 
 % -------------------------------------------------------------------------

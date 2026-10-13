@@ -41,7 +41,7 @@ export function Tabs({ tabs, active, onChange }) {
         const key = typeof t === 'string' ? t : t.key
         const label = typeof t === 'string' ? t : t.label
         return (
-          <button key={key} role="tab" className={active === key ? 'tab active' : 'tab'} onClick={() => onChange(key)}>
+          <button key={key} role="tab" aria-selected={active === key} className={active === key ? 'tab active' : 'tab'} onClick={() => onChange(key)}>
             {label}
           </button>
         )
@@ -101,7 +101,7 @@ export function Segmented({ value, options, onChange }) {
         const v = typeof o === 'string' ? o : o.value
         const l = typeof o === 'string' ? o : o.label
         return (
-          <button key={v} className={value === v ? 'active' : ''} onClick={() => onChange(v)}>
+          <button key={v} className={value === v ? 'active' : ''} aria-pressed={value === v} onClick={() => onChange(v)}>
             {l}
           </button>
         )
@@ -111,29 +111,119 @@ export function Segmented({ value, options, onChange }) {
 }
 
 // ------------------------------------------------------------------ images
-export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, height, badge, actions, emptyText }) {
+// Pixel values for the inspector are read from the PNG that MATLAB wrote
+// (display only — no processing happens in the browser). Cached per image id.
+const pixelCache = new Map()
+function loadPixels(id) {
+  if (pixelCache.has(id)) return pixelCache.get(id)
+  const promise = new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = img.naturalWidth
+      c.height = img.naturalHeight
+      const ctx = c.getContext('2d', { willReadFrequently: true })
+      ctx.drawImage(img, 0, 0)
+      const data = ctx.getImageData(0, 0, c.width, c.height).data
+      let gray = true
+      for (let i = 0; i < data.length && gray; i += 4 * 97) gray = data[i] === data[i + 1] && data[i] === data[i + 2]
+      resolve({ w: c.width, h: c.height, data, gray })
+    }
+    img.onerror = () => reject(new Error('image not available'))
+    img.src = imageUrl(id)
+  })
+  pixelCache.set(id, promise)
+  if (pixelCache.size > 12) pixelCache.delete(pixelCache.keys().next().value)
+  return promise
+}
+
+// Maps a pointer position to the 1-based (row, col) of the image pixel under it
+function pixelAt(img, clientX, clientY) {
+  const rect = img.getBoundingClientRect()
+  const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight)
+  const w = img.naturalWidth * scale
+  const h = img.naturalHeight * scale
+  const x = (clientX - rect.left - (rect.width - w) / 2) / scale
+  const y = (clientY - rect.top - (rect.height - h) / 2) / scale
+  if (x < 0 || y < 0 || x >= img.naturalWidth || y >= img.naturalHeight) return null
+  return { row: Math.floor(y) + 1, col: Math.floor(x) + 1, left: clientX - rect.left < rect.width / 2, top: clientY - rect.top < rect.height / 2 }
+}
+
+function PixelPanel({ px, pixels }) {
+  const value = (r, c) => {
+    if (r < 1 || c < 1 || r > pixels.h || c > pixels.w) return null
+    const i = ((r - 1) * pixels.w + (c - 1)) * 4
+    return pixels.gray ? [pixels.data[i]] : [pixels.data[i], pixels.data[i + 1], pixels.data[i + 2]]
+  }
+  const v = value(px.row, px.col)
+  return (
+    <div className={`pixel-panel ${px.left ? 'right' : 'left'} ${px.top ? 'bottom' : 'top'}`} aria-live="polite">
+      <div className="pixel-head">
+        <span>row {px.row}, col {px.col}</span>
+        {v && <b>{pixels.gray ? v[0] : `${v[0]}, ${v[1]}, ${v[2]}`}</b>}
+      </div>
+      {v && !pixels.gray && <div className="pixel-swatch" style={{ background: `rgb(${v.join(',')})` }} />}
+      <table className="pixel-grid">
+        <tbody>
+          {[-1, 0, 1].map((dr) => (
+            <tr key={dr}>
+              {[-1, 0, 1].map((dc) => {
+                const n = value(px.row + dr, px.col + dc)
+                const g = n ? Math.round(n.reduce((a, b) => a + b, 0) / n.length) : null
+                return (
+                  <td key={dc} className={dr === 0 && dc === 0 ? 'center' : ''}
+                    style={g == null ? undefined : { background: `rgb(${n.length === 1 ? `${g},${g},${g}` : n.join(',')})`, color: g > 140 ? '#111' : '#fff' }}>
+                    {g == null ? '·' : g}
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="pixel-foot">{pixels.gray ? '3×3 neighbourhood (grey level)' : '3×3 neighbourhood (mean of R, G, B)'}</div>
+    </div>
+  )
+}
+
+export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, height, badge, actions, emptyText, inspectable = true }) {
   const ref = useRef(null)
+  const [inspect, setInspect] = useState(false)
+  const [pixels, setPixels] = useState(null)
+  const [px, setPx] = useState(null)
+
+  useEffect(() => {
+    setPx(null)
+    if (!inspect || !id) { setPixels(null); return }
+    let live = true
+    loadPixels(id).then((p) => live && setPixels(p)).catch(() => live && setInspect(false))
+    return () => { live = false }
+  }, [inspect, id])
+
   const click = (e) => {
     if (!onPick || !ref.current) return
-    const img = ref.current
-    const rect = img.getBoundingClientRect()
-    const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight)
-    const w = img.naturalWidth * scale
-    const h = img.naturalHeight * scale
-    const x = (e.clientX - rect.left - (rect.width - w) / 2) / scale
-    const y = (e.clientY - rect.top - (rect.height - h) / 2) / scale
-    if (x >= 0 && y >= 0 && x < img.naturalWidth && y < img.naturalHeight) {
-      onPick({ row: Math.floor(y) + 1, col: Math.floor(x) + 1 })
-    }
+    const p = pixelAt(ref.current, e.clientX, e.clientY)
+    if (p) onPick({ row: p.row, col: p.col })
   }
+  const move = (e) => {
+    if (!inspect || !ref.current) return
+    setPx(pixelAt(ref.current, e.clientX, e.clientY))
+  }
+  const toggle = id && inspectable && (
+    <button className={`icon-btn inspect-btn ${inspect ? 'on' : ''}`} onClick={() => setInspect((v) => !v)}
+      aria-pressed={inspect} aria-label="Pixel inspector" title="Pixel inspector: hover to read pixel values">
+      <Icon name="target" size={16} />
+    </button>
+  )
   return (
     <figure className="imgview">
-      {(title || badge || actions) && (
+      {(title || badge || actions || toggle) && (
         <figcaption className="imgview-title">
           <span>{title}</span>
           <span className="imgview-actions">
             {badge && <span className="badge">{badge}</span>}
             {actions}
+            {toggle}
           </span>
         </figcaption>
       )}
@@ -145,13 +235,17 @@ export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, hei
               src={imageUrl(id)}
               alt={title || 'image'}
               onClick={click}
-              className={`${pixelated ? 'pixelated' : ''} ${onPick ? 'pickable' : ''}`}
+              onPointerMove={inspect ? move : undefined}
+              onPointerLeave={inspect ? () => setPx(null) : undefined}
+              className={`${pixelated || inspect ? 'pixelated' : ''} ${onPick || inspect ? 'pickable' : ''}`}
               style={zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: 'none', maxHeight: 'none', height: 'auto' } : undefined}
             />
           </div>
         ) : (
           <div className="imgview-empty"><Icon name="image" size={28} stroke={1.4} />{emptyText || 'Result appears here'}</div>
         )}
+        {inspect && pixels && px && <PixelPanel px={px} pixels={pixels} />}
+        {inspect && pixels && !px && <div className="pixel-hint">Hover over the image to read pixel values</div>}
       </div>
       {caption && <div className="imgview-caption">{caption}</div>}
     </figure>
@@ -278,16 +372,25 @@ export function BarChart({ values, labels, title, unit = '', height = 180, highe
 
 // ------------------------------------------------------------------ modal
 export function Modal({ title, onClose, children, wide }) {
+  const box = useRef(null)
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+  // Move focus into the dialog and give it back to the opener on close
+  useEffect(() => {
+    const opener = document.activeElement
+    const first = box.current?.querySelector('.modal-body button, .modal-body a[href], .modal-body input, .modal-body select, .modal-body textarea')
+    ;(first || box.current)?.focus()
+    return () => opener?.focus?.()
+  }, [])
+  const titleId = `modal-${String(title).replace(/\W+/g, '-').toLowerCase()}`
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className={`modal ${wide ? 'wide' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div ref={box} tabIndex={-1} className={`modal ${wide ? 'wide' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="modal-head">
-          <h3>{title}</h3>
+          <h3 id={titleId}>{title}</h3>
           <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <div className="modal-body">{children}</div>

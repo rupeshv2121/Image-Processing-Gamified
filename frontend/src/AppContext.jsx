@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { run, serverStatus, uploadImage } from './api'
+import { asArray, getProfileId, run, serverStatus, setProfileId, uploadImage } from './api'
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
@@ -14,7 +14,21 @@ export function AppProvider({ children }) {
   const [busyLabel, setBusyLabel] = useState('')
   const [alertMsg, setAlertMsg] = useState(null)
   const [toast, setToast] = useState(null)
+  const [profiles, setProfiles] = useState([])
+  const [profileId, setProfileState] = useState(getProfileId)
+  const [theme, setThemeState] = useState(() => {
+    try { return localStorage.getItem('imagelab.theme') || 'system' } catch { return 'system' }
+  })
   const toastTimer = useRef(null)
+
+  // ---------------------------------------------------------- theme
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme === 'system') delete root.dataset.theme
+    else root.dataset.theme = theme
+    try { localStorage.setItem('imagelab.theme', theme) } catch { /* storage unavailable */ }
+  }, [theme])
+  const setTheme = useCallback((t) => setThemeState(t), [])
 
   // ---------------------------------------------------------- MATLAB status
   useEffect(() => {
@@ -26,6 +40,7 @@ export function AppProvider({ children }) {
           if (s.matlab) {
             const ping = await run('ping')
             if (!stop) setMatlab({ ready: true, ok: true, error: null, ipt: ping.ipt, iptLicensed: ping.iptLicensed, release: ping.release })
+            await refreshProfiles()
             refreshProgress()
             // Deep link for demos: #filters?sample=peppers.png loads a sample image
             const m = window.location.hash.match(/[?&]sample=([\w.-]+)/)
@@ -80,6 +95,43 @@ export function AppProvider({ children }) {
       return null
     }
   }, [])
+
+  // ------------------------------------------------------------- profiles
+  const refreshProfiles = useCallback(async () => {
+    try {
+      const list = asArray(await run('profiles', { action: 'list' }))
+      setProfiles(list)
+      if (!list.some((x) => x.id === getProfileId())) {   // deleted elsewhere
+        setProfileId('default')
+        setProfileState('default')
+      }
+      return list
+    } catch {
+      return null
+    }
+  }, [])
+
+  const switchProfile = useCallback(async (id) => {
+    setProfileId(id)
+    setProfileState(id)
+    const p = await refreshProgress()
+    const who = profiles.find((x) => x.id === id)
+    if (p && who) notify(`Signed in as ${who.name}`)
+  }, [refreshProgress, profiles, notify])
+
+  // Add / rename / delete a student. Returns the new list (or null on error).
+  const editProfiles = useCallback(async (params, label) => {
+    const list = await call('profiles', params, { label })
+    if (!list) return null
+    const arr = asArray(list)
+    setProfiles(arr)
+    if (!arr.some((x) => x.id === getProfileId())) {
+      setProfileId('default')
+      setProfileState('default')
+      refreshProgress()
+    }
+    return arr
+  }, [call, refreshProgress])
 
   // ------------------------------------------------------------- image state
   const setNewImage = useCallback((data) => {
@@ -139,6 +191,9 @@ export function AppProvider({ children }) {
     currentLabel: history[index]?.label || '',
     canUndo: index > 0, canRedo: index < history.length - 1,
     loadSample, upload, push, undo, redo, reset,
+    profiles, profileId, profile: profiles.find((x) => x.id === profileId) || null,
+    refreshProfiles, switchProfile, editProfiles,
+    theme, setTheme,
   }
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

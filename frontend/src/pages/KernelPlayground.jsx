@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt, toMatrix } from '../api'
 import { evalNumber } from '../matrix'
+import ImagePair from '../components/ImagePair'
 import LabPage from '../components/LabPage'
 import { Card, ImageView, KernelGrid, Note, Segmented, Select, UseButton } from '../components/ui'
 
@@ -132,14 +133,21 @@ export default function KernelPlayground() {
           {error && <Note kind="error">{error}</Note>}
           <p className="small mt" style={{ color: 'var(--text-2)' }}>{description}</p>
         </Card>
-        <ImageView id={view === 'input' ? current : res?.id || null} title={view === 'input' ? 'Input' : 'Output'} height={460} emptyText="Edit the kernel to see the result"
-          caption={res && view === 'output' ? `${fmt(res.timeMs, 1)} ms · display: ${res.display}${res.symmetric ? ' · symmetric kernel' : ''}` : null}
-          actions={
-            <>
-              <Segmented value={view} onChange={setView} options={[{ value: 'output', label: 'Output' }, { value: 'input', label: 'Input' }]} />
-              {res && <UseButton id={res.id} label="Custom kernel" />}
-            </>
-          } />
+        {view === 'input' ? (
+          <ImageView id={current} title="Input" height={460}
+            actions={<Segmented value={view} onChange={setView} options={[{ value: 'output', label: 'Output' }, { value: 'input', label: 'Input' }]} />} />
+        ) : (
+          <ImagePair height={460} modes={['single', 'slider', 'error']}
+            left={{ id: current, title: 'Input' }}
+            right={{ id: res?.id || null, title: 'Output', emptyText: 'Edit the kernel to see the result',
+              caption: res ? `${fmt(res.timeMs, 1)} ms · display: ${res.display}${res.symmetric ? ' · symmetric kernel' : ''}` : null,
+              actions: (
+                <>
+                  <Segmented value={view} onChange={setView} options={[{ value: 'output', label: 'Output' }, { value: 'input', label: 'Input' }]} />
+                  {res && <UseButton id={res.id} label="Custom kernel" />}
+                </>
+              ) }} />
+        )}
       </div>
     </LabPage>
   )

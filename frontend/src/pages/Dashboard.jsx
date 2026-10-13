@@ -22,6 +22,11 @@ const DEMO_FLOW = [
   ['leaderboard', 'Show the leaderboard'],
 ]
 
+const todayStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function Dashboard() {
   const { progress, refreshProgress, matlab, meta, loadSample } = useApp()
   const [tour, setTour] = useState(false)
@@ -58,6 +63,18 @@ export default function Dashboard() {
         <Ring value={doneCount / all.length} size={150} stroke={12} track="rgba(255,255,255,0.12)" color="var(--green-400)"
           label={`${Math.round((doneCount / all.length) * 100)}%`} sub="quest complete" />
       </section>
+
+      <a className="next-mission daily-card" href="#quiz?game=daily" style={{ marginBottom: 16, color: 'inherit', textDecoration: 'none' }}>
+        <div className="ic amber"><Icon name="calendar" size={26} /></div>
+        <div style={{ flex: 1 }}>
+          <div className="tiny faint" style={{ fontWeight: 700, letterSpacing: 1 }}>DAILY CHALLENGE</div>
+          <h3 style={{ marginTop: 2 }}>
+            {asArray(p.dailyHistory).some((h) => h.solved && h.date === todayStr()) ? 'Solved today — come back tomorrow!' : 'Today’s “match the target” puzzle is waiting'}
+          </h3>
+        </div>
+        <span className="badge badge-warn">{p.dailyStreak || 0} day streak 🔥</span>
+        <Icon name="arrow" />
+      </a>
 
       {next && (
         <a className="next-mission" href={`#${next.mission.link}`} style={{ marginBottom: 28, color: 'inherit', textDecoration: 'none' }}>
@@ -100,6 +117,8 @@ export default function Dashboard() {
             {[
               ['image', 'Load an image', '#workspace'],
               ['zap', 'Rapid Fire Quiz', '#quiz'],
+              ['target', 'Practise weak topics', '#quiz?game=weak'],
+              ['morph', 'Morphology Lab', '#morphology'],
               ['compare', 'Compare filters', '#compare'],
               ['file', 'Run an experiment', '#experiments'],
             ].map(([ic, t, href]) => (

@@ -19,6 +19,8 @@ try
     if isfield(req, 'params') && isstruct(req.params), p = req.params; end
     % "track": false = preview request (e.g. landing-page demo) - no XP/progress
     trackingEnabled(~(isfield(p, 'track') && isequal(p.track, false)));
+    % Progress, XP and badges belong to the student profile chosen in the UI
+    profileManager('use', char(P(p, 'profileId', 'default')));
     data = route(op, p);
     response = jsonencode(struct('ok', true, 'op', op, 'data', {data}, ...
         'elapsedMs', 1000 * toc(t0)), 'ConvertInfAndNaN', true);
@@ -62,6 +64,11 @@ switch op
 
     case 'histogramOf'
         data = struct('counts', imhistManual(img(p.id)), 'stats', imageStatistics(img(p.id)));
+
+    case 'errorMap'
+        [H, ~, stats] = errorMap(img(p.id), img(p.refId));
+        data = stats;
+        data.id = put(H, 'error');
 
     % ------------------------------------------------------------ noise
     case 'noise'
@@ -259,6 +266,19 @@ switch op
         data = segmentImage(img(p.id), p);
         activity('segmentation', char(P(p, 'method', 'otsu')));
 
+    % ------------------------------------------------------------ morphology
+    case 'structuringElement'
+        data = ilab_mat(structuringElement(char(P(p, 'shape', 'square')), P(p, 'size', 3)));
+
+    case 'morphology'
+        data = morphologyOp(img(p.id), p);
+        activity('morphology', char(P(p, 'operation', 'erode')));
+
+    % ------------------------------------------------- representation
+    case 'regions'
+        data = regionAnalysis(img(p.id), p);
+        activity('regions', sprintf('conn%d', data.conn));
+
     % ------------------------------------------------------------ colour
     case 'color'
         I = img(p.id);
@@ -323,14 +343,23 @@ switch op
         data = quizEngine('categories');
 
     case 'quizQuestions'
+        plan = [];
         if strcmp(char(P(p, 'mode', 'bank')), 'kernel')
             qs = quizEngine('kernel', P(p, 'n', 10));
+        elseif strcmp(char(P(p, 'mode', 'bank')), 'weak')
+            prog = progressManager('get');
+            stats = prog.categoryStats;
+            if iscell(stats), stats = [stats{:}]; end
+            [qs, plan] = quizEngine('weak', stats, P(p, 'n', 10));
         else
             qs = quizEngine('select', char(P(p, 'difficulty', 'mixed')), P(p, 'categories', 'all'), P(p, 'n', 10));
         end
         data = arrayfun(@(q) struct('id', q.id, 'category', q.category, 'difficulty', q.difficulty, ...
             'type', q.type, 'question', q.question, 'options', {q.options}, 'answer', q.answer, ...
             'explanation', q.explanation, 'kernel', matOrEmpty(q.kernel)), qs(:)', 'UniformOutput', false);
+        if ~isempty(plan)
+            data = struct('questions', {data}, 'plan', {lst(plan)});
+        end
 
     case 'quizSubmit'
         results = P(p, 'results', []);
@@ -370,6 +399,18 @@ switch op
 
     case 'pipelineRun'
         data = runPipeline(p);
+        date = char(P(p, 'daily', ''));
+        if ~isempty(date)
+            checkDate(date);
+            % Bonus: 10 points per dB of PSNR gained (a perfect match has PSNR = Inf)
+            bonus = min(200, max(0, round(10 * (data.after.psnr - data.before.psnr))));
+            data.points = data.points + bonus * ~strcmp(data.verdict, 'wrong');
+            data.psnrBonus = bonus;
+            data.progress = progressManager('daily', date, data.points, strcmp(data.verdict, 'correct'));
+        end
+
+    case 'dailyStart'
+        data = startDaily(char(P(p, 'date', char(datetime('today', 'Format', 'yyyy-MM-dd')))));
 
     case 'challengeStart'
         data = startChallenge(img(p.id), char(P(p, 'level', 'medium')), p);
@@ -383,6 +424,14 @@ switch op
             data = lst(leaderboardManager('add', p.entry));
         else
             data = lst(leaderboardManager(action));
+        end
+
+    case 'profiles'
+        switch char(P(p, 'action', 'list'))
+            case 'add',    data = profileManager('add', char(P(p, 'name', '')), char(P(p, 'roll', '')));
+            case 'update', data = profileManager('update', char(P(p, 'id', '')), char(P(p, 'name', '')), char(P(p, 'roll', '')));
+            case 'remove', data = profileManager('remove', char(P(p, 'id', '')));
+            otherwise,     data = profileManager('list');
         end
 
     case 'progress'
@@ -410,7 +459,7 @@ switch op
         R = runExperiment(n, I);
         data = struct('number', R.number, 'images', {lst(R.images)}, 'metrics', {lst(R.metrics)}, ...
             'observations', {R.observations}, 'kernel', matOrEmpty(R.kernel), 'parameters', R.parameters);
-        progressManager('experiment', n);
+        if trackingEnabled(), progressManager('experiment', n); end
 
     case 'report'
         R = p;
@@ -418,7 +467,7 @@ switch op
         if isfield(R, 'metrics') && iscell(R.metrics), R.metrics = [R.metrics{:}]; end
         if isfield(R, 'kernel') && isstruct(R.kernel), R.kernel = []; end
         info = generateReport(R);
-        data = struct('name', info.name, 'docx', info.docx);
+        data = struct('name', info.name, 'docx', info.docx, 'pdf', info.pdf);
 
     otherwise
         error('ImageLab:unknownOperation', 'Unknown operation "%s".', op);
@@ -466,9 +515,9 @@ data = struct('id', id, 'name', name, 'info', describe(I), ...
     'resized', resized);
 end
 
-function [I, resized] = limitSize(I)
+function [I, resized] = limitSize(I, maxSide)
 % Keep images at most 640 px on the longest side so manual loops stay fast
-maxSide = 640;
+if nargin < 2, maxSide = 640; end
 [h, w, ~] = size(I);
 resized = max(h, w) > maxSide;
 if resized
@@ -607,6 +656,206 @@ data = struct('id', put(BW, 'bw'), 'overlayId', put(overlay, 'overlay'), ...
     'extraId', extraId, 'threshold', level, ...
     'foreground', 100 * nnz(BW) / numel(BW), 'regions', n, 'props', {lst(props)}, ...
     'histogram', imhistManual(G));
+end
+
+% =========================================================================
+% Morphology lab
+function data = morphologyOp(I, p)
+op = char(P(p, 'operation', 'erode'));
+SE = validateSE(double(P(p, 'se', ones(3))));
+mode = char(P(p, 'mode', 'binary'));
+if any(strcmp(op, {'boundary', 'fill'})), mode = 'binary'; end
+level = [];
+if strcmp(mode, 'binary')
+    [A, level] = otsuThreshold(I);
+    A = logical(A);
+    if logical(P(p, 'invert', false)), A = ~A; end
+else
+    A = toDouble(I);
+end
+manual = strcmp(char(P(p, 'impl', 'toolbox')), 'manual');
+if manual
+    er = @(X) morphologyManual(X, SE, 'erode');
+    di = @(X) morphologyManual(X, SE, 'dilate');
+else
+    er = @(X) erodeImage(X, SE);
+    di = @(X) dilateImage(X, SE);
+end
+fname = '';
+tic;
+switch op
+    case 'erode',    J = er(A);        fname = 'erodeImage';
+    case 'dilate',   J = di(A);        fname = 'dilateImage';
+    case 'open',     J = di(er(A));    fname = 'openImage';
+    case 'close',    J = er(di(A));    fname = 'closeImage';
+    case 'boundary', J = A & ~er(A);   fname = 'morphBoundary';
+    case 'fill',     J = fillHoles(A); fname = 'fillHoles';
+    otherwise
+        error('ImageLab:invalidParameter', 'Unknown morphological operation "%s".', op);
+end
+t = 1000 * toc;
+if manual && ~strcmp(op, 'fill'), fname = 'morphologyManual'; end
+
+if islogical(J)
+    % Change map: kept object white, removed pixels red, added pixels green
+    kept = A & J; removed = A & ~J; added = ~A & J;
+    change = cat(3, double(kept | removed), double(kept | added), double(kept));
+    change = 0.04 + 0.92 * change;
+    [~, nBefore] = labelComponents(A, 8);
+    [~, nAfter] = labelComponents(J, 8);
+    stats = struct('foregroundBefore', 100 * nnz(A) / numel(A), 'foregroundAfter', 100 * nnz(J) / numel(J), ...
+        'regionsBefore', nBefore, 'regionsAfter', nAfter, ...
+        'removed', nnz(removed), 'added', nnz(added));
+else
+    change = min(abs(J - A) * 4, 1);
+    stats = struct('meanBefore', 255 * mean(A(:)), 'meanAfter', 255 * mean(J(:)), ...
+        'changed', 100 * mean(any(abs(J - A) > 0.5 / 255, 3), 'all'));
+end
+if manual
+    implementation = 'Manual implementation (explicit loops)';
+elseif hasIPT()
+    implementation = 'MATLAB Image Processing Toolbox (imerode / imdilate)';
+else
+    implementation = 'Vectorised base MATLAB (one shifted min/max per SE element)';
+end
+if strcmp(op, 'fill'), implementation = 'Connected-component labelling of the background (base MATLAB)'; end
+data = struct('id', put(J, op), 'inputId', put(A, 'morphin'), 'changeId', put(change, 'change'), ...
+    'operation', op, 'mode', mode, 'binary', islogical(J), 'threshold', level, ...
+    'se', ilab_mat(SE), 'timeMs', t, 'functionName', fname, 'implementation', implementation, ...
+    'stats', stats);
+end
+
+% =========================================================================
+% Region analysis (representation & description)
+function data = regionAnalysis(I, p)
+G = toGray(I);
+if strcmp(char(P(p, 'method', 'otsu')), 'global')
+    level = P(p, 'threshold', 0.5);
+    BW = G > level;
+else
+    [BW, level] = otsuThreshold(G);
+    BW = logical(BW);
+end
+if logical(P(p, 'invert', false)), BW = ~BW; end
+conn = P(p, 'conn', 8);
+if ~any(conn == [4 8]), conn = 8; end
+minArea = max(1, round(P(p, 'minArea', 20)));
+
+tic;
+[L, n] = labelComponents(BW, conn);
+tLabel = 1000 * toc;
+areas = accumarray(L(L > 0), 1, [max(n, 1) 1]);
+if n == 0, areas = zeros(0, 1); end
+[~, byArea] = sort(areas, 'descend');
+byArea = byArea(areas(byArea) >= minArea);
+total = numel(byArea);
+shown = byArea(1:min(40, total));
+
+% Colour every kept region; regions below minArea stay dark grey
+% (golden-ratio hue steps keep neighbouring labels clearly different)
+palette = zeros(numel(shown), 3);
+if ~isempty(shown)
+    palette = hsv2rgb([mod((0:numel(shown)-1)' * 0.618034, 1), 0.62 * ones(numel(shown), 1), 0.95 * ones(numel(shown), 1)]);
+end
+R = 0.25 * G; Gc = R; B = R;
+small = BW & ~ismember(L, shown);
+R(small) = 0.45; Gc(small) = 0.45; B(small) = 0.45;
+regions = cell(1, numel(shown));
+for k = 1:numel(shown)
+    mask = L == shown(k);
+    R(mask) = palette(k, 1); Gc(mask) = palette(k, 2); B(mask) = palette(k, 3);
+
+    [r, c] = find(mask);
+    r0 = min(r); r1 = max(r); c0 = min(c); c1 = max(c);
+    [code, bnd] = chainCode(mask(r0:r1, c0:c1));
+    bnd = bnd + [r0 c0] - 1;
+    d = chainCodeDescriptors(code);
+    area = numel(r);
+    if d.perimeter > 0, circ = 4 * pi * area / d.perimeter^2; else, circ = 1; end
+    regions{k} = struct('label', k, 'area', area, ...
+        'centroidX', mean(c), 'centroidY', mean(r), ...
+        'bboxX', c0, 'bboxY', r0, 'bboxWidth', c1 - c0 + 1, 'bboxHeight', r1 - r0 + 1, ...
+        'boundaryPixels', size(bnd, 1), 'perimeter', d.perimeter, ...
+        'circularity', min(circ, 1), 'equivDiameter', sqrt(4 * area / pi), ...
+        'color', sprintf('#%02x%02x%02x', round(255 * palette(k, :))), ...
+        'chainLength', numel(code), 'chain', clip(sprintf('%d', code), 800), ...
+        'firstDifference', clip(sprintf('%d', d.firstDifference), 800), ...
+        'shapeNumber', clip(sprintf('%d', d.shapeNumber), 800), ...
+        'nEven', d.nEven, 'nOdd', d.nOdd, 'startRow', r0, 'startCol', bnd(1, 2), ...
+        'cropId', put(regionCrop(G, mask, bnd, r0, r1, c0, c1), 'region'));
+end
+labelImage = cat(3, R, Gc, B);
+data = struct('id', put(labelImage, 'labels'), 'binaryId', put(BW, 'bw'), ...
+    'threshold', level, 'conn', conn, 'minArea', minArea, ...
+    'components', n, 'kept', total, 'shown', numel(shown), ...
+    'labelTimeMs', tLabel, 'regions', {regions}, ...
+    'implementation', ternary(hasIPT(), 'bwlabel (toolbox) + chainCode.m', 'labelComponents.m (BFS) + chainCode.m'));
+end
+
+function C = regionCrop(G, mask, bnd, r0, r1, c0, c1)
+% Close-up of one region: grey image, region tinted, traced boundary red,
+% start pixel yellow. Enlarged with nearest-neighbour so pixels stay visible.
+m = 3;
+rr = max(1, r0 - m):min(size(G, 1), r1 + m);
+cc = max(1, c0 - m):min(size(G, 2), c1 + m);
+g = G(rr, cc);
+k = mask(rr, cc);
+R = g * 0.5; Gc = R; B = R;
+R(k) = 0.35 + 0.3 * g(k); Gc(k) = 0.6 + 0.3 * g(k); B(k) = 0.45 + 0.3 * g(k);
+idx = sub2ind(size(g), bnd(:, 1) - rr(1) + 1, bnd(:, 2) - cc(1) + 1);
+R(idx) = 1; Gc(idx) = 0.15; B(idx) = 0.15;
+R(idx(1)) = 1; Gc(idx(1)) = 0.85; B(idx(1)) = 0;
+C = cat(3, R, Gc, B);
+f = max(1, min(12, floor(160 / max(size(C, 1), size(C, 2)))));
+C = repelem(C, f, f, 1);
+end
+
+function s = clip(s, n)
+if numel(s) > n, s = [s(1:n) '...']; end
+end
+
+function v = ternary(c, a, b)
+if c, v = a; else, v = b; end
+end
+
+% =========================================================================
+% Daily challenge: same puzzle for everybody on a given date
+function data = startDaily(date)
+checkDate(date);
+seedValue = str2double(strrep(date, '-', ''));
+rng(seedValue);
+probs = pipelineProblems();
+prob = probs(randi(numel(probs)));
+pool = {'peppers.png', 'shapes.png', 'lowcontrast.png', 'unevenlight.png', 'cameraman.tif', 'coins.png', 'moon.tif', 'pout.tif'};
+generateSampleImages(false);
+names = {sampleImages('list').name};
+pool = pool(ismember(pool, names));
+sample = pool{randi(numel(pool))};
+[I, map] = imread(sampleImages('path', sample));
+if ~isempty(map), I = ind2rgb(I, map); end
+I = limitSize(toDouble(I(:, :, 1:min(3, size(I, 3)))), 400);
+D = degradeImage(I, prob.degrade);
+rng('shuffle');
+q = imageQuality(D, I);
+prog = progressManager('get');
+hist = prog.dailyHistory;
+if iscell(hist), hist = [hist{:}]; end
+today = struct('solved', false, 'points', 0, 'attempts', 0);
+if ~isempty(hist)
+    idx = find(strcmp({hist.date}, date), 1);
+    if ~isempty(idx), today = hist(idx); end
+end
+data = struct('date', date, 'problemId', prob.id, 'title', prob.title, ...
+    'description', prob.description, 'sample', sample, ...
+    'cleanId', put(I, 'target'), 'degradedId', put(D, 'daily'), ...
+    'psnr', q.psnr, 'ssim', q.ssim, 'solved', today.solved, 'bestPoints', today.points, ...
+    'attempts', today.attempts, 'streak', prog.dailyStreak, 'history', {lst(hist)});
+end
+
+function checkDate(date)
+if isempty(regexp(date, '^\d{4}-\d{2}-\d{2}$', 'once'))
+    error('ImageLab:invalidParameter', 'Invalid date "%s" (expected YYYY-MM-DD).', date);
+end
 end
 
 % =========================================================================

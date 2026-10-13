@@ -311,5 +311,135 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyEqual(size(info.adjacent8, 1), 3);    % (1,2) (1,3) (3,3)
             tc.verifyEqual(size(info.adjacentM, 1), 2);    % (1,3) dropped, (3,3) kept
         end
+
+        % -------------------------------------------------- morphology
+        function structuringElementShapes(tc)
+            tc.verifyEqual(structuringElement('square', 3), true(3));
+            tc.verifyEqual(structuringElement('cross', 3), logical([0 1 0; 1 1 1; 0 1 0]));
+            tc.verifyEqual(structuringElement('diamond', 5), logical([0 0 1 0 0; 0 1 1 1 0; 1 1 1 1 1; 0 1 1 1 0; 0 0 1 0 0]));
+            tc.verifyEqual(structuringElement('disk', 5), logical([0 1 1 1 0; 1 1 1 1 1; 1 1 1 1 1; 1 1 1 1 1; 0 1 1 1 0]));
+            tc.verifyEqual(structuringElement('hline', 3), logical([0 0 0; 1 1 1; 0 0 0]));
+            tc.verifyError(@() validateSE(zeros(3)), 'ImageLab:invalidSE');
+            tc.verifyError(@() validateSE(ones(2)), 'ImageLab:invalidSE');
+        end
+
+        function erodeDilateMatchManual(tc)
+            SE = logical([0 1 0; 1 1 1; 0 1 1]);           % asymmetric on purpose
+            BW = tc.Img > 0.6;
+            tc.verifyEqual(erodeImage(BW, SE), morphologyManual(BW, SE, 'erode'));
+            tc.verifyEqual(dilateImage(BW, SE), morphologyManual(BW, SE, 'dilate'));
+            tc.verifyEqual(erodeImage(tc.Img, SE), morphologyManual(tc.Img, SE, 'erode'), 'AbsTol', 1e-12);
+            tc.verifyEqual(dilateImage(tc.ImgRGB, SE), morphologyManual(tc.ImgRGB, SE, 'dilate'), 'AbsTol', 1e-12);
+            tc.verifyClass(erodeImage(BW, SE), 'logical');
+        end
+
+        function grayErosionIsMinFilter(tc)
+            E = erodeImage(tc.Img, true(3));
+            M = minFilter(tc.Img, 3);                       % borders are padded differently
+            tc.verifyEqual(E(2:end-1, 2:end-1), M(2:end-1, 2:end-1), 'AbsTol', 1e-12);
+        end
+
+        function erosionDilationDuality(tc)
+            SE = structuringElement('disk', 5);
+            BW = tc.Img > 0.55;
+            tc.verifyEqual(erodeImage(BW, SE), ~dilateImage(~BW, SE));
+        end
+
+        function openingAndClosingAreIdempotent(tc)
+            SE = structuringElement('square', 3);
+            BW = tc.Img > 0.55;
+            O = openImage(BW, SE);
+            C = closeImage(BW, SE);
+            tc.verifyEqual(openImage(O, SE), O);
+            tc.verifyEqual(closeImage(C, SE), C);
+            tc.verifyTrue(all(O(:) <= BW(:)));              % opening is anti-extensive
+            tc.verifyTrue(all(C(:) >= BW(:)));              % closing is extensive
+        end
+
+        function boundaryOfSquare(tc)
+            BW = false(9); BW(3:7, 3:7) = true;
+            B = morphBoundary(BW, true(3));
+            tc.verifyEqual(nnz(B), 16);
+            tc.verifyFalse(B(5, 5));
+        end
+
+        function fillHolesFillsOnlyEnclosedBackground(tc)
+            BW = false(12); BW(2:8, 2:8) = true; BW(4:6, 4:6) = false;   % ring with a 3x3 hole
+            BW(10:12, 10:12) = true; BW(11:12, 12) = false;              % notch open to the border
+            [F, holes] = fillHoles(BW);
+            tc.verifyEqual(nnz(holes), 9);
+            tc.verifyTrue(all(F(4:6, 4:6), 'all'));
+            tc.verifyFalse(F(12, 12));
+        end
+
+        % -------------------------------------------------- representation
+        function chainCodeOfSquares(tc)
+            tc.verifyEqual(chainCode(true(2)), [6 0 2 4]);
+            BW = false(5); BW(2:4, 2:4) = true;
+            [code, bnd, start] = chainCode(BW);
+            tc.verifyEqual(code, [6 6 0 0 2 2 4 4]);
+            tc.verifyEqual(size(bnd, 1), 8);
+            tc.verifyEqual(start, [2 2]);
+            tc.verifyEmpty(chainCode(logical([0 0; 0 1])));                % single pixel
+            tc.verifyEqual(chainCode(logical(eye(3))), [7 7 3 3]);         % diagonal line
+        end
+
+        function chainCodeDescriptorsInvariance(tc)
+            d = chainCodeDescriptors([6 6 0 0 2 2 4 4]);
+            tc.verifyEqual(d.perimeter, 8);
+            tc.verifyEqual(d.firstDifference, [2 0 2 0 2 0 2 0]);
+            tc.verifyEqual(d.shapeNumber, [0 2 0 2 0 2 0 2]);
+            rotated = chainCodeDescriptors(mod([6 6 0 0 2 2 4 4] + 2, 8));   % rotate 90 degrees
+            tc.verifyEqual(rotated.firstDifference, d.firstDifference);
+            shifted = chainCodeDescriptors([0 0 2 2 4 4 6 6]);              % other start point
+            tc.verifyEqual(shifted.shapeNumber, d.shapeNumber);
+            tc.verifyEqual(chainCodeDescriptors([7 7 3 3]).perimeter, 4 * sqrt(2), 'AbsTol', 1e-12);
+        end
+
+        % -------------------------------------------------- restoration
+        function adaptiveMedianRemovesImpulses(tc)
+            I = 0.5 * ones(40);
+            N = addSaltPepperNoise(I, 0.25);
+            J = adaptiveMedianFilter(N, 7);
+            tc.verifyEqual(J, I, 'AbsTol', 1e-12);
+        end
+
+        function adaptiveMedianKeepsCleanDetail(tc)
+            I = tc.Img;                                    % no impulses
+            J = adaptiveMedianFilter(I, 5);
+            M = medianFilter(I, 3);
+            tc.verifyLessThan(mean(abs(J(:) - I(:))), mean(abs(M(:) - I(:))));
+        end
+
+        function adaptiveLocalFilterBehaviour(tc)
+            tc.verifyEqual(adaptiveLocalFilter(0.4 * ones(20), 5), 0.4 * ones(20), 'AbsTol', 1e-12);
+            tc.verifyEqual(adaptiveLocalFilter(tc.Img, 5, 1e-15), tc.Img, 'AbsTol', 1e-9);
+            N = tc.Img + 0.05 * randn(size(tc.Img));
+            tc.verifyLessThan(calculateMSE(adaptiveLocalFilter(N, 5), tc.Img), calculateMSE(N, tc.Img));
+        end
+
+        % -------------------------------------------------- metrics
+        function errorMapStatistics(tc)
+            [H, E, s] = errorMap(tc.ImgRGB, tc.ImgRGB);
+            tc.verifyEqual(size(H), size(tc.ImgRGB));
+            tc.verifyEqual(max(E(:)), 0);
+            tc.verifyEqual(s.changedPct, 0);
+            B = tc.Img; B(1, 1) = B(1, 1) + 0.2;
+            [~, E, s] = errorMap(B, tc.Img);
+            tc.verifyEqual(s.maxError, 255 * 0.2, 'AbsTol', 1e-9);
+            tc.verifyEqual(nnz(E), 1);
+            tc.verifyError(@() errorMap(tc.Img, tc.ImgRGB), 'ImageLab:sizeMismatch');
+        end
+
+        % -------------------------------------------------- quiz
+        function weakTopicQuizFocusesOnWeakCategory(tc)
+            stats = struct('name', {'Noise', 'Histogram'}, 'answered', {20, 20}, 'correct', {2, 20});
+            rng(1);
+            [qs, plan] = quizEngine('weak', stats, 15);
+            tc.verifyEqual(numel(qs), 15);
+            tc.verifyEqual(plan(1).category, 'Noise');
+            tc.verifyGreaterThan(nnz(strcmp({qs.category}, 'Noise')), nnz(strcmp({qs.category}, 'Histogram')));
+            tc.verifyEqual(numel(unique({qs.id})), 15);      % no repeated questions
+        end
     end
 end

@@ -37,7 +37,8 @@ export default function Reports() {
       </div>
       <Card title="Report formats" className="mt">
         <ul className="prose small">
-          <li><b>HTML (always)</b> — self-contained with embedded images. Open it and use the browser's <i>Print → Save as PDF</i> for a PDF, or open it in Microsoft Word.</li>
+          <li><b>PDF (always)</b> — an A4 report laid out by MATLAB itself (generateReportPdf.m: figures + exportgraphics), ready to print or submit.</li>
+          <li><b>HTML (always)</b> — self-contained with embedded images; opens in any browser or in Microsoft Word.</li>
           <li><b>DOCX</b> — produced automatically as well when MATLAB Report Generator is installed.</li>
           <li><b>MATLAB Live Script</b> — <code>ImageLab_Demonstration.mlx</code> in the project folder contains theory, code, figures and conclusions for the whole project.</li>
         </ul>

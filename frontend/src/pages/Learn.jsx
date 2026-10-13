@@ -8,6 +8,7 @@ const LAB_NAMES = {
   workspace: 'Image Workspace', histogram: 'Histogram Lab', color: 'Color Processing', fundamentals: 'Pixels & Sampling',
   docs: 'Documentation', kernel: 'Kernel Playground', correlation: 'Correlation & Convolution', filters: 'Spatial Filters',
   sharpening: 'Sharpening Lab', noise: 'Noise Lab', compare: 'Filter Comparison', edges: 'Edge Detection', segmentation: 'Segmentation',
+  morphology: 'Morphology Lab', regions: 'Region Analysis',
 }
 
 const UNIT_TITLES = {

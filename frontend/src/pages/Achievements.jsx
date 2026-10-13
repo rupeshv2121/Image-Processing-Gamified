@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
+import Icon from '../components/Icon'
 import Ring from '../components/Ring'
 import { Card, Modal, Page, Tabs } from '../components/ui'
 import { MEDALS } from '../content/missions'
 
 export default function Achievements() {
-  const { progress, refreshProgress, call, matlab, notify } = useApp()
+  const { progress, refreshProgress, call, matlab, notify, profile } = useApp()
   const [tab, setTab] = useState('badges')
   const [confirm, setConfirm] = useState(false)
   useEffect(() => { if (matlab.ok) refreshProgress() }, [matlab.ok, refreshProgress])
@@ -31,7 +32,7 @@ export default function Achievements() {
   }
 
   return (
-    <Page eyebrow="Your progress" title="Achievements" subtitle="XP, levels and badges are stored by MATLAB in data/userProgress.mat."
+    <Page eyebrow={profile ? `Your progress · ${profile.name}` : 'Your progress'} title="Achievements" subtitle="XP, levels and badges are stored by MATLAB for each student profile (data/ folder)."
       actions={<button className="btn btn-ghost btn-danger" onClick={() => setConfirm(true)}>Reset progress…</button>}>
       <div className="grid-3" style={{ marginBottom: 28 }}>
         <Card>
@@ -72,7 +73,7 @@ export default function Achievements() {
       )}
 
       {tab === 'topics' && (
-        <Card>
+        <Card title="Accuracy per topic" extra={cats.length > 0 && <a className="btn btn-primary btn-small" href="#quiz?game=weak"><Icon name="target" size={15} /> Practise weak topics</a>}>
           {cats.length ? (
             <table className="data">
               <thead><tr><th>Category</th><th>Answered</th><th>Accuracy</th><th style={{ width: '40%' }} /></tr></thead>
@@ -111,6 +112,7 @@ export default function Achievements() {
               <tr><td>Completing a Learn topic</td><td><b>+20 XP</b></td></tr>
               <tr><td>Running an experiment</td><td><b>+50 XP</b></td></tr>
               <tr><td>Finishing a quiz</td><td><b>score ÷ 10</b></td></tr>
+              <tr><td>Solving the daily challenge (first solve each day)</td><td><b>+50 XP</b></td></tr>
               <tr><td>Earning a badge</td><td><b>+100 XP</b></td></tr>
             </tbody>
           </table>
@@ -120,7 +122,7 @@ export default function Achievements() {
 
       {confirm && (
         <Modal title="Reset all progress?" onClose={() => setConfirm(false)}>
-          <p className="alert-text">XP, badges, completed topics and experiments will be cleared. The leaderboard is not affected.</p>
+          <p className="alert-text">XP, badges, completed topics, experiments and daily streak of <b>{profile?.name || 'this student'}</b> will be cleared. Other students and the leaderboard are not affected.</p>
           <div className="row right"><button className="btn" onClick={() => setConfirm(false)}>Cancel</button><button className="btn btn-primary" onClick={reset}>Reset</button></div>
         </Modal>
       )}

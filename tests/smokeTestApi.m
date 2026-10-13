@@ -77,7 +77,26 @@ call('source', struct('name', 'medianFilterManual'));
 call('report', struct('title', 'Smoke report', 'students', 'Test', 'aim', 'Check', ...
     'images', struct('label', {'Original'}, 'id', {id}), 'metrics', struct('name', {'PSNR'}, 'value', {30}), ...
     'kernel', ones(3) / 9, 'observations', {{'ok'}}));
+% morphology, regions, error map, profiles, daily challenge, weak quiz
+call('structuringElement', struct('shape', 'disk', 'size', 5));
+for op = {'erode', 'dilate', 'open', 'close', 'boundary', 'fill'}
+    call('morphology', struct('id', gid, 'operation', op{1}, 'se', ones(3)));
+end
+call('morphology', struct('id', id, 'operation', 'open', 'se', ones(3), 'mode', 'gray'));
+call('regions', struct('id', gid, 'conn', 4));
+call('errorMap', struct('id', n.data.id, 'refId', id));
+for f = {'adaptivemedian', 'adaptivelocal'}
+    call('filter', struct('id', n.data.id, 'name', f{1}, 'k', 7, 'refId', id));
+end
+call('quizQuestions', struct('mode', 'weak', 'n', 5));
+call('profiles', struct('action', 'list'));
+d = call('dailyStart', struct('date', '2026-01-01'));
+call('pipelineRun', struct('problemId', d.data.problemId, 'cleanId', d.data.cleanId, ...
+    'degradedId', d.data.degradedId, 'steps', {{'median'}}, 'daily', '2026-01-01'));
+
 % expected errors
+expectError('morphology', struct('id', gid, 'se', zeros(3)));
+expectError('dailyStart', struct('date', 'not-a-date'));
 expectError('filter', struct('id', id, 'name', 'mean', 'k', 4));
 expectError('imageInfo', struct('id', '../../etc'));
 expectError('correlation', struct('matrix', magic(3), 'kernel', ones(2)));

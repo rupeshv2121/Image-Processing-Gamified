@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt, imageUrl, run } from '../api'
 import Icon from '../components/Icon'
+import ThemeToggle from '../components/ThemeToggle'
 import { MEDALS, UNITS, unitProgress } from '../content/missions'
 
 // ---------------------------------------------------------------- hero animation
@@ -231,7 +232,7 @@ export default function Landing() {
 
   return (
     <div className="landing">
-      <nav className="l-nav">
+      <nav className="l-nav" aria-label="Main">
         <a className="brand" href="#home">
           <span className="logo"><i /><i /><i /><i /></span>
           <span><b>ImageLab</b></span>
@@ -244,6 +245,7 @@ export default function Landing() {
         <span className="pill l-status" style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)', color: '#c9d4e5' }}>
           <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} /> {matlab.ok ? `MATLAB ${matlab.release}` : matlab.ready ? 'MATLAB unavailable' : 'Starting MATLAB…'}
         </span>
+        <ThemeToggle className="icon-btn l-theme" />
         <a className="btn btn-primary" href="#dashboard">Enter the Lab</a>
       </nav>
 

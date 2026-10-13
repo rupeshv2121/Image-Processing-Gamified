@@ -3,9 +3,10 @@ function [J, info] = ilab_runFilter(I, name, k, params, impl)
 %   [J, info] = ilab_runFilter(I, name, k, params, impl)
 %
 %   name   : mean | weighted | gaussian | median | min | max | midpoint |
-%            order | alphatrimmed | laplacian | sobel | prewitt
-%   k      : neighbourhood size (odd)
-%   params : struct (sigma, rank, d)
+%            order | alphatrimmed | adaptivemedian | adaptivelocal |
+%            laplacian | sobel | prewitt
+%   k      : neighbourhood size (odd); the MAXIMUM window for adaptivemedian
+%   params : struct (sigma, rank, d, noiseVar)
 %   impl   : 'toolbox' (fast / Image Processing Toolbox) or 'manual' (loops)
 %
 %   info.kernel         kernel matrix for linear filters ([] otherwise)
@@ -63,6 +64,14 @@ switch lower(name)
         d = round(param(params, 'd', 2));
         J = alphaTrimmedMeanFilter(I, k, d);
         info.functionName = 'alphaTrimmedMeanFilter';
+    case 'adaptivemedian'
+        info.linear = false;
+        J = adaptiveMedianFilter(I, max(k, 3));
+        info.functionName = 'adaptiveMedianFilter';
+    case 'adaptivelocal'
+        info.linear = false;                 % the weights change with the local variance
+        J = adaptiveLocalFilter(I, k, param(params, 'noiseVar', []));
+        info.functionName = 'adaptiveLocalFilter';
     case 'laplacian'
         info.kernel = [0 1 0; 1 -4 1; 0 1 0];
         info.signed = true;
@@ -82,7 +91,9 @@ switch lower(name)
         error('ImageLab:invalidParameter', 'Unknown filter "%s".', name);
 end
 
-if manual
+if any(strcmpi(name, {'adaptivemedian', 'adaptivelocal'}))
+    info.implementation = 'Hand-written base MATLAB (vectorised over all pixels)';
+elseif manual
     info.implementation = 'Manual implementation (explicit loops)';
 elseif hasIPT()
     info.implementation = 'MATLAB Image Processing Toolbox';

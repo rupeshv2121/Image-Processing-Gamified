@@ -2,13 +2,24 @@
 // Every call is forwarded to the MATLAB function ilab_dispatch.m —
 // the browser never processes pixels itself, it only displays MATLAB's output.
 
+// The active student profile travels with every request, so MATLAB stores
+// XP, badges and quiz results for the right student (profileManager.m).
+let profileId = (() => {
+  try { return localStorage.getItem('imagelab.profile') || 'default' } catch { return 'default' }
+})()
+export const getProfileId = () => profileId
+export function setProfileId(id) {
+  profileId = id || 'default'
+  try { localStorage.setItem('imagelab.profile', profileId) } catch { /* storage unavailable */ }
+}
+
 export async function run(op, params = {}) {
   let res
   try {
     res = await fetch('/api/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ op, params }),
+      body: JSON.stringify({ op, params: { ...params, profileId } }),
     })
   } catch {
     throw new Error('Cannot reach the ImageLab server. Start it with start_imagelab.bat.')

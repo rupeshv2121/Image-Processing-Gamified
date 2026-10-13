@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useApp } from '../AppContext'
-import { fmtPsnr } from '../api'
+import { fmt, fmtPsnr } from '../api'
+import ImagePair from '../components/ImagePair'
 import LabPage from '../components/LabPage'
-import { ImageView, Metrics, Note, Segmented, Slider, UseButton } from '../components/ui'
+import { BarChart, Card, Metrics, Note, Slider, UseButton } from '../components/ui'
 
 const TYPES = [
   { value: 'gaussian', label: 'Gaussian', hint: 'sensor noise' },
@@ -18,21 +19,53 @@ const INFO = {
   poisson: { model: 'g ~ Poisson(λ = f),   variance = mean', text: 'Shot (photon) noise: light arrives as discrete photons, so the count fluctuates. Signal-dependent; dominant in low-light images.', code: "J = imnoise(I, 'poisson');" },
 }
 
+// Restoration filters run on the noisy image and are scored against the clean input
+const RESTORE = [
+  { name: 'adaptivemedian', label: 'Adaptive median', text: 'Grows the window up to Smax and only replaces pixels that look like impulses — best for (dense) salt & pepper.' },
+  { name: 'adaptivelocal', label: 'Adaptive local (Wiener)', text: 'f̂ = g − (σ²η/σ²L)(g − mL): smooths flat areas, keeps edges where the local variance is high — best for Gaussian noise.' },
+  { name: 'median', label: 'Median', text: 'Fixed-size median, for comparison.' },
+  { name: 'mean', label: 'Mean', text: 'Fixed-size average, for comparison.' },
+]
+
 export default function NoiseLab() {
-  const { current, original, call } = useApp()
+  const { current, call } = useApp()
   const [type, setType] = useState('saltpepper')
   const [mean, setMean] = useState(0)
   const [variance, setVariance] = useState(0.01)
   const [density, setDensity] = useState(0.05)
   const [speckleVar, setSpeckleVar] = useState(0.04)
-  const [view, setView] = useState('noisy')
   const [res, setRes] = useState(null)
+  const [smax, setSmax] = useState(7)
+  const [rk, setRk] = useState(5)
+  const [noiseVar, setNoiseVar] = useState(0)
+  const [restored, setRestored] = useState({})
+  const [shown, setShown] = useState(null)
 
   const apply = async () => {
     const params = { id: current, type, mean, variance: type === 'speckle' ? speckleVar : variance, density }
     const d = await call('noise', params, { label: `imnoise ${type}` })
-    if (d) setRes({ ...d, type })
+    if (d) {
+      setRes({ ...d, type, clean: current })
+      setRestored({})
+      setShown(null)
+    }
   }
+
+  const restore = async (f) => {
+    const k = f.name === 'adaptivemedian' ? smax : rk
+    const params = { id: res.id, name: f.name, k, refId: res.clean }
+    if (f.name === 'adaptivelocal' && noiseVar > 0) params.noiseVar = noiseVar
+    const d = await call('filter', params, { label: `${f.label} ${k}×${k}` })
+    if (d) {
+      const r = Array.isArray(d.runs) ? d.runs[0] : d.runs
+      setRestored((x) => ({ ...x, [f.name]: { ...r, k, label: f.label } }))
+      setShown(f.name)
+    }
+  }
+  const restoreAll = async () => { for (const f of RESTORE) await restore(f) }
+  const done = RESTORE.filter((f) => restored[f.name])
+  const best = done.length ? done.reduce((a, b) => ((restored[b.name].psnr ?? Infinity) > (restored[a.name].psnr ?? Infinity) ? b : a)) : null
+  const pick = shown && restored[shown]
 
   const theory = (
     <>
@@ -45,6 +78,11 @@ export default function NoiseLab() {
         </div>
       ))}
       <p className="small">Quality is measured against the original: MSE (lower is better), PSNR = 10·log₁₀(1/MSE) and SSIM (1 = identical structure).</p>
+      <h4>Adaptive restoration filters</h4>
+      <div className="formula" style={{ margin: '8px 0' }}>{'Adaptive median\nstage A: if zmin < zmed < zmax go to stage B, else grow the window (up to Smax)\nstage B: if zmin < zxy < zmax keep zxy, else output zmed'}</div>
+      <p className="small">Only pixels that look like impulses are replaced, so detail survives — and the growing window copes with dense noise.</p>
+      <div className="formula" style={{ margin: '8px 0' }}>Adaptive local noise reduction:  f̂ = g − (σ²η / σ²L)·(g − mL)</div>
+      <p className="small">Where the local variance σ²L is close to the noise variance σ²η (a flat area) the output is the local mean; where σ²L is much larger (an edge) the pixel is kept. The toolbox equivalent is wiener2.</p>
     </>
   )
 
@@ -82,22 +120,42 @@ export default function NoiseLab() {
             { label: 'SSIM', value: res.ssim },
           ]} />
         )}
-        <div className="grid-2">
-          <ImageView id={original} title="Original" height={380} />
-          <ImageView
-            id={res ? (view === 'noisy' ? res.id : res.diffId) : null}
-            title={res ? (view === 'noisy' ? 'Noisy' : '|Noisy − Original| × 3') : 'Noisy'}
-            emptyText="Choose a noise model and press Add noise"
-            height={380}
-            actions={res && (
-              <>
-                <Segmented value={view} onChange={setView} options={[{ value: 'noisy', label: 'Noisy' }, { value: 'diff', label: 'Difference' }]} />
-                <UseButton id={res.id} label={`Added ${res.type} noise`} />
-              </>
-            )}
-          />
-        </div>
-        {res && <Note>Next: send the noisy image to the <b>Workspace</b>, then remove the noise in <a href="#filters">Spatial Filters</a> or rank all filters in <a href="#compare">Filter Comparison</a>.</Note>}
+        <ImagePair height={380}
+          left={{ id: res ? res.clean : current, title: 'Original' }}
+          right={{ id: res?.id || null, title: 'Noisy', emptyText: 'Choose a noise model and press Add noise',
+            actions: res && <UseButton id={res.id} label={`Added ${res.type} noise`} /> }} />
+        {res && (
+          <Card title="Restore the noisy image" extra={<button className="btn btn-small btn-navy" onClick={restoreAll}>Run all four</button>}>
+            <div className="restore-grid">
+              <div className="controls">
+                <Slider label="Adaptive median: max window Smax" value={smax} min={3} max={15} step={2} onChange={setSmax} format={(v) => `${v}×${v}`} />
+                <Slider label="Window k (Wiener, median, mean)" value={rk} min={3} max={11} step={2} onChange={setRk} format={(v) => `${v}×${v}`} />
+                <Slider label="Noise variance σ²η" value={noiseVar} min={0} max={0.05} step={0.001} onChange={setNoiseVar} format={(v) => (v ? v.toFixed(3) : 'estimate')} />
+                <div className="choice-list">
+                  {RESTORE.map((f) => (
+                    <button key={f.name} className={`choice ${shown === f.name ? 'active' : ''}`} onClick={() => restore(f)} title={f.text}>
+                      {f.label}<small>{restored[f.name] ? fmtPsnr(restored[f.name].psnr) : 'run'}</small>
+                    </button>
+                  ))}
+                </div>
+                <p className="tiny faint">{RESTORE.find((f) => f.name === (shown || 'adaptivemedian')).text}</p>
+              </div>
+              <div className="stack-sm">
+                {done.length > 1 && (
+                  <BarChart title="PSNR against the clean original (dB)" values={done.map((f) => restored[f.name].psnr)} labels={done.map((f) => f.label)} height={170} />
+                )}
+                {best && done.length > 1 && <Note kind="ok"><b>{best.label}</b> restores this {res.type} noise best (PSNR {fmtPsnr(restored[best.name].psnr)}, SSIM {fmt(restored[best.name].ssim, 3)}).</Note>}
+                {!done.length && <p className="muted small">Pick a filter: MATLAB filters the noisy image and scores it against the clean original.</p>}
+              </div>
+            </div>
+          </Card>
+        )}
+        {pick && (
+          <ImagePair height={380}
+            left={{ id: res.id, title: 'Noisy' }}
+            right={{ id: pick.id, title: `${pick.label} ${pick.k}×${pick.k}`, badge: fmtPsnr(pick.psnr), actions: <UseButton id={pick.id} label={`${pick.label} restoration`} /> }} />
+        )}
+        {res && <Note>Tip: add <b>dense</b> salt & pepper noise (d ≥ 0.25) — the plain median fails while the adaptive median still recovers the image. For Gaussian noise the adaptive local filter keeps edges that the mean filter blurs.</Note>}
       </div>
     </LabPage>
   )

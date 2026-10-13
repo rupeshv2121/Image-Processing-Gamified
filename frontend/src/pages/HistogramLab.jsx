@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../AppContext'
 import { fmt } from '../api'
+import ImagePair from '../components/ImagePair'
 import LabPage from '../components/LabPage'
 import { Card, Histogram, ImageView, Note, Segmented, Slider, Tabs, UseButton } from '../components/ui'
 
@@ -94,11 +95,10 @@ export default function HistogramLab() {
         <>
           <Tabs tabs={[{ key: 'images', label: 'Images' }, { key: 'hist', label: 'Histograms' }, { key: 'stats', label: 'Statistics' }]} active={tab} onChange={setTab} />
           {tab === 'images' && (
-            <div className="grid-2">
-              <ImageView id={res.input} title="Original" height={420} />
-              <ImageView id={res.id} title={METHODS[res.method].label} height={420}
-                actions={res.method !== 'none' && <UseButton id={res.id} label={METHODS[res.method].label} />} />
-            </div>
+            <ImagePair height={420}
+              left={{ id: res.input, title: 'Original' }}
+              right={{ id: res.id, title: METHODS[res.method].label,
+                actions: res.method !== 'none' && <UseButton id={res.id} label={METHODS[res.method].label} /> }} />
           )}
           {tab === 'hist' && (
             <div className="grid-2">
