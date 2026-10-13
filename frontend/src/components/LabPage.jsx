@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { CodeButton, NeedImage } from './ui'
 
@@ -9,7 +10,7 @@ export function Drawer({ title, onClose, children }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  return (
+  return createPortal(
     <>
       <div className="drawer-backdrop" onClick={onClose} />
       <aside className="drawer" role="dialog" aria-modal="true">
@@ -19,7 +20,8 @@ export function Drawer({ title, onClose, children }) {
         </div>
         <div className="drawer-body">{children}</div>
       </aside>
-    </>
+    </>,
+    document.body,
   )
 }
 

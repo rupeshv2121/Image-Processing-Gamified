@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { asArray, fmt, imageUrl, run } from '../api'
 import { useApp } from '../AppContext'
 import Icon from './Icon'
@@ -386,7 +387,9 @@ export function Modal({ title, onClose, children, wide }) {
     return () => opener?.focus?.()
   }, [])
   const titleId = `modal-${String(title).replace(/\W+/g, '-').toLowerCase()}`
-  return (
+  // Rendered into <body>: an ancestor with a transform or backdrop-filter (e.g. the
+  // top bar) would otherwise become the containing block of this fixed overlay.
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div ref={box} tabIndex={-1} className={`modal ${wide ? 'wide' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="modal-head">
@@ -395,7 +398,8 @@ export function Modal({ title, onClose, children, wide }) {
         </div>
         <div className="modal-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
