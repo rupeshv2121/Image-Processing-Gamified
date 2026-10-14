@@ -5,7 +5,8 @@ import { initials, StudentsModal } from '../components/Profiles'
 import { Card, Modal, Page, Segmented, Tabs } from '../components/ui'
 
 export default function Leaderboard() {
-  const { call, matlab, profiles, profileId, refreshProfiles } = useApp()
+  const { call, matlab, profiles, profileId, refreshProfiles, role } = useApp()
+  const teacher = role === 'teacher'
   const [rows, setRows] = useState([])
   const [mode, setMode] = useState('all')
   const [confirm, setConfirm] = useState(false)
@@ -31,8 +32,8 @@ export default function Leaderboard() {
   return (
     <Page eyebrow="Play" title="Leaderboard" subtitle="Top quiz scores (quizzes/leaderboard.mat) and the class ranking of every student profile on this computer."
       actions={tab === 'scores'
-        ? <><button className="btn" onClick={load}>Refresh</button><button className="btn btn-danger" onClick={() => setConfirm(true)} disabled={!rows.length}>Clear…</button></>
-        : <><button className="btn" onClick={refreshProfiles}>Refresh</button><button className="btn btn-navy" onClick={() => setManage(true)}>Manage students…</button></>}>
+        ? <><button className="btn" onClick={load}>Refresh</button>{teacher && <button className="btn btn-danger" onClick={() => setConfirm(true)} disabled={!rows.length}>Clear…</button>}</>
+        : <><button className="btn" onClick={refreshProfiles}>Refresh</button>{teacher && <button className="btn btn-navy" onClick={() => setManage(true)}>Manage students…</button>}</>}>
       <Tabs tabs={[{ key: 'scores', label: 'Quiz scores' }, { key: 'class', label: `Class (${profiles.length})` }]} active={tab} onChange={setTab} />
       {tab === 'class' && (
         <Card>

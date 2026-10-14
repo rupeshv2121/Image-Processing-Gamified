@@ -58,7 +58,7 @@ const errorLineField = StateField.define({
   provide: (f) => EditorView.decorations.from(f),
 })
 
-export default function MatlabEditor({ value, onChange, onRun, errorLine, height = 380, label = 'MATLAB code' }) {
+export default function MatlabEditor({ value, onChange, onRun, errorLine, height = 380, label = 'MATLAB code', readOnly = false }) {
   const host = useRef(null)
   const view = useRef(null)
   const handlers = useRef({ onChange, onRun })
@@ -79,6 +79,7 @@ export default function MatlabEditor({ value, onChange, onRun, errorLine, height
         ]),
         editorTheme,
         errorLineField,
+        ...(readOnly ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : []),
         EditorView.contentAttributes.of({ 'aria-label': label }),
         EditorView.updateListener.of((u) => { if (u.docChanged) handlers.current.onChange?.(u.state.doc.toString()) }),
       ],

@@ -39,7 +39,8 @@ interaction**, and the Python server is only a bridge between the two.
 
 | Area | What you can do |
 |---|---|
-| Dashboard | Current image, experiments completed, filters tested, quiz score, topics, XP, badges, demo flow |
+| Student / teacher modes | A start screen asks who is using ImageLab. **Students** pick (or add) their profile and get their own dashboard and navigation. The **teacher** enters the PIN and gets a separate teacher side. Each mode only sees its own pages; MATLAB records nothing in teacher mode |
+| Student dashboard | Missions, assigned experiments and Code Lab tasks with due dates, daily challenge, experiments / filters / quiz score / code tasks, XP and badges |
 | Learn | 22 theory topics following the syllabus, each linked to a lab |
 | Animations | Step-by-step playback (play / pause / step / scrub) of the median filter, histogram equalisation, erosion & dilation and region growing — every step computed by MATLAB on a small matrix |
 | Image Workspace | Load / save / **webcam capture**, undo / redo (Ctrl+Z / Ctrl+Y), zoom, grayscale, image information, histogram |
@@ -59,8 +60,8 @@ interaction**, and the Python server is only a bridge between the two.
 | Code Lab | **MATLAB editor in the browser** (syntax highlighting, Ctrl+Enter to run): MATLAB runs the code and returns the Command Window, figures and a workspace table. 11 graded programming tasks (negative, gamma, contrast stretch, histogram, equalisation, mean / median filters with loops, Laplacian, Sobel, Otsu, erosion) with hints, a "write it yourself" function blacklist, automatic checking against MATLAB's reference result, difference images and a model solution after solving |
 | Experiments | 13 experiments with aim, theory, algorithm, MATLAB code (toolbox / manual), run, observation, conclusion, quiz |
 | Quiz & games | Daily Challenge (same “match the target” puzzle for everyone each day, streaks), Weak-Topic Practice (questions weighted by your error rate), Rapid Fire (10 s timer), Kernel Quiz, Guess the Filter, Build the Pipeline, Challenge Mode, Classroom Mode |
-| Students | Several student profiles on one computer, each with its own XP, badges, quiz history and streak (`data/profiles.mat`) |
-| Teacher | PIN-protected teacher area: class table, topic-accuracy heatmap per student, weakest topics of the class, open / assign (with due date and note) / lock each experiment, export to CSV and Excel (`data/classroom.mat`) |
+| Students | Up to 500 student profiles on one computer, each with its own XP, badges, quiz history, streak and Code Lab work (`data/profiles.mat`, `data/codelab/`) |
+| Teacher side | **Class dashboard** (active students, average XP, quiz accuracy, code tasks solved, assigned-work completion, who needs attention, recent activity feed, demo tour) · **Students** (searchable, sortable roster, topic heatmap, weakest topics) · **Student detail** (progress, quiz topics, experiments, badges, activity, every Code Lab task) · **Assignments** (open / assign with due date and note / lock each experiment and Code Lab task) · **Code submissions** (students × tasks matrix; read any student's latest and passing code) · **Class settings** (manage students, PIN, CSV / Excel export). PIN stored as a salted SHA-256 hash (`data/classroom.mat`) |
 | Leaderboard | Quiz scores in `quizzes/leaderboard.mat` (MATLAB table) and a class ranking of all student profiles |
 | Reports | A4 PDF written by base MATLAB (`generateReportPdf`), HTML report, DOCX if MATLAB Report Generator is installed |
 | Every lab | Compare input and result **side by side, with a before/after slider or as an error heat map** (\|result − input\| with PSNR / SSIM); pixel inspector (value + 3×3 neighbourhood) on every image |
@@ -337,10 +338,11 @@ ImageLab/
 ├── steps/         step-by-step data for the animations (median, histeq, morphology, region growing)
 ├── color/         channels, RGB↔YCbCr, RGB↔Lab, enhancement
 ├── fundamentals/  sampling, quantisation, neighbourhoods, distances
-├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, teacher settings, pipeline problems
+├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, teacher settings,
+│                  class analytics (teacher views), pipeline problems
 ├── experiments/   experimentCatalog, runExperiment
 ├── reports/       generateReport (HTML) + generateReportPdf (PDF) — output in reports/output/
-├── codelab/       runStudentCode (runs student code), codeTasks (tasks + grading), figurePool,
+├── codelab/       runStudentCode (runs student code), codeTasks (tasks + grading), submissionStore, figurePool,
 │                  shims/ (toolbox stand-ins used only while student code runs without the toolbox)
 ├── api/           ilab_dispatch (single entry point), ilab_store (image store), samples, charts
 ├── tests/         ImageLabTests (matlab.unittest), smokeTestApi

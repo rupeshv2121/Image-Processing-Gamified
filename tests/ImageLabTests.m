@@ -523,5 +523,46 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyEmpty(r.error);
             tc.verifyFalse(contains(path, [filesep 'shims']));   % stand-ins removed again
         end
+
+        % -------------------------------------------------- teacher / student data
+        function dataCacheSeesEveryWrite(tc)
+            f = [tempname '.mat'];
+            cleanup = onCleanup(@() delete(f));
+            x = 1; save(f, 'x');
+            tc.verifyEqual(dataCache('load', f).x, 1);
+            x = 2; save(f, 'x'); dataCache('put', f, struct('x', x));   % how ImageLab writes
+            tc.verifyEqual(dataCache('load', f).x, 2);
+            dataCache('forget', f);
+            tc.verifyEmpty(dataCache('load', [f '.missing']));
+        end
+
+        function submissionStoreKeepsLatestAndPassingCode(tc)
+            id = 'ztest';
+            cleanup = onCleanup(@() submissionStore('remove', id));
+            submissionStore('record', id, 'negative', 'out = img;', struct('passed', false, 'match', 10), '');
+            submissionStore('record', id, 'negative', 'out = 1 - img;', struct('passed', true, 'match', 100), '');
+            submissionStore('record', id, 'negative', 'out = 1-img; %v3', struct('passed', false, 'match', 80), '');
+            submissionStore('record', id, 'gamma', 'out = img(', [], 'syntax error');
+            e = submissionStore('get', id, 'negative');
+            tc.verifyEqual(e.attempts, 3);
+            tc.verifyTrue(e.passed);
+            tc.verifyEqual(e.attemptsToSolve, 2);
+            tc.verifyEqual(e.passedCode, 'out = 1 - img;');
+            tc.verifyEqual(e.lastCode, 'out = 1-img; %v3');
+            tc.verifyEqual(e.bestMatch, 100);
+            s = submissionStore('summary', id);
+            tc.verifyFalse(isfield(s.negative, 'lastCode'));        % summaries carry no code
+            tc.verifyEqual(s.gamma.lastError, 'syntax error');
+        end
+
+        function teacherProfileRecordsNothing(tc)
+            prev = profileManager('active');
+            restore = onCleanup(@() profileManager('use', prev));
+            profileManager('use', 'teacher');
+            tc.verifyEqual(profileManager('active'), 'teacher');
+            p = progressManager('topic', 'Some topic');
+            tc.verifyEqual(p.xp, 0);
+            tc.verifyEmpty(p.topicsCompleted);
+        end
     end
 end

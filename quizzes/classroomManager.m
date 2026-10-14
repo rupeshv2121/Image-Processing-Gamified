@@ -8,9 +8,16 @@ function out = classroomManager(action, varargin)
 %   s = classroomManager('setPin', oldPin, newPin)   set / change ('' removes the PIN)
 %   s = classroomManager('setExperiment', n, status, due, note)
 %        status: 'open' | 'assigned' | 'locked'   due: 'yyyy-mm-dd' or ''
+%   s = classroomManager('setCodeTask', id, status, due, note)   same for a Code Lab task
 %   classroomManager('assertRunnable', n)            error if experiment n is locked
+%   classroomManager('assertCodeRunnable', id)       error if Code Lab task id is locked
 %   r = classroomManager('report')                   class overview (all student profiles)
+%   o = classroomManager('overview')                 report + dashboard (KPIs, attention, feed)
+%   m = classroomManager('submissions')              Code Lab matrix (students x tasks)
+%   d = classroomManager('student', id)              one student in detail
+%   c = classroomManager('submission', id, taskId)   one student's code for one task
 %   f = classroomManager('export')                   writes CSV + XLSX to reports/output
+%   (the class views are built by classAnalytics.m)
 %
 %   The PIN is never stored: only its SHA-256 hash (salted with a random value).
 
@@ -50,16 +57,7 @@ switch action
 
     case 'setExperiment'
         n = double(varargin{1});
-        status = lower(char(varargin{2}));
-        if ~any(strcmp(status, {'open', 'assigned', 'locked'}))
-            error('ImageLab:invalidParameter', 'Status must be open, assigned or locked.');
-        end
-        due = char(argOr(varargin, 3, ''));
-        if ~isempty(due) && isempty(regexp(due, '^\d{4}-\d{2}-\d{2}$', 'once'))
-            error('ImageLab:invalidParameter', 'The due date must look like 2026-10-31.');
-        end
-        note = strtrim(regexprep(char(argOr(varargin, 4, '')), '[\x00-\x1F<>]', ''));
-        if numel(note) > 120, note = note(1:120); end
+        [status, due, note] = assignment(varargin{2:end});
         idx = find([S.experiments.number] == n, 1);
         if isempty(idx)
             error('ImageLab:invalidParameter', 'There is no experiment %d.', n);
@@ -70,6 +68,27 @@ switch action
         saveSettings(file, S);
         out = publicView(S);
 
+    case 'setCodeTask'
+        id = char(varargin{1});
+        [status, due, note] = assignment(varargin{2:end});
+        idx = find(strcmp({S.codeTasks.id}, id), 1);
+        if isempty(idx)
+            error('ImageLab:invalidParameter', 'There is no Code Lab task "%s".', id);
+        end
+        S.codeTasks(idx).status = status;
+        S.codeTasks(idx).due = due;
+        S.codeTasks(idx).note = note;
+        saveSettings(file, S);
+        out = publicView(S);
+
+    case 'assertCodeRunnable'
+        idx = find(strcmp({S.codeTasks.id}, char(varargin{1})), 1);
+        if ~isempty(idx) && strcmp(S.codeTasks(idx).status, 'locked')
+            error('ImageLab:taskLocked', ...
+                'The task "%s" is locked by your teacher. Ask your teacher to unlock it.', S.codeTasks(idx).title);
+        end
+        out = true;
+
     case 'assertRunnable'
         n = double(varargin{1});
         idx = find([S.experiments.number] == n, 1);
@@ -79,11 +98,17 @@ switch action
         end
         out = true;
 
-    case 'report'
-        out = classReport(S);
+    case {'report', 'overview', 'submissions'}
+        out = classAnalytics(action, S);
+
+    case 'student'
+        out = classAnalytics('student', S, varargin{1});
+
+    case 'submission'
+        out = classAnalytics('submission', S, varargin{1}, varargin{2});
 
     case 'export'
-        out = exportReport(classReport(S), root);
+        out = exportReport(classAnalytics('report', S), root);
 
     otherwise
         error('ImageLab:internal', 'Unknown classroom action "%s".', action);
@@ -93,12 +118,16 @@ end
 % -------------------------------------------------------------------------
 function S = loadSettings(file)
 E = experimentCatalog();
+T = codeTasks('list');
 S = struct('pinHash', '', 'salt', '', ...
     'experiments', struct('number', num2cell([E.number]), 'title', {E.title}, ...
+        'status', 'open', 'due', '', 'note', ''), ...
+    'codeTasks', struct('id', cellfun(@(t) t.id, T, 'UniformOutput', false), ...
+        'title', cellfun(@(t) t.title, T, 'UniformOutput', false), ...
         'status', 'open', 'due', '', 'note', ''));
 if isfile(file)
     try
-        s = load(file, 'S');
+        s = dataCache('load', file);
         if isfield(s.S, 'pinHash'), S.pinHash = s.S.pinHash; S.salt = s.S.salt; end
         for k = 1:numel(s.S.experiments)          % keep saved states, catalogue may grow
             idx = find([S.experiments.number] == s.S.experiments(k).number, 1);
@@ -106,6 +135,16 @@ if isfile(file)
                 S.experiments(idx).status = s.S.experiments(k).status;
                 S.experiments(idx).due = s.S.experiments(k).due;
                 S.experiments(idx).note = s.S.experiments(k).note;
+            end
+        end
+        if isfield(s.S, 'codeTasks')               % keep saved Code Lab task states
+            for k = 1:numel(s.S.codeTasks)
+                idx = find(strcmp({S.codeTasks.id}, s.S.codeTasks(k).id), 1);
+                if ~isempty(idx)
+                    S.codeTasks(idx).status = s.S.codeTasks(k).status;
+                    S.codeTasks(idx).due = s.S.codeTasks(k).due;
+                    S.codeTasks(idx).note = s.S.codeTasks(k).note;
+                end
             end
         end
     catch
@@ -117,10 +156,28 @@ end
 function saveSettings(file, S) %#ok<INUSD> - saved by variable name
 if ~isfolder(fileparts(file)), mkdir(fileparts(file)); end
 save(file, 'S');
+dataCache('put', file, struct('S', S));
+end
+
+function [status, due, note] = assignment(status, due, note)
+% Validate an open / assigned / locked state with optional due date and note
+if nargin < 2, due = ''; end
+if nargin < 3, note = ''; end
+status = lower(char(status));
+if ~any(strcmp(status, {'open', 'assigned', 'locked'}))
+    error('ImageLab:invalidParameter', 'Status must be open, assigned or locked.');
+end
+due = char(due);
+if ~isempty(due) && isempty(regexp(due, '^\d{4}-\d{2}-\d{2}$', 'once'))
+    error('ImageLab:invalidParameter', 'The due date must look like 2026-10-31.');
+end
+note = strtrim(regexprep(char(note), '[\x00-\x1F<>]', ''));
+if numel(note) > 120, note = note(1:120); end
 end
 
 function v = publicView(S)
-v = struct('hasPin', ~isempty(S.pinHash), 'experiments', {num2cell(S.experiments)});
+v = struct('hasPin', ~isempty(S.pinHash), 'experiments', {num2cell(S.experiments)}, ...
+    'codeTasks', {num2cell(S.codeTasks)});
 end
 
 function tf = pinOk(S, pin)
@@ -138,57 +195,6 @@ function s = randomSalt()
 s = lower(reshape(dec2hex(randi([0 255], 1, 16), 2).', 1, []));
 end
 
-% -------------------------------------------------------------------------
-function R = classReport(S)
-profiles = profileManager('list');
-cats = quizEngine('categories');
-assigned = [S.experiments(strcmp({S.experiments.status}, 'assigned')).number];
-nS = numel(profiles);
-students = cell(1, nS);
-answered = zeros(1, numel(cats));
-correct = zeros(1, numel(cats));
-struggling = zeros(1, numel(cats));
-expDone = zeros(1, numel(S.experiments));
-for k = 1:nS
-    pr = profiles{k};
-    p = progressManager('raw', profileManager('file', pr.id));
-    acc = nan(1, numel(cats));
-    for c = 1:numel(cats)
-        idx = find(strcmp({p.categoryStats.name}, cats{c}), 1);
-        if ~isempty(idx) && p.categoryStats(idx).answered > 0
-            a = p.categoryStats(idx).answered;
-            r = p.categoryStats(idx).correct;
-            acc(c) = 100 * r / a;
-            answered(c) = answered(c) + a;
-            correct(c) = correct(c) + r;
-            if a >= 2 && acc(c) < 60, struggling(c) = struggling(c) + 1; end
-        end
-    end
-    done = p.experimentsCompleted;
-    expDone = expDone + ismember([S.experiments.number], done);
-    last = '';
-    if ~isempty(p.quizHistory), last = p.quizHistory(end).date; end
-    students{k} = struct('id', pr.id, 'name', pr.name, 'roll', pr.roll, 'level', pr.level, 'xp', pr.xp, ...
-        'badges', pr.badges, 'quizzes', pr.quizzes, 'accuracy', pr.accuracy, ...
-        'questions', p.questionsAnswered, 'dailyStreak', pr.dailyStreak, ...
-        'experimentsDone', {num2cell(sort(done))}, ...
-        'assignedDone', nnz(ismember(assigned, done)), 'assignedTotal', numel(assigned), ...
-        'topicAccuracy', {num2cell(acc)}, 'lastQuiz', last);
-end
-topics = struct('category', cats, 'answered', num2cell(answered), 'correct', num2cell(correct), ...
-    'accuracy', num2cell(100 * correct ./ max(answered, 1)), 'struggling', num2cell(struggling));
-for c = 1:numel(topics)
-    if answered(c) == 0, topics(c).accuracy = NaN; end
-end
-tried = topics(answered > 0);
-[~, order] = sort([tried.accuracy]);
-experiments = S.experiments;
-for k = 1:numel(experiments), experiments(k).completedBy = expDone(k); end
-R = struct('students', {students}, 'categories', {cats}, 'topics', {num2cell(topics)}, ...
-    'weakest', {num2cell(tried(order))}, 'experiments', {num2cell(experiments)}, ...
-    'studentCount', nS, 'generated', char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm')));
-end
-
 function f = exportReport(R, root)
 outDir = fullfile(root, 'reports', 'output');
 if ~isfolder(outDir), mkdir(outDir); end
@@ -197,14 +203,16 @@ n = numel(R.students);
 st = [R.students{:}];
 if n == 0, st = struct('name', {}, 'roll', {}, 'level', {}, 'xp', {}, 'badges', {}, 'quizzes', {}, ...
         'questions', {}, 'accuracy', {}, 'dailyStreak', {}, 'experimentsDone', {}, 'assignedDone', {}, ...
-        'assignedTotal', {}, 'topicAccuracy', {}, 'lastQuiz', {}); end
+        'assignedTotal', {}, 'codeSolved', {}, 'codeAttempts', {}, 'topicAccuracy', {}, ...
+        'lastQuiz', {}, 'lastActive', {}); end
 T = table(string({st.name})', string({st.roll})', [st.level]', [st.xp]', [st.badges]', ...
     [st.quizzes]', [st.questions]', round([st.accuracy]', 1), [st.dailyStreak]', ...
     cellfun(@numel, {st.experimentsDone})', ...
     string(arrayfun(@(s) sprintf('%d/%d', s.assignedDone, s.assignedTotal), st, 'UniformOutput', false))', ...
-    string({st.lastQuiz})', ...
+    [st.codeSolved]', [st.codeAttempts]', string({st.lastQuiz})', string({st.lastActive})', ...
     'VariableNames', {'Name', 'Roll', 'Level', 'XP', 'Badges', 'Quizzes', 'Questions', ...
-                      'Accuracy (%)', 'Daily streak', 'Experiments done', 'Assigned done', 'Last quiz'});
+                      'Accuracy (%)', 'Daily streak', 'Experiments done', 'Assigned done', ...
+                      'Code tasks solved', 'Code runs', 'Last quiz', 'Last active'});
 for c = 1:numel(R.categories)
     v = nan(n, 1);
     for k = 1:n, v(k) = round(st(k).topicAccuracy{c}, 1); end
@@ -219,9 +227,10 @@ writetable(T, fullfile(outDir, [base '.csv']));
 xlsx = fullfile(outDir, [base '.xlsx']);
 writetable(T, xlsx, 'Sheet', 'Students');
 writetable(TT, xlsx, 'Sheet', 'Topics');
+ct = [R.codeTasks{:}];
+TC = table(string({ct.title})', string({ct.level})', string({ct.status})', string({ct.due})', ...
+    [ct.solvedBy]', [ct.triedBy]', ...
+    'VariableNames', {'Code Lab task', 'Level', 'Status', 'Due', 'Solved by', 'Tried by'});
+writetable(TC, xlsx, 'Sheet', 'Code Lab');
 f = struct('csv', [base '.csv'], 'xlsx', [base '.xlsx']);
-end
-
-function v = argOr(args, k, default)
-if numel(args) >= k && ~isempty(args{k}), v = args{k}; else, v = default; end
 end

@@ -14,6 +14,30 @@ base-MATLAB implementations automatically (identical results, verified by the un
 
 First start takes 10–60 s (MATLAB start-up and graphics warm-up).
 
+### Student or teacher
+
+**Enter the Lab** opens the start screen:
+
+* **I am a student** — click your name (or **I am new — add me**). Your dashboard, missions, XP,
+  badges, quizzes and Code Lab work belong to that name. The menu at the top right has
+  **Switch student** and **Sign out**. The computer remembers the last student.
+* **I am the teacher** — enter the teacher PIN. The teacher side has its own navigation:
+  * **Class dashboard** — key numbers, students who need attention (overdue work, inactive for a week,
+    low quiz accuracy, stuck on a Code Lab task), recent activity of the class and the demo tour.
+  * **Students** — roster (search, sort by any column), topic heatmap and weakest topics. Click a name
+    for the student's full page, including every Code Lab task and a **View code** button.
+  * **Assignments** — open, assign (due date + note) or lock every Code Lab task and experiment.
+    Assigned work appears on the students' dashboards; locked work cannot be run by students.
+  * **Code submissions** — a students × tasks grid (✓ solved, best match %, number of runs). Click a
+    cell to read the student's passing code and latest attempt.
+  * **Class settings** — add, rename or delete students, set the PIN, export CSV / Excel.
+
+  The teacher can also open every lab, the Code Lab (all tasks, with model solutions) and Classroom
+  Mode to demonstrate. Nothing done in teacher mode is recorded as student progress. Teacher mode
+  lasts until the browser tab is closed or **Lock teacher mode** is chosen.
+
+Without a teacher PIN anybody can enter the teacher side — set one under **Class settings**.
+
 ## 2. Loading an image
 
 *Image Workspace → Load Image…* (PNG, JPG, TIF, BMP, GIF up to 25 MB) or click a sample image:

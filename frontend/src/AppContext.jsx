@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { asArray, getProfileId, run, serverStatus, setProfileId, uploadImage } from './api'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { asArray, getProfileId, getRole, run, serverStatus, setProfileId, setRole, uploadImage } from './api'
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
@@ -16,6 +16,7 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState(null)
   const [profiles, setProfiles] = useState([])
   const [profileId, setProfileState] = useState(getProfileId)
+  const [role, setRoleState] = useState(getRole)       // 'student' | 'teacher' | null
   const [theme, setThemeState] = useState(() => {
     try { return localStorage.getItem('imagelab.theme') || 'system' } catch { return 'system' }
   })
@@ -134,6 +135,37 @@ export function AppProvider({ children }) {
     return arr
   }, [call, refreshProgress])
 
+  // ------------------------------------------------------------- roles
+  // Student: pick (or create) your profile. Teacher: MATLAB checks the PIN.
+  const enterStudent = useCallback(async (id) => {
+    if (id !== getProfileId()) {           // a different student: start with an empty workspace
+      setHistory([])
+      setIndex(-1)
+      setMeta(null)
+    }
+    setRole('student')
+    setRoleState('student')
+    setProfileId(id)
+    setProfileState(id)
+    await refreshProgress()
+  }, [refreshProgress])
+
+  const enterTeacher = useCallback(async (pin) => {
+    await run('classroom', { action: 'unlock', pin })      // throws on a wrong PIN
+    setRole('teacher', pin)
+    setRoleState('teacher')
+    setProgress(null)
+  }, [])
+
+  const signOut = useCallback(() => {
+    setRole(null)
+    setRoleState(null)
+    setHistory([])
+    setIndex(-1)
+    setMeta(null)
+    window.location.hash = 'start'
+  }, [])
+
   // ------------------------------------------------------------- image state
   const setNewImage = useCallback((data) => {
     setHistory([{ id: data.id, label: `Loaded ${data.name}` }])
@@ -182,7 +214,7 @@ export function AppProvider({ children }) {
     }
   }, [history.length])
 
-  const value = {
+  const value = useMemo(() => ({
     matlab, call, notify, progress, refreshProgress,
     busy: busy > 0, busyLabel,
     alertMsg, setAlertMsg, toast,
@@ -194,7 +226,10 @@ export function AppProvider({ children }) {
     loadSample, upload, push, undo, redo, reset,
     profiles, profileId, profile: profiles.find((x) => x.id === profileId) || null,
     refreshProfiles, switchProfile, editProfiles,
+    role, enterStudent, enterTeacher, signOut,
     theme, setTheme,
-  }
+  }), [matlab, call, notify, progress, refreshProgress, busy, busyLabel, alertMsg, toast, meta, history, index,
+    loadSample, upload, push, undo, redo, reset, profiles, profileId, refreshProfiles, switchProfile, editProfiles,
+    role, enterStudent, enterTeacher, signOut, theme, setTheme])
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

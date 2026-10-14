@@ -43,6 +43,7 @@ export default function CodeLab() {
   const [tasks, setTasks] = useState([])
   const [solved, setSolved] = useState([])
   const [ipt, setIpt] = useState(true)
+  const [teacher, setTeacher] = useState(false)     // teacher preview: nothing is recorded
   const [taskId, setTaskId] = useState(taskFromHash)
   const [code, setCode] = useState('')
   const [inputId, setInputId] = useState(null)
@@ -63,6 +64,9 @@ export default function CodeLab() {
 
   const task = useMemo(() => tasks.find((t) => t.id === taskId) || null, [tasks, taskId])
   const isFree = taskId === FREE
+  const locked = !teacher && task?.status === 'locked'
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   useEffect(() => {
     if (!matlab.ok) return
@@ -70,6 +74,7 @@ export default function CodeLab() {
       setTasks(asArray(d.tasks))
       setSolved(asArray(d.solved))
       setIpt(!!d.ipt)
+      setTeacher(!!d.teacher)
       if (taskFromHash() === FREE) warmUp()
     }).catch((e) => setRunError({ message: e.message }))
   }, [matlab.ok])
@@ -153,11 +158,14 @@ export default function CodeLab() {
             <Icon name="code" size={16} /> <span className="task-name">Free practice</span>
           </button>
           {tasks.map((t) => (
-            <button key={t.id} className={`task-item ${t.id === taskId ? 'active' : ''}`} onClick={() => setTaskId(t.id)} aria-current={t.id === taskId}>
-              <span className={`task-tick ${solved.includes(t.id) ? 'done' : ''}`} aria-label={solved.includes(t.id) ? 'solved' : 'not solved'}>
-                {solved.includes(t.id) ? '✓' : ''}
+            <button key={t.id} className={`task-item ${t.id === taskId ? 'active' : ''} ${t.status === 'locked' ? 'locked' : ''}`} onClick={() => setTaskId(t.id)} aria-current={t.id === taskId}>
+              <span className={`task-tick ${solved.includes(t.id) ? 'done' : ''}`} aria-label={solved.includes(t.id) ? 'solved' : t.status === 'locked' ? 'locked' : 'not solved'}>
+                {solved.includes(t.id) ? '✓' : t.status === 'locked' ? <Icon name="lock" size={10} /> : ''}
               </span>
-              <span className="task-name">{t.title}<small>{t.unit} · {t.topic}</small></span>
+              <span className="task-name">{t.title}
+                <small>{t.status === 'assigned' ? <b className={t.due && t.due < today && !solved.includes(t.id) ? 'overdue' : 'assigned'}>
+                  {t.due ? `Assigned · due ${t.due}` : 'Assigned'}</b> : `${t.unit} · ${t.topic}`}</small>
+              </span>
               <span className={LEVEL_BADGE[t.level] || 'badge'}>{t.level}</span>
             </button>
           ))}
@@ -165,6 +173,7 @@ export default function CodeLab() {
 
         <div className="stack code-main">
           {!matlab.ok && <Note kind="warn">The Code Lab needs MATLAB. {matlab.ready ? 'MATLAB is not available.' : 'MATLAB is starting…'}</Note>}
+          {teacher && <Note>Teacher preview: you can run every task (also locked ones) and see each model solution. Your runs are not recorded. Student work is under <a href="#submissions">Code submissions</a>.</Note>}
 
           {isFree ? (
             <Card title="Free practice">
@@ -183,6 +192,12 @@ export default function CodeLab() {
               <div className="task-brief">
                 <div className="stack-sm">
                   <div className="eyebrow" style={{ margin: 0 }}>{task.unit} · {task.topic}</div>
+                  {locked && <Note kind="warn">Your teacher has locked this task for now.</Note>}
+                  {task.status === 'assigned' && (
+                    <Note kind={task.due && task.due < today && !solved.includes(task.id) ? 'error' : 'warn'}>
+                      <b>Assigned by your teacher{task.due ? ` · due ${task.due}` : ''}.</b>{task.teacherNote ? ` ${task.teacherNote}` : ''}
+                    </Note>
+                  )}
                   {asArray(task.instructions).map((line, i) => <p key={i}>{line}</p>)}
                   {forbidden.length > 0 && (
                     <p className="small muted">Not allowed here (write it yourself): {forbidden.map((f) => <code key={f} className="chip-code">{f}</code>)}</p>
@@ -208,10 +223,10 @@ export default function CodeLab() {
               <span className="small muted hide-mobile"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> runs</span>
               <button className="btn btn-small btn-ghost" onClick={download} title="Download as a .m file for MATLAB"><Icon name="download" size={15} /> .m</button>
               <button className="btn btn-small btn-ghost" onClick={reset} disabled={!isFree && !task}><Icon name="reset" size={15} /> Reset</button>
-              {!isFree && solved.includes(taskId) && <button className="btn btn-small" onClick={showSolution}>Model solution</button>}
+              {!isFree && (teacher || solved.includes(taskId)) && <button className="btn btn-small" onClick={showSolution}>Model solution</button>}
               {running
                 ? <button className="btn btn-small" onClick={() => cancelRun()}>■ Stop</button>
-                : <button className="btn btn-primary btn-small" onClick={runCode} disabled={!matlab.ok || (!isFree && !task)}><Icon name="play" size={14} /> Run</button>}
+                : <button className="btn btn-primary btn-small" onClick={runCode} disabled={!matlab.ok || (!isFree && !task) || locked}><Icon name="play" size={14} /> Run</button>}
             </span>}>
             <MatlabEditor value={code} onChange={edit} onRun={runCode} errorLine={errorLine} />
             {solution && (

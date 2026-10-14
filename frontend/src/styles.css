@@ -187,7 +187,8 @@ code { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 0.92em; bac
 .field { display: flex; flex-direction: column; gap: 7px; font-size: 14px; }
 .field-label { color: var(--text-2); font-size: 13px; font-weight: 550; display: flex; justify-content: space-between; gap: 8px; }
 .field-label b { color: var(--navy-800); font-variant-numeric: tabular-nums; }
-select, input[type='number'], input[type='text'], textarea {
+.grow { flex: 1; min-width: 0; }
+select, input[type='number'], input[type='text'], input[type='password'], input[type='search'], input[type='date'], textarea {
   font: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); width: 100%;
 }
 select:focus, input:focus, textarea:focus { outline: none; border-color: var(--green-500); box-shadow: 0 0 0 3px var(--green-100); }
@@ -841,8 +842,74 @@ pre.console .muted { color: #8592a8; }
 .workspace-table td { vertical-align: middle; }
 .ws-thumb { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); image-rendering: pixelated; }
 
+.task-item.locked .task-name { color: var(--text-3); }
+.task-name small b.assigned { color: #a66d08; font-weight: 650; }
+.task-name small b.overdue { color: var(--red-500); font-weight: 650; }
+
+/* ==========================================================================
+   Start screen (student / teacher)
+   ========================================================================== */
+.start { min-height: 100vh; min-height: 100dvh; background: var(--bg); }
+.start-head { display: flex; justify-content: space-between; align-items: center; padding: 0 28px; background: var(--navy-900); }
+.start-head .brand { padding-left: 0; }
+.start-main { max-width: 1040px; margin: 0 auto; padding: 48px 24px 64px; }
+.start-main > h1 { font-size: 34px; }
+.start-main > .subtitle { margin: 8px 0 28px; color: var(--text-2); }
+.start-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.start-card { padding: 28px; }
+.start-card h2 { margin: 14px 0 4px; }
+.start-ic { width: 54px; height: 54px; border-radius: 16px; background: var(--green-100); color: var(--green-600); display: grid; place-items: center; }
+.start-ic.navy { background: var(--navy-100); color: var(--navy-600); }
+.start-students { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-top: 16px; max-height: 360px; overflow-y: auto; padding: 2px; }
+.start-student { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.start-student:hover:not(:disabled) { border-color: var(--green-400); background: var(--green-50); }
+.start-student:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.start-student small { display: block; font-size: 11.5px; color: var(--text-3); }
+.start-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.start-add input { flex: 1 1 150px; }
+.start-pin { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.start-pin input { flex: 1 1 160px; }
+
+/* ==========================================================================
+   Teacher mode
+   ========================================================================== */
+.sidebar-teacher { background: linear-gradient(180deg, #101d33, #0b1424); }
+.sidebar-teacher .nav-link.active { background: var(--violet-500); }
+.teacher-pill { background: var(--violet-100); color: var(--violet-500); border-color: transparent; font-weight: 650; }
+.avatar.teacher { background: var(--navy-700); }
+.avatar.lg { width: 48px; height: 48px; font-size: 18px; }
+.attention { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.attention li { padding-bottom: 12px; border-bottom: 1px solid var(--line-2); }
+.attention li:last-child { border-bottom: 0; padding-bottom: 0; }
+.attention a { color: var(--text); }
+.attention-issues { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0 34px; }
+.feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; font-size: 14px; }
+.feed li { display: flex; align-items: flex-start; gap: 10px; }
+.feed-ic { flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--navy-100); color: var(--navy-600); display: grid; place-items: center; }
+.th-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; white-space: nowrap; }
+.th-sort:hover { color: var(--navy-600); }
+table.roster td { white-space: nowrap; }
+table.roster a, table.sub-matrix a { color: var(--text); }
+.sub-matrix th, .sub-matrix td { text-align: center; padding: 8px 6px; }
+.sub-matrix thead th { vertical-align: bottom; min-width: 82px; }
+.sub-task { display: block; font-size: 11.5px; line-height: 1.3; text-transform: none; letter-spacing: 0; margin-bottom: 4px; white-space: normal; }
+.sub-matrix .sticky-col { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left; min-width: 180px; white-space: nowrap; }
+.sub-matrix tfoot td, .sub-matrix tfoot th { border-top: 2px solid var(--line); }
+.sub-matrix tbody th, .sub-matrix tfoot th { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; color: var(--text); }
+.sub-cell { border: 0; border-radius: 8px; padding: 4px 8px; min-width: 52px; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.sub-cell small { font-size: 10.5px; font-weight: 500; opacity: 0.8; }
+.sub-cell.ok { background: var(--green-100); color: var(--green-600); }
+.sub-cell.try { background: var(--amber-100); color: #a66d08; }
+.sub-cell.stuck { background: var(--red-100); color: var(--red-500); }
+.sub-cell:focus-visible { outline: 2px solid var(--focus); }
+.exp-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.exp-checklist li { display: flex; align-items: center; gap: 10px; }
+.exp-checklist .tick { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--text-3); }
+.exp-checklist li.done .tick { background: var(--green-500); border-color: var(--green-500); color: #fff; }
+
 @media (max-width: 1150px) {
   .code-lab { grid-template-columns: 1fr; }
+  .start-grid { grid-template-columns: 1fr; }
   .code-tasks { position: static; max-height: 280px; }
   .lab { grid-template-columns: 1fr; }
   .lab-panel { position: static; }
