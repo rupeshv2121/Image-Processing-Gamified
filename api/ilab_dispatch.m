@@ -441,6 +441,27 @@ switch op
         data = compareFilters(img(p.id), p);
         activity('tools', 'compare');
 
+    % ------------------------------------------------------------ code lab
+    case 'codeTasks'
+        data = struct('tasks', {codeTasks('list')}, 'solved', {solvedCodeTasks()}, 'ipt', hasIPT());
+
+    case 'codeWarmup'
+        figurePool('warm');                 % first figure render takes seconds - do it early
+        data = struct('warm', true);
+
+    case 'codeTaskStart'
+        data = struct('inputId', put(codeTasks('input', char(P(p, 'taskId', ''))), 'taskin'));
+
+    case 'codeTaskSolution'
+        taskId = char(P(p, 'taskId', ''));
+        if ~ismember(taskId, solvedCodeTasks())
+            error('ImageLab:invalidParameter', 'Solve the task first - then the model solution is shown.');
+        end
+        data = struct('code', codeTasks('solution', taskId));
+
+    case 'runCode'
+        data = runCodeLab(p);
+
     % ------------------------------------------------------------ quiz & games
     case 'quizCategories'
         data = quizEngine('categories');
@@ -988,6 +1009,46 @@ function checkDate(date)
 if isempty(regexp(date, '^\d{4}-\d{2}-\d{2}$', 'once'))
     error('ImageLab:invalidParameter', 'Invalid date "%s" (expected YYYY-MM-DD).', date);
 end
+end
+
+% =========================================================================
+% Code Lab: run the student's MATLAB code, grade it when it belongs to a task
+function data = runCodeLab(p)
+taskId = char(P(p, 'taskId', ''));
+opts = struct();
+if ~isempty(taskId)
+    t = codeTasks('get', taskId);
+    I = codeTasks('input', taskId);
+    opts.forbidden = t.forbidden;
+elseif isfield(p, 'id') && ~isempty(p.id)
+    I = img(p.id);
+else
+    generateSampleImages(false);
+    I = limitSize(toDouble(imread(sampleImages('path', 'peppers.png'))));
+end
+r = runStudentCode(char(P(p, 'code', '')), I, opts);
+data = rmfield(r, {'outValue', 'hasOut'});
+data.grade = [];
+data.newBadges = {};
+if isempty(taskId), return; end
+if ~isempty(r.error)
+    data.grade = struct('passed', false, 'match', 0, 'checks', {{}}, 'expectedId', '', 'diffId', '', ...
+        'message', 'Your code stopped with an error - fix it (see the Command Window) and run again.');
+    return
+end
+ws = struct();
+if r.hasOut, ws.out = r.outValue; end
+data.grade = codeTasks('grade', taskId, ws, I);
+if data.grade.passed && trackingEnabled()
+    prog = progressManager('codeTask', taskId);
+    data.newBadges = prog.newBadges;
+end
+end
+
+function ids = solvedCodeTasks()
+prog = progressManager('get');
+ids = {};
+if isfield(prog.activities, 'codelab'), ids = reshape(cellstr(prog.activities.codelab), 1, []); end
 end
 
 % =========================================================================

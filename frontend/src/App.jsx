@@ -36,6 +36,7 @@ const PAGES = {
   about: lazy(() => import('./pages/About')),
   teacher: lazy(() => import('./pages/Teacher')),
   animate: lazy(() => import('./pages/Animations')),
+  code: lazy(() => import('./pages/CodeLab')),
 }
 
 const LAB_KEYS = UNITS.flatMap((u) => u.labs).filter((k) => k !== 'workspace')
@@ -105,6 +106,7 @@ function Sidebar({ route }) {
           </div>
         )}
         <NavLink to="experiments" icon="file" label="Experiments" route={route} />
+        <NavLink to="code" icon="code" label="Code Lab" route={route} />
 
         <div className="nav-section">Play</div>
         <NavLink to="quiz" icon="gamepad" label="Arcade" route={route} />
