@@ -27,6 +27,7 @@ export const UNITS = [
       { text: 'Flip a kernel (convolution)', link: 'correlation', done: (p) => has(p, 'tools', 'convolution') },
       { text: 'Design your own kernel', link: 'kernel', done: (p) => has(p, 'tools', 'kernelPlayground') },
       { text: 'Sharpen an image', link: 'sharpening', done: (p) => count(p, 'sharpening') >= 1 },
+      { text: 'Solve a MATLAB task in the Code Lab', link: 'code', done: (p) => count(p, 'codelab') >= 1 },
     ],
   },
   {
@@ -73,6 +74,7 @@ export const MEDALS = {
   edge_detective: '🔍', segmentation_pro: '🧩', colour_artist: '🎨', perfect_quiz: '💯',
   streak_master: '🔥', experimenter: '⚗️', scholar: '🎓', quiz_regular: '⚡',
   morphologist: '🫧', shape_analyst: '📐', restorer: '🩹', daily_devotee: '📅',
+  matlab_coder: '💻',
 }
 
 // All labs with their navigation metadata

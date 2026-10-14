@@ -56,6 +56,7 @@ interaction**, and the Python server is only a bridge between the two.
 | Morphology Lab | Erosion, dilation, opening, closing, boundary extraction, hole filling; clickable structuring-element editor; binary and grayscale; fast vs manual loops; change map |
 | Region Analysis | Connected-component labelling (4 / 8-connectivity), Freeman chain codes, first difference, shape number, area, perimeter, centroid, circularity |
 | Color Processing | RGB, HSV, YCbCr, L\*a\*b\* channels; per-channel enhancement |
+| Code Lab | **MATLAB editor in the browser** (syntax highlighting, Ctrl+Enter to run): MATLAB runs the code and returns the Command Window, figures and a workspace table. 11 graded programming tasks (negative, gamma, contrast stretch, histogram, equalisation, mean / median filters with loops, Laplacian, Sobel, Otsu, erosion) with hints, a "write it yourself" function blacklist, automatic checking against MATLAB's reference result, difference images and a model solution after solving |
 | Experiments | 13 experiments with aim, theory, algorithm, MATLAB code (toolbox / manual), run, observation, conclusion, quiz |
 | Quiz & games | Daily Challenge (same “match the target” puzzle for everyone each day, streaks), Weak-Topic Practice (questions weighted by your error rate), Rapid Fire (10 s timer), Kernel Quiz, Guess the Filter, Build the Pipeline, Challenge Mode, Classroom Mode |
 | Students | Several student profiles on one computer, each with its own XP, badges, quiz history and streak (`data/profiles.mat`) |
@@ -339,6 +340,8 @@ ImageLab/
 ├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, teacher settings, pipeline problems
 ├── experiments/   experimentCatalog, runExperiment
 ├── reports/       generateReport (HTML) + generateReportPdf (PDF) — output in reports/output/
+├── codelab/       runStudentCode (runs student code), codeTasks (tasks + grading), figurePool,
+│                  shims/ (toolbox stand-ins used only while student code runs without the toolbox)
 ├── api/           ilab_dispatch (single entry point), ilab_store (image store), samples, charts
 ├── tests/         ImageLabTests (matlab.unittest), smokeTestApi
 ├── sample_images/ peppers.png + generated teaching images

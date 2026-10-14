@@ -99,6 +99,10 @@ call('steps', struct('algorithm', 'histeq', 'matrix', [0 1 2; 3 2 1], 'levels', 
 call('steps', struct('algorithm', 'morphology', 'matrix', eye(5), 'se', ones(3), 'operation', 'dilate'));
 call('steps', struct('algorithm', 'regiongrow', 'matrix', magic(6), 'seedRow', 2, 'seedCol', 2, 'tolerance', 10));
 call('classroom', struct('action', 'get'));
+call('codeTasks', struct());
+call('codeTaskStart', struct('taskId', 'meanfilter'));
+call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;', 'track', false));
+call('runCode', struct('id', id, 'code', sprintf('J = rgb2gray(img);\nimshow(J)\nout = J;')));
 
 % expected errors
 expectError('morphology', struct('id', gid, 'se', zeros(3)));
@@ -106,6 +110,8 @@ expectError('dailyStart', struct('date', 'not-a-date'));
 expectError('filter', struct('id', id, 'name', 'mean', 'k', 4));
 expectError('imageInfo', struct('id', '../../etc'));
 expectError('correlation', struct('matrix', magic(3), 'kernel', ones(2)));
+expectError('runCode', struct('code', 'system(''dir'')'));
+expectError('codeTaskSolution', struct('taskId', 'otsu'));
 
 % clean test entries from the leaderboard/progress files
 leaderboardManager('clear');

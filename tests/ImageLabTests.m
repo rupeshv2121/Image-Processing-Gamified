@@ -478,5 +478,50 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyGreaterThan(nnz(strcmp({qs.category}, 'Noise')), nnz(strcmp({qs.category}, 'Histogram')));
             tc.verifyEqual(numel(unique({qs.id})), 15);      % no repeated questions
         end
+
+        % -------------------------------------------------- code lab
+        function codeTaskSolutionsPassAndStartersFail(tc)
+            ilab_store('init', fullfile(tempdir, 'ilab_test_images'));
+            T = codeTasks('list');
+            for k = 1:numel(T)
+                t = T{k};
+                I = codeTasks('input', t.id);
+                full = codeTasks('get', t.id);
+                r = runStudentCode(codeTasks('solution', t.id), I, struct('forbidden', {full.forbidden}));
+                tc.verifyEmpty(r.error, t.id);
+                g = codeTasks('grade', t.id, struct('out', r.outValue), I);
+                tc.verifyTrue(g.passed, sprintf('%s: model solution must pass (%s)', t.id, g.message));
+                r = runStudentCode(t.starter, I, struct());
+                ws = struct(); if r.hasOut, ws.out = r.outValue; end
+                tc.verifyFalse(codeTasks('grade', t.id, ws, I).passed, [t.id ': starter code must not pass']);
+            end
+        end
+
+        function codeLabCapturesOutputErrorsAndFigures(tc)
+            ilab_store('init', fullfile(tempdir, 'ilab_test_images'));
+            r = runStudentCode(sprintf('x = 6 * 7\nfigure; plot(1:3)\nout = img;'), tc.Img);
+            tc.verifyTrue(contains(r.output, '42'));
+            tc.verifyNumElements(r.figures, 1);
+            tc.verifyEqual(r.outValue, tc.Img);
+            tc.verifyEqual(r.variables{1}.name, 'out');
+            r = runStudentCode(sprintf('a = 1;\nb = [1 2 3];\nc = b(5);'), tc.Img);
+            tc.verifyEqual(r.error.line, 3);
+            r = runStudentCode(sprintf('a = 1;\nb = [1 2 3;\nc = 2'), tc.Img);
+            tc.verifyNotEmpty(r.error);
+            tc.verifyFalse(contains(r.error.message, 'ilab_code_'));
+        end
+
+        function codeLabBlocksDangerousCalls(tc)
+            for bad = {'system(''dir'')', 'clear all', 'clear functions', '!dir', ...
+                       'delete(''x.txt'')', 'eval(''1+1'')', 'cd ..', 'x = 1; save(''x.mat'')'}
+                tc.verifyError(@() runStudentCode(bad{1}, tc.Img), 'ImageLab:codeBlocked', bad{1});
+            end
+            tc.verifyError(@() runStudentCode('out = conv2(img, ones(3)/9);', tc.Img, ...
+                struct('forbidden', {{'conv2'}})), 'ImageLab:codeForbidden');
+            % names inside strings and comments, or used as variables, are fine
+            r = runStudentCode(sprintf('input = img;\n%% system(x)\ns = ''delete me'';\nt = s'';\nout = input;'), tc.Img);
+            tc.verifyEmpty(r.error);
+            tc.verifyFalse(contains(path, [filesep 'shims']));   % stand-ins removed again
+        end
     end
 end

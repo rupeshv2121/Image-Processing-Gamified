@@ -88,6 +88,28 @@ it in Word. A DOCX is also produced when MATLAB Report Generator is installed.
 
 The leaderboard and progress are stored by MATLAB in `quizzes/leaderboard.mat` and `data/userProgress.mat`.
 
+### MATLAB Code Lab
+
+Open **Code Lab** in the sidebar to write real MATLAB code in the browser.
+
+* **Free practice**: `img` is the current Workspace image (double, `[0,1]`). Anything you print shows in
+  the Command Window, every figure you draw (`imshow`, `plot`, `subplot` …) appears below, and the
+  Workspace table lists your variables. Put a result image in `out` and send it to the Workspace
+  with **→ Workspace**.
+* **Tasks**: every task gives you `img` and asks for the result in `out`. Press **Run** (or Ctrl+Enter):
+  MATLAB compares `out` with its own reference result and shows the match, the expected image and a
+  difference image. Hints can be revealed one by one. Functions that would solve the task in one
+  call are not allowed. Solving a task gives +40 XP the first time, and the model solution becomes
+  available. Five solved tasks earn the *MATLAB Coder* badge.
+* Your code is saved in the browser for each task and student profile. **.m** downloads it for MATLAB.
+* **Stop** interrupts code that runs too long (for example an endless loop).
+* Calls that could change files or the shared MATLAB session (`system`, `delete`, `cd`, `save`,
+  `clear all`, `input` …) are rejected. This guards against accidents. It is not a security sandbox:
+  run the server only on a computer you trust (it listens on 127.0.0.1 only).
+* Without the Image Processing Toolbox, `imfilter`, `fspecial`, `medfilt2`, `imnoise`, `imhist`,
+  `histeq`, `padarray`, `mat2gray`, `graythresh`, `imbinarize`, `strel`, `imerode` and `imdilate`
+  are ImageLab stand-ins with the same calling syntax.
+
 ## 7. Troubleshooting
 
 | Message | Fix |
