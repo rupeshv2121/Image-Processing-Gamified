@@ -555,6 +555,16 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyEqual(s.gamma.lastError, 'syntax error');
         end
 
+        function invalidTokensGiveNoSession(tc)
+            tc.verifyEmpty(authManager('resolve', ''));
+            tc.verifyEmpty(authManager('resolve', repmat('a', 1, 64)));       % well-formed, unknown
+            tc.verifyEmpty(authManager('resolve', 'x'' OR 1=1'));
+            prev = profileManager('active');
+            restore = onCleanup(@() profileManager('use', prev));
+            profileManager('use', 'guest');
+            tc.verifyEqual(progressManager('topic', 'Guest topic').xp, 0);  % guests record nothing
+        end
+
         function teacherProfileRecordsNothing(tc)
             prev = profileManager('active');
             restore = onCleanup(@() profileManager('use', prev));

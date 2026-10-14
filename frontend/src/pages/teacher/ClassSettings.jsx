@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../../AppContext'
-import { getTeacherPin, run, setRole } from '../../api'
+import { run } from '../../api'
 import Icon from '../../components/Icon'
-import { StudentsModal } from '../../components/Profiles'
+import { StudentsModal, useSelfRegister } from '../../components/Profiles'
 import { Card, Note, Page } from '../../components/ui'
 import { useTeacher } from './TeacherData'
 
@@ -12,7 +12,8 @@ export default function ClassSettings() {
   const [hasPin, setHasPin] = useState(null)
   const [manage, setManage] = useState(false)
   const [files, setFiles] = useState(null)
-  const [pinForm, setPinForm] = useState({ next: '', confirm: '' })
+  const [pinForm, setPinForm] = useState({ current: '', next: '', confirm: '' })
+  const [selfRegister, setSelfRegister] = useSelfRegister()
   const [pinMsg, setPinMsg] = useState(null)
 
   useEffect(() => {
@@ -28,12 +29,12 @@ export default function ClassSettings() {
     setPinMsg(null)
     const next = remove ? '' : pinForm.next
     if (!remove && next !== pinForm.confirm) { setPinMsg({ kind: 'error', text: 'The two PINs do not match.' }); return }
-    const s = await call('classroom', { action: 'setPin', pin: getTeacherPin(), newPin: next }, { label: 'Saving the PIN' })
+    // The current PIN is asked again, so nobody can change it at an unattended computer
+    const s = await call('classroom', { action: 'setPin', pin: pinForm.current, newPin: next }, { label: 'Saving the PIN' })
     if (s) {
-      setRole('teacher', next)                  // keep this tab signed in with the new PIN
       setHasPin(!!s.hasPin)
-      setPinForm({ next: '', confirm: '' })
-      setPinMsg({ kind: 'ok', text: remove ? 'PIN removed — anyone can open the teacher side.' : 'PIN saved. It is asked again when this browser tab is closed.' })
+      setPinForm({ current: '', next: '', confirm: '' })
+      setPinMsg({ kind: 'ok', text: remove ? 'PIN removed — anyone can sign in as the teacher.' : 'PIN saved. Use it the next time you sign in as the teacher.' })
     }
   }
 
@@ -42,8 +43,13 @@ export default function ClassSettings() {
       {hasPin === false && <Note kind="warn">No teacher PIN is set, so students can open the teacher side. Set one below.</Note>}
       <div className="grid-2 mt-sm" style={{ alignItems: 'start' }}>
         <Card title="Students" extra={<span className="small faint">{profiles.length} on this computer</span>}>
-          <p className="small">Add students before the first class, or let them add themselves on the start screen. Renaming and deleting a student needs the teacher PIN; deleting removes their progress and Code Lab work.</p>
-          <button className="btn btn-primary mt-sm" onClick={() => setManage(true)}><Icon name="users" size={16} /> Manage students</button>
+          <p className="small">Add students (each gets a first password), reset forgotten passwords, rename or delete students. Deleting removes the account, progress and Code Lab work.</p>
+          <button className="btn btn-primary mt-sm" onClick={() => setManage(true)}><Icon name="users" size={16} /> Manage students & passwords</button>
+          <label className="check mt">
+            <input type="checkbox" checked={!!selfRegister} disabled={selfRegister === null} onChange={(e) => setSelfRegister(e.target.checked)} />
+            Students may create their own account on the sign-in page
+          </label>
+          <p className="tiny faint">Off: only you create accounts. Students added before passwords existed choose one at their first sign-in.</p>
         </Card>
 
         <Card title="Export the class report">
@@ -58,6 +64,10 @@ export default function ClassSettings() {
 
         <Card title={hasPin ? 'Change the teacher PIN' : 'Set a teacher PIN'}>
           <form className="pin-form" onSubmit={changePin}>
+            {hasPin && (
+              <label className="field"><span className="field-label">Current PIN</span>
+                <input type="password" autoComplete="current-password" value={pinForm.current} onChange={(e) => setPinForm({ ...pinForm, current: e.target.value })} /></label>
+            )}
             <label className="field"><span className="field-label">New PIN (4–32 characters)</span>
               <input type="password" autoComplete="new-password" value={pinForm.next} onChange={(e) => setPinForm({ ...pinForm, next: e.target.value })} /></label>
             <label className="field"><span className="field-label">Repeat the PIN</span>
@@ -68,7 +78,7 @@ export default function ClassSettings() {
             </div>
           </form>
           {pinMsg && <Note kind={pinMsg.kind}>{pinMsg.text}</Note>}
-          <p className="small muted mt-sm">MATLAB stores only a salted SHA-256 hash of the PIN in data/classroom.mat. It protects the teacher side, the exports, assignments and student management.</p>
+          <p className="small muted mt-sm">MATLAB stores only a salted hash of the PIN (data/classroom.mat) and of every student password (PBKDF2, data/accounts.mat). Five wrong attempts lock sign-in for five minutes.</p>
         </Card>
       </div>
       {manage && <StudentsModal onClose={() => { setManage(false); refreshProfiles(); refresh({ force: true }) }} />}

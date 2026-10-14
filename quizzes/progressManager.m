@@ -42,7 +42,7 @@ elseif strcmp(action, 'summaryOf')
     out = summarise(loadProgress(varargin{1}), {});
     return
 end
-if strcmp(profileManager('active'), 'teacher')  % teacher mode: never record anything
+if any(strcmp(profileManager('active'), {'teacher', 'guest'}))  % nobody signed in as a student
     out = summarise(defaultProgress(), {});
     return
 end

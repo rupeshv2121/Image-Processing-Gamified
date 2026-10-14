@@ -2,41 +2,38 @@
 // Every call is forwarded to the MATLAB function ilab_dispatch.m —
 // the browser never processes pixels itself, it only displays MATLAB's output.
 
-// The active student profile travels with every request, so MATLAB stores
-// XP, badges and quiz results for the right student (profileManager.m).
-let profileId = (() => {
-  try { return localStorage.getItem('imagelab.profile') || 'default' } catch { return 'default' }
-})()
-export const getProfileId = () => profileId
-export function setProfileId(id) {
-  profileId = id || 'default'
-  try { localStorage.setItem('imagelab.profile', profileId) } catch { /* storage unavailable */ }
+// ------------------------------------------------------------------ session
+// Signing in (authManager.m) returns a session token. It travels with every
+// request and MATLAB derives WHO is asking from it - the browser never says
+// which student it is. Students may stay signed in on this computer
+// ("remember me": localStorage); otherwise, and always for the teacher, the
+// session ends with the browser tab (sessionStorage).
+const SESSION_KEY = 'imagelab.session'
+const readSession = (store) => { try { return JSON.parse(store.getItem(SESSION_KEY) || 'null') } catch { return null } }
+let session = readSession(sessionStorage) || readSession(localStorage)
+export const getSession = () => session
+export const getRole = () => session?.role || null
+// Key for per-student browser data (Code Lab drafts)
+export const getProfileId = () => (session ? (session.role === 'teacher' ? 'teacher' : session.profileId) : 'guest')
+
+export function setSession(next, remember = false) {
+  session = next
+  for (const store of [sessionStorage, localStorage]) {
+    try { store.removeItem(SESSION_KEY) } catch { /* storage unavailable */ }
+  }
+  // tidy up keys of the previous version (role / PIN / chosen profile)
+  for (const [store, key] of [[localStorage, 'imagelab.role'], [localStorage, 'imagelab.profile'], [sessionStorage, 'imagelab.role'], [sessionStorage, 'imagelab.teacherPin']]) {
+    try { store.removeItem(key) } catch { /* storage unavailable */ }
+  }
+  if (!next) return
+  const keep = { token: next.token, role: next.role, profileId: next.profileId, name: next.name }
+  try { (remember && next.role === 'student' ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(keep)) } catch { /* storage unavailable */ }
 }
 
-// Role of this browser tab: 'student' | 'teacher' | null (not chosen yet).
-// Students are remembered on this computer; the teacher role and PIN only
-// last for the browser tab (sessionStorage), like a sign-in.
-const ROLE_KEY = 'imagelab.role'
-const PIN_KEY = 'imagelab.teacherPin'
-const store = (s, k, v) => { try { if (v) s.setItem(k, v); else s.removeItem(k) } catch { /* storage unavailable */ } }
-const read = (s, k) => { try { return s.getItem(k) || '' } catch { return '' } }
-let role = read(sessionStorage, ROLE_KEY) === 'teacher' ? 'teacher' : read(localStorage, ROLE_KEY) === 'student' ? 'student' : null
-let teacherPin = role === 'teacher' ? read(sessionStorage, PIN_KEY) : ''
-export const getRole = () => role
-export const getTeacherPin = () => teacherPin
-export function setRole(next, pin = '') {
-  role = next
-  teacherPin = next === 'teacher' ? pin : ''
-  store(sessionStorage, ROLE_KEY, next === 'teacher' ? 'teacher' : '')
-  store(sessionStorage, PIN_KEY, teacherPin)
-  store(localStorage, ROLE_KEY, next === 'student' ? 'student' : '')
-}
-
-// In teacher mode every request runs as the reserved 'teacher' profile (MATLAB
-// records nothing for it) and carries the PIN for the teacher-only operations.
-const identity = () => (role === 'teacher'
-  ? { profileId: 'teacher', pin: teacherPin, track: false }
-  : { profileId })
+// Called when MATLAB no longer knows the token (expired, signed out elsewhere,
+// password reset by the teacher, MATLAB restarted)
+let onSessionLost = null
+export const setSessionLostHandler = (fn) => { onSessionLost = fn }
 
 export async function run(op, params = {}) {
   let res
@@ -44,7 +41,7 @@ export async function run(op, params = {}) {
     res = await fetch('/api/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ op, params: { ...params, ...identity() } }),
+      body: JSON.stringify({ op, params: { ...params, ...(session ? { token: session.token } : {}), ...(session?.role === 'teacher' ? { track: false } : {}) } }),
     })
   } catch {
     throw new Error('Cannot reach the ImageLab server. Start it with start_imagelab.bat.')
@@ -58,6 +55,11 @@ export async function run(op, params = {}) {
   if (!json.ok) {
     const err = new Error(json.error || 'Unknown MATLAB error.')
     err.cancelled = !!json.cancelled
+    err.errorId = json.errorId || ''
+    if (err.errorId === 'ImageLab:auth' && session) {
+      setSession(null)
+      onSessionLost?.(err.message)
+    }
     throw err
   }
   return json.data

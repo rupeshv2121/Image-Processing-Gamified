@@ -1,12 +1,26 @@
 function failures = smokeTestApi()
 %SMOKETESTAPI Call every ilab_dispatch operation once and report problems.
 %   failures = smokeTestApi() returns the number of failed operations.
+%
+%   Most operations need a signed-in user. The test signs in as the teacher
+%   with the PIN in the environment variable ILAB_TEST_PIN (empty = no PIN
+%   set); without a teacher session those operations are skipped. With a
+%   session it also runs a whole student account cycle on a temporary
+%   student, which is deleted again at the end.
 
 root = fileparts(fileparts(mfilename('fullpath')));
 addpath(root);
 ilab_setup();
 ilab_store('init', fullfile(root, 'runtime', 'images'));
 failures = 0;
+token = '';
+t = jsondecode(ilab_dispatch(jsonencode(struct('op', 'auth', 'params', ...
+    struct('action', 'teacherLogin', 'pin', getenv('ILAB_TEST_PIN'))))));
+if t.ok
+    token = t.data.token;
+else
+    fprintf('  skip signed-in operations (teacher sign-in failed: %s - setenv ILAB_TEST_PIN)\n', t.error);
+end
 
 r = call('loadSample', struct('name', 'peppers.png'));
 id = r.data.id;
@@ -57,7 +71,7 @@ q = call('quizQuestions', struct('difficulty', 'easy', 'n', 10));
 call('quizQuestions', struct('mode', 'kernel', 'n', 5));
 res = struct('id', {'A', 'B'}, 'category', {'Noise', 'Histogram'}, 'difficulty', {'easy', 'hard'}, ...
     'correct', {true, false}, 'timeLeft', {6, 0});
-call('quizSubmit', struct('results', res, 'name', 'Smoke Test', 'roll', '000'));
+signedIn('quizSubmit', struct('results', res, 'name', 'Smoke Test', 'roll', '000'));
 call('guessFilter', struct('id', id));
 call('pipelineProblems', struct());
 ps = call('pipelineStart', struct('id', id, 'problemId', 'spcontrast'));
@@ -68,13 +82,13 @@ steps = struct('block', {'median', 'gaussian'}, 'k', {3, 5});
 call('challengeScore', struct('cleanId', cs.data.cleanId, 'degradedId', cs.data.degradedId, ...
     'steps', steps, 'timeUsed', 20, 'timeLimit', 60));
 call('leaderboard', struct('action', 'get'));
-call('progress', struct('action', 'topic', 'value', 'Smoke'));
+signedIn('progress', struct('action', 'topic', 'value', 'Smoke'));
 call('experiments', struct());
 for e = 1:13
-    call('runExperiment', struct('number', e));
+    signedIn('runExperiment', struct('number', e));
 end
 call('source', struct('name', 'medianFilterManual'));
-call('report', struct('title', 'Smoke report', 'students', 'Test', 'aim', 'Check', ...
+signedIn('report', struct('title', 'Smoke report', 'students', 'Test', 'aim', 'Check', ...
     'images', struct('label', {'Original'}, 'id', {id}), 'metrics', struct('name', {'PSNR'}, 'value', {30}), ...
     'kernel', ones(3) / 9, 'observations', {{'ok'}}));
 % morphology, regions, error map, profiles, daily challenge, weak quiz
@@ -89,7 +103,7 @@ for f = {'adaptivemedian', 'adaptivelocal'}
     call('filter', struct('id', n.data.id, 'name', f{1}, 'k', 7, 'refId', id));
 end
 call('quizQuestions', struct('mode', 'weak', 'n', 5));
-call('profiles', struct('action', 'list'));
+signedIn('profiles', struct('action', 'list'));
 d = call('dailyStart', struct('date', '2026-01-01'));
 call('pipelineRun', struct('problemId', d.data.problemId, 'cleanId', d.data.cleanId, ...
     'degradedId', d.data.degradedId, 'steps', {{'median'}}, 'daily', '2026-01-01'));
@@ -99,18 +113,32 @@ call('steps', struct('algorithm', 'histeq', 'matrix', [0 1 2; 3 2 1], 'levels', 
 call('steps', struct('algorithm', 'morphology', 'matrix', eye(5), 'se', ones(3), 'operation', 'dilate'));
 call('steps', struct('algorithm', 'regiongrow', 'matrix', magic(6), 'seedRow', 2, 'seedCol', 2, 'tolerance', 10));
 call('classroom', struct('action', 'get'));
-% Teacher operations need the teacher PIN when one is set: pass it with
-% setenv('ILAB_TEST_PIN', '...') or these calls are skipped.
-pin = getenv('ILAB_TEST_PIN');
-if classroomManager('checkPin', pin)
-    call('classroom', struct('action', 'overview', 'pin', pin));
-    call('classroom', struct('action', 'submissions', 'pin', pin));
-    call('classroom', struct('action', 'student', 'id', 'default', 'pin', pin));
-    call('classroom', struct('action', 'submission', 'id', 'default', 'taskId', 'negative', 'pin', pin));
-    call('classroom', struct('action', 'setCodeTask', 'taskId', 'negative', 'status', 'open', 'pin', pin));
-else
-    fprintf('  skip teacher operations (a teacher PIN is set; setenv ILAB_TEST_PIN to test them)\n');
+if ~isempty(token)
+    call('classroom', struct('action', 'overview'));
+    call('classroom', struct('action', 'submissions'));
+    call('classroom', struct('action', 'student', 'id', 'default'));
+    call('classroom', struct('action', 'submission', 'id', 'default', 'taskId', 'negative'));
+    call('classroom', struct('action', 'setCodeTask', 'taskId', 'negative', 'status', 'open'));
+    call('profiles', struct('action', 'accounts'));
+    % student account cycle on a temporary student
+    a = call('profiles', struct('action', 'add', 'name', 'Smoke Student', 'roll', 'SMOKE-1'));
+    if a.ok
+        sid = a.data.id;
+        l = call('auth', struct('action', 'login', 'identifier', 'smoke-1', 'password', a.data.password, 'token', ''));
+        if l.ok
+            st = l.data.token;
+            call('auth', struct('action', 'changePassword', 'oldPassword', '', 'newPassword', 'smoke-pass-2', 'token', st));
+            call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;', 'token', st));
+            call('auth', struct('action', 'me', 'token', st));
+            expectError('classroom', struct('action', 'overview', 'token', st));      % students are not teachers
+            call('auth', struct('action', 'logout', 'token', st));
+            expectError('progress', struct('token', st));                            % signed out
+        end
+        call('profiles', struct('action', 'remove', 'id', sid));
+    end
 end
+expectError('profiles', struct('action', 'list'));                                 % guests see no students
+expectError('auth', struct('action', 'login', 'identifier', 'nobody-here', 'password', 'whatever1'));
 call('codeTasks', struct());
 call('codeTaskStart', struct('taskId', 'meanfilter'));
 call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;', 'track', false));
@@ -127,10 +155,20 @@ expectError('codeTaskSolution', struct('taskId', 'otsu'));
 
 % clean test entries from the leaderboard/progress files
 leaderboardManager('clear');
-progressManager('reset');
+if ~isempty(token), call('auth', struct('action', 'logout')); end
 fprintf('\nSmoke test finished: %d failure(s)\n', failures);
 
+    function r = signedIn(op, params)
+        if isempty(token)
+            fprintf('  skip %-18s (needs a signed-in user)\n', op);
+            r = struct('ok', false);
+        else
+            r = call(op, params);
+        end
+    end
+
     function r = call(op, params)
+        if ~isempty(token) && ~isfield(params, 'token'), params.token = token; end
         tic;
         r = jsondecode(ilab_dispatch(jsonencode(struct('op', op, 'params', params))));
         t = toc;

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { asArray, getProfileId, getRole, run, serverStatus, setProfileId, setRole, uploadImage } from './api'
+import { asArray, getSession, run, serverStatus, setSession, setSessionLostHandler, uploadImage } from './api'
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
@@ -15,8 +15,12 @@ export function AppProvider({ children }) {
   const [alertMsg, setAlertMsg] = useState(null)
   const [toast, setToast] = useState(null)
   const [profiles, setProfiles] = useState([])
-  const [profileId, setProfileState] = useState(getProfileId)
-  const [role, setRoleState] = useState(getRole)       // 'student' | 'teacher' | null
+  // Signed-in user: { token, role: 'student' | 'teacher', profileId, name } or null
+  const [session, setSessionState] = useState(getSession)
+  const [mustChangePassword, setMustChangePassword] = useState(false)
+  const [sessionMessage, setSessionMessage] = useState(null)   // why the user was signed out
+  const role = session?.role || null
+  const profileId = role === 'student' ? session.profileId : null
   const [theme, setThemeState] = useState(() => {
     try { return localStorage.getItem('imagelab.theme') || 'system' } catch { return 'system' }
   })
@@ -41,8 +45,14 @@ export function AppProvider({ children }) {
           if (s.matlab) {
             const ping = await run('ping')
             if (!stop) setMatlab({ ready: true, ok: true, error: null, ipt: ping.ipt, iptLicensed: ping.iptLicensed, release: ping.release })
-            await refreshProfiles()
-            refreshProgress()
+            // A remembered session is only valid while MATLAB still knows its token
+            if (getSession()) {
+              const me = await run('auth', { action: 'me' }).catch(() => null)
+              if (me && !stop) {
+                await refreshProfiles()
+                refreshProgress()
+              }
+            }
             // Deep link for demos: #filters?sample=peppers.png loads a sample image
             const m = window.location.hash.match(/[?&]sample=([\w.-]+)/)
             if (m && !stop) {
@@ -99,72 +109,80 @@ export function AppProvider({ children }) {
   }, [])
 
   // ------------------------------------------------------------- profiles
+  // The class list (signed-in users only). Students see it in the leaderboard.
   const refreshProfiles = useCallback(async () => {
     try {
       const list = asArray(await run('profiles', { action: 'list' }))
       setProfiles(list)
-      if (!list.some((x) => x.id === getProfileId())) {   // deleted elsewhere
-        setProfileId('default')
-        setProfileState('default')
-      }
       return list
     } catch {
       return null
     }
   }, [])
 
-  const switchProfile = useCallback(async (id) => {
-    setProfileId(id)
-    setProfileState(id)
-    const p = await refreshProgress()
-    const who = profiles.find((x) => x.id === id)
-    if (p && who) notify(`Signed in as ${who.name}`)
-  }, [refreshProgress, profiles, notify])
-
-  // Add / rename / delete a student. Returns the new list (or null on error).
+  // Teacher: add / rename / delete students. Returns MATLAB's answer (or null).
   const editProfiles = useCallback(async (params, label) => {
-    const list = await call('profiles', params, { label })
-    if (!list) return null
-    const arr = asArray(list)
-    setProfiles(arr)
-    if (!arr.some((x) => x.id === getProfileId())) {
-      setProfileId('default')
-      setProfileState('default')
-      refreshProgress()
-    }
-    return arr
-  }, [call, refreshProgress])
+    const d = await call('profiles', params, { label })
+    if (!d) return null
+    const list = asArray(d.students || d)
+    if (list.length && list[0].id) setProfiles(list)
+    return d
+  }, [call])
 
-  // ------------------------------------------------------------- roles
-  // Student: pick (or create) your profile. Teacher: MATLAB checks the PIN.
-  const enterStudent = useCallback(async (id) => {
-    if (id !== getProfileId()) {           // a different student: start with an empty workspace
-      setHistory([])
-      setIndex(-1)
-      setMeta(null)
-    }
-    setRole('student')
-    setRoleState('student')
-    setProfileId(id)
-    setProfileState(id)
-    await refreshProgress()
-  }, [refreshProgress])
-
-  const enterTeacher = useCallback(async (pin) => {
-    await run('classroom', { action: 'unlock', pin })      // throws on a wrong PIN
-    setRole('teacher', pin)
-    setRoleState('teacher')
-    setProgress(null)
-  }, [])
-
-  const signOut = useCallback(() => {
-    setRole(null)
-    setRoleState(null)
+  // ------------------------------------------------------------- sign-in
+  const clearWork = useCallback(() => {
     setHistory([])
     setIndex(-1)
     setMeta(null)
-    window.location.hash = 'start'
+    setProgress(null)
   }, [])
+
+  const begin = useCallback(async (s, remember) => {
+    setSession(s, remember)
+    setSessionState({ token: s.token, role: s.role, profileId: s.profileId, name: s.name })
+    setSessionMessage(null)
+    setMustChangePassword(!!s.mustChange)
+    clearWork()
+    await refreshProfiles()
+    if (s.role === 'student') await refreshProgress()
+    return s
+  }, [clearWork, refreshProfiles, refreshProgress])
+
+  // Each throws MATLAB's message (wrong password, locked, needs a password ...)
+  const login = useCallback(async (identifier, password, remember, claim = false) =>
+    begin(await run('auth', { action: 'login', identifier, password, claim }), remember), [begin])
+  const register = useCallback(async (name, roll, password, remember) =>
+    begin(await run('auth', { action: 'register', name, roll, password }), remember), [begin])
+  const teacherLogin = useCallback(async (pin) =>
+    begin(await run('auth', { action: 'teacherLogin', pin }), false), [begin])
+
+  const changePassword = useCallback(async (oldPassword, newPassword) => {
+    await run('auth', { action: 'changePassword', oldPassword, newPassword })
+    setMustChangePassword(false)
+  }, [])
+
+  const signOut = useCallback((message = null) => {
+    if (getSession()) run('auth', { action: 'logout' }).catch(() => {})
+    setSession(null)
+    setSessionState(null)
+    setMustChangePassword(false)
+    setSessionMessage(message)
+    setProfiles([])
+    clearWork()
+    window.location.hash = 'start'
+  }, [clearWork])
+
+  // MATLAB rejected the token (expired, password reset, MATLAB restarted)
+  useEffect(() => {
+    setSessionLostHandler((message) => {
+      setSessionState(null)
+      setMustChangePassword(false)
+      setSessionMessage(message)
+      clearWork()
+      window.location.hash = 'start'
+    })
+    return () => setSessionLostHandler(null)
+  }, [clearWork])
 
   // ------------------------------------------------------------- image state
   const setNewImage = useCallback((data) => {
@@ -224,12 +242,13 @@ export function AppProvider({ children }) {
     currentLabel: history[index]?.label || '',
     canUndo: index > 0, canRedo: index < history.length - 1,
     loadSample, upload, push, undo, redo, reset,
-    profiles, profileId, profile: profiles.find((x) => x.id === profileId) || null,
-    refreshProfiles, switchProfile, editProfiles,
-    role, enterStudent, enterTeacher, signOut,
+    profiles, profileId,
+    profile: profiles.find((x) => x.id === profileId) || (profileId ? { id: profileId, name: session.name, level: progress?.level ?? 1, xp: progress?.xp ?? 0 } : null),
+    refreshProfiles, editProfiles,
+    session, role, login, register, teacherLogin, signOut, changePassword, mustChangePassword, sessionMessage,
     theme, setTheme,
   }), [matlab, call, notify, progress, refreshProgress, busy, busyLabel, alertMsg, toast, meta, history, index,
-    loadSample, upload, push, undo, redo, reset, profiles, profileId, refreshProfiles, switchProfile, editProfiles,
-    role, enterStudent, enterTeacher, signOut, theme, setTheme])
+    loadSample, upload, push, undo, redo, reset, profiles, profileId, refreshProfiles, editProfiles,
+    session, role, login, register, teacherLogin, signOut, changePassword, mustChangePassword, sessionMessage, theme, setTheme])
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

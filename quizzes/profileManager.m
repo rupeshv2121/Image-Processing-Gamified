@@ -17,7 +17,9 @@ function out = profileManager(action, varargin)
 %   using data/userProgress.mat so existing progress is not lost.
 %   The UI sends the active profile id with every request (ilab_dispatch
 %   calls profileManager('use', id) first). The reserved id 'teacher' is
-%   used in teacher mode: it belongs to no student and stores no progress.
+%   used in teacher mode and 'guest' before anybody signed in: they belong to
+%   no student and store no progress. Roll numbers are unique (students sign
+%   in with them, see authManager).
 
 persistent activeId
 if isempty(activeId), activeId = 'default'; end
@@ -29,7 +31,7 @@ listFile = fullfile(dataDir, 'profiles.mat');
 switch action
     case 'use'
         id = char(varargin{1});
-        if ~strcmp(id, 'teacher')
+        if ~any(strcmp(id, {'teacher', 'guest'}))
             profiles = loadProfiles(listFile);
             if ~validId(id) || ~any(strcmp({profiles.id}, id)), id = 'default'; end
         end
@@ -66,6 +68,7 @@ switch action
         if any(strcmpi({profiles.name}, name))
             error('ImageLab:invalidParameter', 'A student called "%s" already exists.', name);
         end
+        uniqueRoll(profiles, roll);
         if numel(profiles) >= 500
             error('ImageLab:invalidParameter', 'At most 500 student profiles are supported.');
         end
@@ -87,8 +90,10 @@ switch action
         if any(strcmpi({others.name}, name))
             error('ImageLab:invalidParameter', 'A student called "%s" already exists.', name);
         end
+        roll = cleanRoll(argOr(varargin, 3, ''));
+        uniqueRoll(others, roll);
         profiles(idx).name = name;
-        profiles(idx).roll = cleanRoll(argOr(varargin, 3, ''));
+        profiles(idx).roll = roll;
         saveProfiles(listFile, profiles);
         out = withStats(profiles, dataDir);
 
@@ -106,6 +111,7 @@ switch action
             if isfile(f), delete(f); end
             dataCache('forget', f);
             submissionStore('remove', id);
+            authManager('forget', id);
         end
         if strcmp(activeId, id), activeId = 'default'; end
         out = withStats(profiles, dataDir);
@@ -172,6 +178,12 @@ if isempty(name)
     error('ImageLab:invalidParameter', 'Please enter the student''s name.');
 end
 if numel(name) > 40, name = name(1:40); end
+end
+
+function uniqueRoll(profiles, roll)
+if ~isempty(roll) && any(strcmpi({profiles.roll}, roll))
+    error('ImageLab:invalidParameter', 'Roll number "%s" is already taken.', roll);
+end
 end
 
 function roll = cleanRoll(roll)

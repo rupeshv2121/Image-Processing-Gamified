@@ -6,7 +6,7 @@ function root = ilab_setup()
 root = fileparts(mfilename('fullpath'));
 folders = {'core', 'algorithms', 'noise', 'histogram', 'metrics', ...
            'segmentation', 'morphology', 'steps', 'color', 'fundamentals', 'quizzes', ...
-           'experiments', 'reports', 'api', 'codelab'};
+           'experiments', 'reports', 'api', 'codelab', 'auth'};
 for k = 1:numel(folders)
     addpath(fullfile(root, folders{k}));
 end

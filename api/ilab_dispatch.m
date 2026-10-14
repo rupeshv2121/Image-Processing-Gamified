@@ -19,8 +19,13 @@ try
     if isfield(req, 'params') && isstruct(req.params), p = req.params; end
     % "track": false = preview request (e.g. landing-page demo) - no XP/progress
     trackingEnabled(~(isfield(p, 'track') && isequal(p.track, false)));
-    % Progress, XP and badges belong to the student profile chosen in the UI
-    profileManager('use', char(P(p, 'profileId', 'default')));
+    % WHO is asking comes only from the session token (authManager), never from
+    % ids the browser sends: a signed-in student, the teacher, or a guest.
+    sess = authManager('resolve', char(P(p, 'token', '')));
+    session(sess);
+    if isempty(sess), who = 'guest'; elseif strcmp(sess.role, 'teacher'), who = 'teacher'; else, who = sess.profileId; end
+    profileManager('use', who);
+    checkAccess(op, p, sess);
     [data, cached] = cachedRoute(op, p);
     response = jsonencode(struct('ok', true, 'op', op, 'data', {data}, ...
         'elapsedMs', 1000 * toc(t0), 'cached', cached), 'ConvertInfAndNaN', true);
@@ -42,7 +47,7 @@ if ~any(strcmp(op, CACHEABLE)) || isequal(P(p, 'noCache', false), true)
     data = route(op, p);
     return
 end
-q = rmfield(p, intersect(fieldnames(p), {'profileId', 'track', 'noCache'}));
+q = rmfield(p, intersect(fieldnames(p), {'profileId', 'token', 'track', 'noCache'}));
 key = [op '|' jsonencode(q)];
 [found, data] = resultCache('get', key);
 if found && imagesExist(data)
@@ -441,6 +446,10 @@ switch op
         data = compareFilters(img(p.id), p);
         activity('tools', 'compare');
 
+    % ------------------------------------------------------------ sign-in
+    case 'auth'
+        data = authRoute(char(P(p, 'action', 'me')), p);
+
     % ------------------------------------------------------------ code lab
     case 'codeTasks'
         % Tasks with the teacher's open / assigned / locked state, due date and note
@@ -451,7 +460,7 @@ switch op
             T{k}.status = st.status; T{k}.due = st.due; T{k}.teacherNote = st.note;
         end
         data = struct('tasks', {T}, 'solved', {solvedCodeTasks()}, 'ipt', hasIPT(), ...
-            'teacher', isTeacher(p));
+            'teacher', isTeacher());
 
     case 'codeWarmup'
         figurePool('warm');                 % first figure render takes seconds - do it early
@@ -462,7 +471,7 @@ switch op
 
     case 'codeTaskSolution'
         taskId = char(P(p, 'taskId', ''));
-        if ~ismember(taskId, solvedCodeTasks()) && ~isTeacher(p)
+        if ~ismember(taskId, solvedCodeTasks()) && ~isTeacher()
             error('ImageLab:invalidParameter', 'Solve the task first - then the model solution is shown.');
         end
         data = struct('code', codeTasks('solution', taskId));
@@ -504,7 +513,7 @@ switch op
         progress = progressManager('quiz', summary, results);
         board = [];
         name = strtrim(char(P(p, 'name', '')));
-        if ~isempty(name) && ~strcmp(profileManager('active'), 'teacher')
+        if ~isempty(name) && ~any(strcmp(profileManager('active'), {'teacher', 'guest'}))
             board = leaderboardManager('add', struct('name', name, 'roll', char(P(p, 'roll', '')), ...
                 'score', summary.score, 'accuracy', summary.accuracy, ...
                 'bestStreak', summary.bestStreak, 'mode', summary.mode));
@@ -554,20 +563,24 @@ switch op
         action = char(P(p, 'action', 'get'));
         if strcmp(action, 'add')
             data = lst(leaderboardManager('add', p.entry));
-        elseif ~strcmp(action, 'get')
-            classroomManager('requirePin', char(P(p, 'pin', '')));   % clearing etc. is for the teacher
+        elseif ~strcmp(action, 'get')                 % clearing etc.: teacher only (checkAccess)
             data = lst(leaderboardManager(action));
         else
             data = lst(leaderboardManager(action));
         end
 
     case 'profiles'
-        % Students may add themselves; renaming and deleting need the teacher PIN
-        if any(strcmp(char(P(p, 'action', 'list')), {'update', 'remove'}))
-            classroomManager('requirePin', char(P(p, 'pin', '')));
-        end
+        % Everything except 'list' is for the teacher (checkAccess)
         switch char(P(p, 'action', 'list'))
-            case 'add',    data = profileManager('add', char(P(p, 'name', '')), char(P(p, 'roll', '')));
+            case 'add'
+                % New students get a password right away: the teacher's or a generated one
+                data = profileManager('add', char(P(p, 'name', '')), char(P(p, 'roll', '')));
+                newId = data{end}.id;
+                pw = authManager('resetPassword', newId, char(P(p, 'password', '')));
+                data = struct('students', {data}, 'id', newId, 'password', pw.password);
+            case 'resetPassword'
+                data = authManager('resetPassword', char(P(p, 'id', '')), char(P(p, 'password', '')));
+            case 'accounts',      data = authManager('status');
             case 'update', data = profileManager('update', char(P(p, 'id', '')), char(P(p, 'name', '')), char(P(p, 'roll', '')));
             case 'remove', data = profileManager('remove', char(P(p, 'id', '')));
             otherwise,     data = profileManager('list');
@@ -595,15 +608,12 @@ switch op
         end
 
     case 'classroom'
-        % Teacher view. Everything except 'get' needs the teacher PIN (if one is set).
+        % Teacher view: everything except 'get' needs a teacher session (checkAccess)
         action = char(P(p, 'action', 'get'));
-        pin = char(P(p, 'pin', ''));
-        if ~strcmp(action, 'get') && ~strcmp(action, 'setPin')
-            classroomManager('requirePin', pin);
-        end
+        pin = char(P(p, 'pin', ''));                  % only to confirm a PIN change
         switch action
             case 'get',           data = classroomManager('get');
-            case 'unlock',        data = classroomManager('get');
+            case 'setSelfRegister', data = classroomManager('setSelfRegister', isequal(P(p, 'value', true), true));
             case 'report',        data = classroomManager('report');
             case 'overview',      data = classroomManager('overview');
             case 'submissions',   data = classroomManager('submissions');
@@ -1042,6 +1052,7 @@ function data = runCodeLab(p)
 taskId = char(P(p, 'taskId', ''));
 opts = struct();
 teacher = strcmp(profileManager('active'), 'teacher');
+student = ~any(strcmp(profileManager('active'), {'teacher', 'guest'}));
 if ~isempty(taskId)
     t = codeTasks('get', taskId);
     if ~teacher, classroomManager('assertCodeRunnable', taskId); end
@@ -1058,7 +1069,7 @@ data = rmfield(r, {'outValue', 'hasOut'});
 data.grade = [];
 data.newBadges = {};
 if isempty(taskId), return; end
-record = trackingEnabled() && ~teacher;     % the teacher's tries are not submissions
+record = trackingEnabled() && student;     % only signed-in students' runs are submissions
 if ~isempty(r.error)
     data.grade = struct('passed', false, 'match', 0, 'checks', {{}}, 'expectedId', '', 'diffId', '', ...
         'message', 'Your code stopped with an error - fix it (see the Command Window) and run again.');
@@ -1079,9 +1090,67 @@ if record
 end
 end
 
-function tf = isTeacher(p)
-% Teacher mode with the right PIN (or no PIN set)
-tf = strcmp(profileManager('active'), 'teacher') && classroomManager('checkPin', char(P(p, 'pin', '')));
+function tf = isTeacher()
+s = session();
+tf = ~isempty(s) && strcmp(s.role, 'teacher');
+end
+
+% =========================================================================
+% Sign-in and access control
+function s = session(value)
+% The session of the request being handled ([] = guest)
+persistent current
+if nargin > 0, current = value; end
+s = current;
+end
+
+function checkAccess(op, p, sess)
+% Teacher-only and sign-in-only operations. Image operations stay open:
+% the landing page demo runs them before anybody signs in.
+action = char(P(p, 'action', ''));
+teacherOnly = (strcmp(op, 'classroom') && ~any(strcmp(action, {'', 'get'}))) || ...
+    (strcmp(op, 'profiles') && ~any(strcmp(action, {'', 'list'}))) || ...
+    (strcmp(op, 'leaderboard') && ~any(strcmp(action, {'', 'get', 'add'})));
+signedIn = any(strcmp(op, {'profiles', 'progress', 'codeTaskSolution', 'quizSubmit', 'report', ...
+    'runExperiment'})) || (strcmp(op, 'leaderboard') && strcmp(action, 'add'));
+if teacherOnly && (isempty(sess) || ~strcmp(sess.role, 'teacher'))
+    if isempty(sess)
+        error('ImageLab:auth', 'Please sign in again (your session has ended).');
+    end
+    error('ImageLab:forbidden', 'Only the teacher can do this.');
+end
+if signedIn && isempty(sess)
+    error('ImageLab:auth', 'Please sign in again (your session has ended).');
+end
+end
+
+function data = authRoute(action, p)
+switch action
+    case 'options'                                 % public: what the sign-in page may offer
+        C = classroomManager('get');
+        data = struct('selfRegister', C.selfRegister, 'hasPin', C.hasPin);
+    case 'login'
+        data = authManager('login', char(P(p, 'identifier', '')), char(P(p, 'password', '')), ...
+            isequal(P(p, 'claim', false), true));
+    case 'register'
+        data = authManager('register', char(P(p, 'name', '')), char(P(p, 'roll', '')), char(P(p, 'password', '')));
+    case 'teacherLogin'
+        data = authManager('teacherLogin', char(P(p, 'pin', '')));
+    case 'logout'
+        data = authManager('logout', char(P(p, 'token', '')));
+    case 'me'
+        s = session();
+        if isempty(s), error('ImageLab:auth', 'Please sign in again (your session has ended).'); end
+        data = struct('role', s.role, 'profileId', s.profileId, 'name', s.name);
+    case 'changePassword'
+        s = session();
+        if isempty(s) || ~strcmp(s.role, 'student')
+            error('ImageLab:auth', 'Please sign in as a student to change your password.');
+        end
+        data = authManager('changePassword', s.profileId, char(P(p, 'oldPassword', '')), char(P(p, 'newPassword', '')));
+    otherwise
+        error('ImageLab:invalidParameter', 'Unknown sign-in action "%s".', action);
+end
 end
 
 function ids = solvedCodeTasks()
