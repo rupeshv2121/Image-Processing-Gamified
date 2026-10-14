@@ -99,6 +99,18 @@ call('steps', struct('algorithm', 'histeq', 'matrix', [0 1 2; 3 2 1], 'levels', 
 call('steps', struct('algorithm', 'morphology', 'matrix', eye(5), 'se', ones(3), 'operation', 'dilate'));
 call('steps', struct('algorithm', 'regiongrow', 'matrix', magic(6), 'seedRow', 2, 'seedCol', 2, 'tolerance', 10));
 call('classroom', struct('action', 'get'));
+% Teacher operations need the teacher PIN when one is set: pass it with
+% setenv('ILAB_TEST_PIN', '...') or these calls are skipped.
+pin = getenv('ILAB_TEST_PIN');
+if classroomManager('checkPin', pin)
+    call('classroom', struct('action', 'overview', 'pin', pin));
+    call('classroom', struct('action', 'submissions', 'pin', pin));
+    call('classroom', struct('action', 'student', 'id', 'default', 'pin', pin));
+    call('classroom', struct('action', 'submission', 'id', 'default', 'taskId', 'negative', 'pin', pin));
+    call('classroom', struct('action', 'setCodeTask', 'taskId', 'negative', 'status', 'open', 'pin', pin));
+else
+    fprintf('  skip teacher operations (a teacher PIN is set; setenv ILAB_TEST_PIN to test them)\n');
+end
 call('codeTasks', struct());
 call('codeTaskStart', struct('taskId', 'meanfilter'));
 call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;', 'track', false));

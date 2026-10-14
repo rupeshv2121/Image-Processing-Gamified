@@ -222,7 +222,8 @@ function Teaser() {
 
 // ---------------------------------------------------------------- page
 export default function Landing() {
-  const { matlab, progress, meta } = useApp()
+  const { matlab, progress, meta, role } = useApp()
+  const enter = role === 'teacher' ? '#class' : role === 'student' ? '#dashboard' : '#start'
   const [top, setTop] = useState([])
   useEffect(() => {
     if (matlab.ok) run('leaderboard', { action: 'get' }).then((d) => setTop(asArray(d).slice(0, 3))).catch(() => {})
@@ -246,7 +247,7 @@ export default function Landing() {
           <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} /> {matlab.ok ? `MATLAB ${matlab.release}` : matlab.ready ? 'MATLAB unavailable' : 'Starting MATLAB…'}
         </span>
         <ThemeToggle className="icon-btn l-theme" />
-        <a className="btn btn-primary" href="#dashboard">Enter the Lab</a>
+        <a className="btn btn-primary" href={enter}>Enter the Lab</a>
       </nav>
 
       <header className="l-hero">
@@ -259,7 +260,7 @@ export default function Landing() {
               hand-written implementation — so you see not just <i>what</i> happens, but <i>how</i>.
             </p>
             <div className="row" style={{ gap: 14 }}>
-              <a className="btn btn-primary btn-lg" href={meta ? '#dashboard' : '#workspace'}>
+              <a className="btn btn-primary btn-lg" href={enter}>
                 <Icon name="play" size={17} /> {meta ? 'Continue learning' : 'Start the lab'}
               </a>
               <button className="btn btn-lg" onClick={() => scrollTo('demo')}>See it live</button>
@@ -400,7 +401,7 @@ export default function Landing() {
         <h2>Ready to filter some pixels?</h2>
         <p>Everything runs offline in MATLAB on your computer.</p>
         <div className="row center" style={{ gap: 14 }}>
-          <a className="btn btn-primary btn-lg" href="#dashboard">Enter the Lab</a>
+          <a className="btn btn-primary btn-lg" href={enter}>Enter the Lab</a>
           <a className="btn btn-lg" style={{ background: 'transparent', color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} href="#learn">Read the theory</a>
         </div>
       </section>

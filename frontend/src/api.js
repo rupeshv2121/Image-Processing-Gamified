@@ -13,13 +13,38 @@ export function setProfileId(id) {
   try { localStorage.setItem('imagelab.profile', profileId) } catch { /* storage unavailable */ }
 }
 
+// Role of this browser tab: 'student' | 'teacher' | null (not chosen yet).
+// Students are remembered on this computer; the teacher role and PIN only
+// last for the browser tab (sessionStorage), like a sign-in.
+const ROLE_KEY = 'imagelab.role'
+const PIN_KEY = 'imagelab.teacherPin'
+const store = (s, k, v) => { try { if (v) s.setItem(k, v); else s.removeItem(k) } catch { /* storage unavailable */ } }
+const read = (s, k) => { try { return s.getItem(k) || '' } catch { return '' } }
+let role = read(sessionStorage, ROLE_KEY) === 'teacher' ? 'teacher' : read(localStorage, ROLE_KEY) === 'student' ? 'student' : null
+let teacherPin = role === 'teacher' ? read(sessionStorage, PIN_KEY) : ''
+export const getRole = () => role
+export const getTeacherPin = () => teacherPin
+export function setRole(next, pin = '') {
+  role = next
+  teacherPin = next === 'teacher' ? pin : ''
+  store(sessionStorage, ROLE_KEY, next === 'teacher' ? 'teacher' : '')
+  store(sessionStorage, PIN_KEY, teacherPin)
+  store(localStorage, ROLE_KEY, next === 'student' ? 'student' : '')
+}
+
+// In teacher mode every request runs as the reserved 'teacher' profile (MATLAB
+// records nothing for it) and carries the PIN for the teacher-only operations.
+const identity = () => (role === 'teacher'
+  ? { profileId: 'teacher', pin: teacherPin, track: false }
+  : { profileId })
+
 export async function run(op, params = {}) {
   let res
   try {
     res = await fetch('/api/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ op, params: { ...params, profileId } }),
+      body: JSON.stringify({ op, params: { ...params, ...identity() } }),
     })
   } catch {
     throw new Error('Cannot reach the ImageLab server. Start it with start_imagelab.bat.')

@@ -7,13 +7,21 @@ function out = progressManager(action, varargin)
 %   p = progressManager('experiment', number)      mark an experiment complete
 %   p = progressManager('quiz', summary, results)  record a finished quiz
 %   p = progressManager('daily', date, points, solved)  record a daily challenge
-%   p = progressManager('codeTask', taskId)        record a solved Code Lab task
+%   p = progressManager('codeTask', taskId, title) record a solved Code Lab task
 %   p = progressManager('reset')
 %   s = progressManager('peek', file)              short stats of any progress
 %                                                  file (read only)
 %   p = progressManager('raw', file)               full stored progress of any file (read only)
+%   s = progressManager('summaryOf', file)         the 'get' summary of any file (read only)
+%   r = progressManager('inspect', file)           struct(p = stored progress, peek = short stats)
 %
 %   Progress belongs to the active student profile (see profileManager).
+%   The reserved 'teacher' profile never stores anything: in teacher mode
+%   every action returns an empty summary and nothing is written.
+%   Files are read through dataCache and only written when they changed.
+%   p.events keeps the last 30 notable events (quiz, experiment, solved
+%   task, badge ...) with a timestamp for the teacher's activity feed;
+%   p.lastActive is the time of the last change.
 %
 %   XP:  +10 for each new thing tried, +20 per topic, +50 per experiment,
 %        quiz score / 10, +50 for the first solve of each daily challenge,
@@ -26,11 +34,23 @@ if strcmp(action, 'peek')
 elseif strcmp(action, 'raw')                  % full stored struct of any file, read only
     out = loadProgress(varargin{1});
     return
+elseif strcmp(action, 'inspect')              % stored progress + short stats, one read
+    p = loadProgress(varargin{1});
+    out = struct('p', p, 'peek', peek(p));
+    return
+elseif strcmp(action, 'summaryOf')
+    out = summarise(loadProgress(varargin{1}), {});
+    return
+end
+if strcmp(profileManager('active'), 'teacher')  % teacher mode: never record anything
+    out = summarise(defaultProgress(), {});
+    return
 end
 file = profileManager('file');
 dataDir = fileparts(file);
 if ~isfolder(dataDir), mkdir(dataDir); end
 p = loadProgress(file);
+before = p;
 newBadges = {};
 
 switch action
@@ -48,12 +68,14 @@ switch action
         if ~ismember(topic, p.topicsCompleted)
             p.topicsCompleted{end+1} = topic;
             p.xp = p.xp + 20;
+            p = addEvent(p, 'topic', ['Read "' topic '"']);
         end
     case 'experiment'
         n = double(varargin{1});
         if ~ismember(n, p.experimentsCompleted)
             p.experimentsCompleted(end+1) = n;
             p.xp = p.xp + 50;
+            p = addEvent(p, 'experiment', sprintf('Completed experiment %d', n));
         end
     case 'quiz'
         summary = varargin{1};
@@ -78,6 +100,8 @@ switch action
         end
         p.quizHistory(end+1) = struct('date', char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm')), ...
             'score', summary.score, 'accuracy', summary.accuracy, 'mode', char(getf(summary, 'mode', 'Rapid Fire')));
+        p = addEvent(p, 'quiz', sprintf('%s quiz: %d/%d correct (%d points)', ...
+            char(getf(summary, 'mode', 'Rapid Fire')), summary.correct, summary.total, round(summary.score)));
     case 'daily'
         date = char(varargin{1});
         points = double(varargin{2});
@@ -88,17 +112,22 @@ switch action
             idx = numel(p.dailyChallenges);
         end
         d = p.dailyChallenges(idx);
-        if solved && ~d.solved, p.xp = p.xp + 50; end      % XP only for the first solve
+        if solved && ~d.solved                              % XP only for the first solve
+            p.xp = p.xp + 50;
+            p = addEvent(p, 'daily', ['Solved the daily challenge of ' date]);
+        end
         d.solved = d.solved || solved;
         d.points = max(d.points, points);
         d.attempts = d.attempts + 1;
         p.dailyChallenges(idx) = d;
     case 'codeTask'
         id = char(varargin{1});
+        title = id; if numel(varargin) > 1, title = char(varargin{2}); end
         solved = getf(p.activities, 'codelab', {});
         if ~ismember(id, solved)
             p.activities.codelab = [reshape(solved, 1, []), {id}];
             p.xp = p.xp + 40;
+            p = addEvent(p, 'code', ['Solved the Code Lab task "' title '"']);
         end
     case 'reset'
         p = defaultProgress();
@@ -107,8 +136,21 @@ switch action
 end
 
 [p, newBadges] = awardBadges(p);
-save(file, 'p');
+if ~isequal(p, before)                        % 'get' and repeated actions write nothing
+    if ~strcmp(action, 'reset'), p.lastActive = nowText(); end
+    save(file, 'p');
+    dataCache('put', file, struct('p', p));
+end
 out = summarise(p, newBadges);
+end
+
+function p = addEvent(p, type, text)
+p.events(end+1) = struct('time', nowText(), 'type', type, 'text', text);
+if numel(p.events) > 30, p.events = p.events(end-29:end); end
+end
+
+function t = nowText()
+t = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm'));
 end
 
 % -------------------------------------------------------------------------
@@ -127,13 +169,15 @@ p.experimentsCompleted = zeros(1, 0);
 p.badges = struct('id', {}, 'earned', {});
 p.quizHistory = struct('date', {}, 'score', {}, 'accuracy', {}, 'mode', {});
 p.dailyChallenges = struct('date', {}, 'points', {}, 'solved', {}, 'attempts', {});
+p.events = struct('time', {}, 'type', {}, 'text', {});
+p.lastActive = '';
 end
 
 function p = loadProgress(file)
 p = defaultProgress();
-if ~isfile(file), return; end
 try
-    s = load(file, 'p');
+    s = dataCache('load', file);
+    if ~isstruct(s) || ~isfield(s, 'p'), return; end   % no file yet
     fields = fieldnames(s.p);
     for k = 1:numel(fields)
         p.(fields{k}) = s.p.(fields{k});      % keep defaults for new fields
@@ -202,6 +246,7 @@ for k = find(earned)
         p.badges(end+1) = struct('id', defs(k).id, 'earned', char(datetime('now', 'Format', 'yyyy-MM-dd')));
         p.xp = p.xp + 100;
         newBadges{end+1} = defs(k).name; %#ok<AGROW>
+        p = addEvent(p, 'badge', ['Earned the badge "' defs(k).name '"']);
     end
 end
 end
@@ -261,7 +306,7 @@ s = struct('xp', p.xp, 'level', floor(sqrt(p.xp / 100)) + 1, ...
     'badgeCount', numel(p.badges), 'quizzesTaken', p.quizzesTaken, ...
     'accuracy', 100 * p.questionsCorrect / max(p.questionsAnswered, 1), ...
     'bestScore', max([p.quizHistory.score, 0]), 'dailyStreak', dailyStreak(p), ...
-    'codeTasks', numel(getf(p.activities, 'codelab', {})));
+    'codeTasks', numel(getf(p.activities, 'codelab', {})), 'lastActive', p.lastActive);
 end
 
 function n = dailyStreak(p)

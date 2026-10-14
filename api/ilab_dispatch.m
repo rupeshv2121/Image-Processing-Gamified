@@ -443,7 +443,15 @@ switch op
 
     % ------------------------------------------------------------ code lab
     case 'codeTasks'
-        data = struct('tasks', {codeTasks('list')}, 'solved', {solvedCodeTasks()}, 'ipt', hasIPT());
+        % Tasks with the teacher's open / assigned / locked state, due date and note
+        T = codeTasks('list');
+        C = classroomManager('get');
+        for k = 1:numel(T)
+            st = C.codeTasks{k};
+            T{k}.status = st.status; T{k}.due = st.due; T{k}.teacherNote = st.note;
+        end
+        data = struct('tasks', {T}, 'solved', {solvedCodeTasks()}, 'ipt', hasIPT(), ...
+            'teacher', isTeacher(p));
 
     case 'codeWarmup'
         figurePool('warm');                 % first figure render takes seconds - do it early
@@ -454,7 +462,7 @@ switch op
 
     case 'codeTaskSolution'
         taskId = char(P(p, 'taskId', ''));
-        if ~ismember(taskId, solvedCodeTasks())
+        if ~ismember(taskId, solvedCodeTasks()) && ~isTeacher(p)
             error('ImageLab:invalidParameter', 'Solve the task first - then the model solution is shown.');
         end
         data = struct('code', codeTasks('solution', taskId));
@@ -496,7 +504,7 @@ switch op
         progress = progressManager('quiz', summary, results);
         board = [];
         name = strtrim(char(P(p, 'name', '')));
-        if ~isempty(name)
+        if ~isempty(name) && ~strcmp(profileManager('active'), 'teacher')
             board = leaderboardManager('add', struct('name', name, 'roll', char(P(p, 'roll', '')), ...
                 'score', summary.score, 'accuracy', summary.accuracy, ...
                 'bestStreak', summary.bestStreak, 'mode', summary.mode));
@@ -546,11 +554,18 @@ switch op
         action = char(P(p, 'action', 'get'));
         if strcmp(action, 'add')
             data = lst(leaderboardManager('add', p.entry));
+        elseif ~strcmp(action, 'get')
+            classroomManager('requirePin', char(P(p, 'pin', '')));   % clearing etc. is for the teacher
+            data = lst(leaderboardManager(action));
         else
             data = lst(leaderboardManager(action));
         end
 
     case 'profiles'
+        % Students may add themselves; renaming and deleting need the teacher PIN
+        if any(strcmp(char(P(p, 'action', 'list')), {'update', 'remove'}))
+            classroomManager('requirePin', char(P(p, 'pin', '')));
+        end
         switch char(P(p, 'action', 'list'))
             case 'add',    data = profileManager('add', char(P(p, 'name', '')), char(P(p, 'roll', '')));
             case 'update', data = profileManager('update', char(P(p, 'id', '')), char(P(p, 'name', '')), char(P(p, 'roll', '')));
@@ -590,10 +605,18 @@ switch op
             case 'get',           data = classroomManager('get');
             case 'unlock',        data = classroomManager('get');
             case 'report',        data = classroomManager('report');
+            case 'overview',      data = classroomManager('overview');
+            case 'submissions',   data = classroomManager('submissions');
+            case 'student',       data = classroomManager('student', char(P(p, 'id', '')));
+            case 'submission'
+                data = classroomManager('submission', char(P(p, 'id', '')), char(P(p, 'taskId', '')));
             case 'export',        data = classroomManager('export');
             case 'setPin',        data = classroomManager('setPin', pin, char(P(p, 'newPin', '')));
             case 'setExperiment'
                 data = classroomManager('setExperiment', P(p, 'number', 0), char(P(p, 'status', 'open')), ...
+                    char(P(p, 'due', '')), char(P(p, 'note', '')));
+            case 'setCodeTask'
+                data = classroomManager('setCodeTask', char(P(p, 'taskId', '')), char(P(p, 'status', 'open')), ...
                     char(P(p, 'due', '')), char(P(p, 'note', '')));
             otherwise
                 error('ImageLab:invalidParameter', 'Unknown classroom action "%s".', action);
@@ -601,7 +624,9 @@ switch op
 
     case 'runExperiment'
         n = P(p, 'number', 1);
-        classroomManager('assertRunnable', n);
+        if ~strcmp(profileManager('active'), 'teacher')    % teachers may demo locked ones
+            classroomManager('assertRunnable', n);
+        end
         if isfield(p, 'id') && ~isempty(p.id)
             I = img(p.id);
         else
@@ -1016,8 +1041,10 @@ end
 function data = runCodeLab(p)
 taskId = char(P(p, 'taskId', ''));
 opts = struct();
+teacher = strcmp(profileManager('active'), 'teacher');
 if ~isempty(taskId)
     t = codeTasks('get', taskId);
+    if ~teacher, classroomManager('assertCodeRunnable', taskId); end
     I = codeTasks('input', taskId);
     opts.forbidden = t.forbidden;
 elseif isfield(p, 'id') && ~isempty(p.id)
@@ -1031,18 +1058,30 @@ data = rmfield(r, {'outValue', 'hasOut'});
 data.grade = [];
 data.newBadges = {};
 if isempty(taskId), return; end
+record = trackingEnabled() && ~teacher;     % the teacher's tries are not submissions
 if ~isempty(r.error)
     data.grade = struct('passed', false, 'match', 0, 'checks', {{}}, 'expectedId', '', 'diffId', '', ...
         'message', 'Your code stopped with an error - fix it (see the Command Window) and run again.');
+    if record
+        submissionStore('record', profileManager('active'), taskId, char(P(p, 'code', '')), [], r.error.message);
+    end
     return
 end
 ws = struct();
 if r.hasOut, ws.out = r.outValue; end
 data.grade = codeTasks('grade', taskId, ws, I);
-if data.grade.passed && trackingEnabled()
-    prog = progressManager('codeTask', taskId);
-    data.newBadges = prog.newBadges;
+if record
+    submissionStore('record', profileManager('active'), taskId, char(P(p, 'code', '')), data.grade, '');
+    if data.grade.passed
+        prog = progressManager('codeTask', taskId, t.title);
+        data.newBadges = prog.newBadges;
+    end
 end
+end
+
+function tf = isTeacher(p)
+% Teacher mode with the right PIN (or no PIN set)
+tf = strcmp(profileManager('active'), 'teacher') && classroomManager('checkPin', char(P(p, 'pin', '')));
 end
 
 function ids = solvedCodeTasks()

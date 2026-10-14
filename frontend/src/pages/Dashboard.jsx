@@ -3,24 +3,9 @@ import { useApp } from '../AppContext'
 import { asArray } from '../api'
 import Icon from '../components/Icon'
 import Ring from '../components/Ring'
-import { Card, Modal } from '../components/ui'
+import { Card } from '../components/ui'
 import { TOPICS } from '../content/topics'
 import { nextMission, UNITS, unitProgress } from '../content/missions'
-
-const DEMO_FLOW = [
-  ['workspace', 'Load peppers.png and show the image information'],
-  ['noise', 'Add salt & pepper noise and send it to the workspace'],
-  ['filters', 'Apply the mean, median and Gaussian filters'],
-  ['compare', 'Compare the filters (PSNR / SSIM / time)'],
-  ['learn', 'Explain linear vs non-linear filters'],
-  ['histogram', 'Show the histogram and equalise it'],
-  ['correlation', 'Correlation: the kernel moving step by step'],
-  ['correlation', 'Convolution: the kernel flipping'],
-  ['kernel', 'Kernel Playground: change a kernel, see the result'],
-  ['edges', 'Edge detection: Sobel vs Prewitt vs Canny'],
-  ['quiz', 'Rapid Fire Quiz for the juniors'],
-  ['leaderboard', 'Show the leaderboard'],
-]
 
 const todayStr = () => {
   const d = new Date()
@@ -28,12 +13,14 @@ const todayStr = () => {
 }
 
 export default function Dashboard() {
-  const { progress, refreshProgress, matlab, meta, loadSample, call } = useApp()
-  const [tour, setTour] = useState(false)
+  const { progress, refreshProgress, matlab, meta, call, profile } = useApp()
   const [assignedList, setAssignedList] = useState([])
+  const [codeTasks, setCodeTasks] = useState({ tasks: [], solved: [] })
   useEffect(() => { if (matlab.ok) refreshProgress() }, [matlab.ok, refreshProgress])
   useEffect(() => {
-    if (matlab.ok) call('experiments', {}, { quiet: true }).then((d) => d && setAssignedList(asArray(d).filter((e) => e.status === 'assigned')))
+    if (!matlab.ok) return
+    call('experiments', {}, { quiet: true }).then((d) => d && setAssignedList(asArray(d).filter((e) => e.status === 'assigned')))
+    call('codeTasks', {}, { quiet: true }).then((d) => d && setCodeTasks({ tasks: asArray(d.tasks), solved: asArray(d.solved) }))
   }, [call, matlab.ok])
 
   const p = progress || {}
@@ -41,27 +28,26 @@ export default function Dashboard() {
   const all = UNITS.flatMap((u) => u.missions)
   const doneCount = all.filter((m) => m.done(p, state)).length
   const next = nextMission(p, state)
-  const homework = assignedList.filter((e) => !asArray(p.experimentsCompleted).includes(e.number))
-
-  const startDemo = async () => {
-    setTour(false)
-    const d = await loadSample('peppers.png')
-    if (d) window.location.hash = 'workspace'
-  }
+  const homework = [
+    ...assignedList.filter((e) => !asArray(p.experimentsCompleted).includes(e.number))
+      .map((e) => ({ key: `e${e.number}`, tick: e.number, title: e.title, note: e.teacherNote, due: e.due, href: '#experiments' })),
+    ...codeTasks.tasks.filter((t) => t.status === 'assigned' && !codeTasks.solved.includes(t.id))
+      .map((t) => ({ key: `c${t.id}`, tick: <Icon name="code" size={14} />, title: `Code Lab: ${t.title}`, note: t.teacherNote, due: t.due, href: `#code?task=${t.id}` })),
+  ].sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'))
 
   return (
     <div className="page">
       <section className="welcome">
         <div>
           <div className="eyebrow" style={{ color: 'var(--green-400)' }}>Mission control</div>
-          <h1>{doneCount ? 'Welcome back to the lab' : 'Welcome to ImageLab'}</h1>
+          <h1>{doneCount ? `Welcome back, ${profile?.name?.split(' ')[0] || 'to the lab'}` : `Welcome to ImageLab${profile ? `, ${profile.name.split(' ')[0]}` : ''}`}</h1>
           <p>
             {doneCount === all.length
               ? 'Every mission complete — try the Arcade challenges or generate your reports.'
               : `You have completed ${doneCount} of ${all.length} missions across the four syllabus units.`}
           </p>
           <div className="row" style={{ marginTop: 22 }}>
-            <button className="btn btn-primary" onClick={() => setTour(true)}><Icon name="play" size={16} /> Professor demo tour</button>
+            <a className="btn btn-primary" href="#code"><Icon name="code" size={16} /> Open the Code Lab</a>
             <a className="btn" style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }} href="#labs">Browse labs</a>
           </div>
         </div>
@@ -85,9 +71,9 @@ export default function Dashboard() {
         <Card title={<><Icon name="file" size={18} /> Assigned by your teacher</>} className="homework">
           <div className="stack-sm" style={{ gap: 8 }}>
             {homework.map((e) => (
-              <a key={e.number} className="mission" href="#experiments">
-                <span className="tick">{e.number}</span>
-                <span className="t small"><b>{e.title}</b>{e.teacherNote ? ` — ${e.teacherNote}` : ''}</span>
+              <a key={e.key} className="mission" href={e.href}>
+                <span className="tick">{e.tick}</span>
+                <span className="t small"><b>{e.title}</b>{e.note ? ` — ${e.note}` : ''}</span>
                 {e.due && <span className={`badge ${e.due < todayStr() ? 'badge-locked' : 'badge-warn'}`}>{e.due < todayStr() ? 'overdue' : `due ${e.due}`}</span>}
               </a>
             ))}
@@ -111,7 +97,8 @@ export default function Dashboard() {
         <div className="stat"><div className="ic"><Icon name="file" /></div><div><div className="v">{asArray(p.experimentsCompleted).length}<span className="faint" style={{ fontSize: 15 }}> / 13</span></div><div className="l">Experiments</div></div></div>
         <div className="stat"><div className="ic navy"><Icon name="layers" /></div><div><div className="v">{p.filtersTested || 0}</div><div className="l">Filters tested</div></div></div>
         <div className="stat"><div className="ic amber"><Icon name="trophy" /></div><div><div className="v">{p.bestScore || 0}</div><div className="l">Best quiz score</div></div></div>
-        <div className="stat"><div className="ic violet"><Icon name="book" /></div><div><div className="v">{asArray(p.topicsCompleted).length}<span className="faint" style={{ fontSize: 15 }}> / {TOPICS.length}</span></div><div className="l">Topics read</div></div></div>
+        <div className="stat"><div className="ic violet"><Icon name="code" /></div><div><div className="v">{codeTasks.solved.length}<span className="faint" style={{ fontSize: 15 }}> / {codeTasks.tasks.length || 11}</span></div><div className="l">Code tasks solved</div></div></div>
+        <div className="stat"><div className="ic"><Icon name="book" /></div><div><div className="v">{asArray(p.topicsCompleted).length}<span className="faint" style={{ fontSize: 15 }}> / {TOPICS.length}</span></div><div className="l">Topics read</div></div></div>
       </div>
 
       <div className="grid-2 mt">
@@ -150,17 +137,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {tour && (
-        <Modal title="Professor demonstration tour" onClose={() => setTour(false)}>
-          <p className="muted small" style={{ marginBottom: 14 }}>The recommended order for the classroom demonstration. Each step opens the right lab.</p>
-          <ol style={{ paddingLeft: 22, margin: 0, lineHeight: 2 }}>
-            {DEMO_FLOW.map(([k, t], i) => <li key={i}><a href={`#${k}`} onClick={() => setTour(false)}>{t}</a></li>)}
-          </ol>
-          <div className="row right" style={{ marginTop: 18 }}>
-            <button className="btn btn-primary" onClick={startDemo} disabled={!matlab.ok}>Start: load peppers.png</button>
-          </div>
-        </Modal>
-      )}
     </div>
   )
 }

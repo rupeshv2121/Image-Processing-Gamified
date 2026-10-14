@@ -7,7 +7,9 @@ export const initials = (name = '') => name.split(/\s+/).filter(Boolean).slice(0
 
 // Add, rename and delete student profiles (stored by MATLAB in data/profiles.mat)
 export function StudentsModal({ onClose }) {
-  const { profiles, profileId, editProfiles, switchProfile, refreshProfiles } = useApp()
+  const { profiles, profileId: activeId, editProfiles, switchProfile, refreshProfiles, role } = useApp()
+  const teacher = role === 'teacher'
+  const profileId = teacher ? null : activeId      // the teacher is nobody's profile
   useEffect(() => { refreshProfiles() }, [refreshProfiles])
   const [name, setName] = useState('')
   const [roll, setRoll] = useState('')
@@ -36,7 +38,7 @@ export function StudentsModal({ onClose }) {
   return (
     <Modal title="Students on this computer" onClose={onClose} wide>
       <p className="small muted" style={{ marginBottom: 14 }}>
-        Every student has their own XP, badges, quiz history and daily-challenge streak. Switch student from the menu at the top right.
+        Every student has their own XP, badges, quizzes, daily-challenge streak and Code Lab work.
       </p>
       <div className="table-scroll">
         <table className="data">
@@ -61,7 +63,7 @@ export function StudentsModal({ onClose }) {
                     <td>{p.xp}</td>
                     <td>{p.badges}</td>
                     <td className="row right" style={{ gap: 4, flexWrap: 'nowrap' }}>
-                      {p.id !== profileId && <button className="btn btn-small" onClick={() => { switchProfile(p.id); onClose() }}>Switch</button>}
+                      {!teacher && p.id !== profileId && <button className="btn btn-small" onClick={() => { switchProfile(p.id); onClose() }}>Switch</button>}
                       <button className="icon-btn" onClick={() => setEditing({ id: p.id, name: p.name, roll: p.roll || '' })} aria-label={`Rename ${p.name}`} title="Rename"><Icon name="sliders" size={16} /></button>
                       {p.id !== 'default' && <button className="icon-btn" onClick={() => setConfirm(p)} aria-label={`Delete ${p.name}`} title="Delete"><Icon name="close" size={16} /></button>}
                     </td>
@@ -92,15 +94,13 @@ export function StudentsModal({ onClose }) {
   )
 }
 
-// Top-bar menu: who is learning right now
+// Top-bar account menu: the signed-in student, or the teacher
 export function ProfileMenu() {
-  const { profiles, profile, profileId, switchProfile, matlab, refreshProfiles } = useApp()
+  const { profile, matlab, role, signOut } = useApp()
   const [open, setOpen] = useState(false)
-  const [manage, setManage] = useState(false)
   const box = useRef(null)
   useEffect(() => {
     if (!open) return
-    refreshProfiles()                     // XP may have changed since the last look
     const onDown = (e) => { if (!box.current?.contains(e.target)) setOpen(false) }
     const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); box.current?.querySelector('button')?.focus() } }
     document.addEventListener('pointerdown', onDown)
@@ -110,33 +110,29 @@ export function ProfileMenu() {
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
-  if (!matlab.ok) return null
-  const name = profile?.name || 'Student'
+  if (!matlab.ok || !role) return null
+  const teacher = role === 'teacher'
+  const name = teacher ? 'Teacher' : profile?.name || 'Student'
   return (
     <div className="profile-menu" ref={box}>
-      <button className="profile-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title="Switch student">
-        <span className="avatar">{initials(name)}</span>
+      <button className="profile-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} title={teacher ? 'Teacher mode' : 'Signed in student'}>
+        <span className={`avatar ${teacher ? 'teacher' : ''}`}>{teacher ? <Icon name="lock" size={14} /> : initials(name)}</span>
         <span className="profile-name">{name}</span>
         <Icon name="chevron" size={14} className="chev-down" />
       </button>
       {open && (
         <div className="menu" role="menu">
-          <div className="menu-label">Who is learning?</div>
-          {profiles.map((p) => (
-            <button key={p.id} role="menuitemradio" aria-checked={p.id === profileId} className={`menu-item ${p.id === profileId ? 'active' : ''}`}
-              onClick={() => { setOpen(false); if (p.id !== profileId) switchProfile(p.id) }}>
-              <span className="avatar sm">{initials(p.name)}</span>
-              <span className="grow">{p.name}<small>Level {p.level} · {p.xp} XP</small></span>
-              {p.id === profileId && <Icon name="check" size={16} />}
+          <div className="menu-label">{teacher ? 'Teacher mode' : `Level ${profile?.level ?? 1} · ${profile?.xp ?? 0} XP`}</div>
+          {!teacher && (
+            <button role="menuitem" className="menu-item" onClick={() => { setOpen(false); window.location.hash = 'start' }}>
+              <Icon name="users" size={17} /> <span className="grow">Switch student</span>
             </button>
-          ))}
-          <div className="menu-sep" />
-          <button role="menuitem" className="menu-item" onClick={() => { setOpen(false); setManage(true) }}>
-            <Icon name="users" size={17} /> <span className="grow">Manage students…</span>
+          )}
+          <button role="menuitem" className="menu-item" onClick={() => { setOpen(false); signOut() }}>
+            <Icon name="close" size={17} /> <span className="grow">{teacher ? 'Lock teacher mode' : 'Sign out'}</span>
           </button>
         </div>
       )}
-      {manage && <StudentsModal onClose={() => setManage(false)} />}
     </div>
   )
 }

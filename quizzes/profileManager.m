@@ -9,12 +9,15 @@ function out = profileManager(action, varargin)
 %   id   = profileManager('active')             the active profile id
 %   file = profileManager('file')               progress file of the active profile
 %   p    = profileManager('get', id)            one profile (id, name, roll, created)
+%   r    = profileManager('roster')             all profiles WITHOUT stats (no progress reads)
+%   row  = profileManager('row', profile, peek) one 'list' entry from a progress peek
 %
 %   Profiles are kept in data/profiles.mat. Each profile has its own
 %   progress file (data/progress_<id>.mat); the 'default' profile keeps
 %   using data/userProgress.mat so existing progress is not lost.
 %   The UI sends the active profile id with every request (ilab_dispatch
-%   calls profileManager('use', id) first).
+%   calls profileManager('use', id) first). The reserved id 'teacher' is
+%   used in teacher mode: it belongs to no student and stores no progress.
 
 persistent activeId
 if isempty(activeId), activeId = 'default'; end
@@ -26,8 +29,10 @@ listFile = fullfile(dataDir, 'profiles.mat');
 switch action
     case 'use'
         id = char(varargin{1});
-        profiles = loadProfiles(listFile);
-        if ~validId(id) || ~any(strcmp({profiles.id}, id)), id = 'default'; end
+        if ~strcmp(id, 'teacher')
+            profiles = loadProfiles(listFile);
+            if ~validId(id) || ~any(strcmp({profiles.id}, id)), id = 'default'; end
+        end
         activeId = id;
         out = id;
 
@@ -48,6 +53,12 @@ switch action
     case 'list'
         out = withStats(loadProfiles(listFile), dataDir);
 
+    case 'roster'
+        out = loadProfiles(listFile);
+
+    case 'row'
+        out = statsRow(varargin{1}, varargin{2});
+
     case 'add'
         profiles = loadProfiles(listFile);
         name = cleanName(varargin{1});
@@ -55,8 +66,8 @@ switch action
         if any(strcmpi({profiles.name}, name))
             error('ImageLab:invalidParameter', 'A student called "%s" already exists.', name);
         end
-        if numel(profiles) >= 60
-            error('ImageLab:invalidParameter', 'At most 60 student profiles are supported.');
+        if numel(profiles) >= 500
+            error('ImageLab:invalidParameter', 'At most 500 student profiles are supported.');
         end
         [~, t] = fileparts(tempname);
         id = ['s' lower(t(end-9:end))];
@@ -93,6 +104,8 @@ switch action
             saveProfiles(listFile, profiles);
             f = progressFile(dataDir, id);
             if isfile(f), delete(f); end
+            dataCache('forget', f);
+            submissionStore('remove', id);
         end
         if strcmp(activeId, id), activeId = 'default'; end
         out = withStats(profiles, dataDir);
@@ -104,10 +117,11 @@ end
 
 % -------------------------------------------------------------------------
 function f = progressFile(dataDir, id)
+% plain concatenation: fullfile is slow when called for every student
 if ~validId(id) || strcmp(id, 'default')
-    f = fullfile(dataDir, 'userProgress.mat');
+    f = [dataDir filesep 'userProgress.mat'];
 else
-    f = fullfile(dataDir, ['progress_' id '.mat']);
+    f = [dataDir filesep 'progress_' id '.mat'];
 end
 end
 
@@ -115,7 +129,7 @@ function profiles = loadProfiles(file)
 profiles = struct('id', {'default'}, 'name', {'Student 1'}, 'roll', {''}, 'created', {''});
 if isfile(file)
     try
-        s = load(file, 'profiles');
+        s = dataCache('load', file);
         if isfield(s, 'profiles') && isstruct(s.profiles) && ~isempty(s.profiles)
             profiles = s.profiles;
         end
@@ -129,17 +143,22 @@ function saveProfiles(file, profiles) %#ok<INUSD> - saved by variable name
 folder = fileparts(file);
 if ~isfolder(folder), mkdir(folder); end
 save(file, 'profiles');
+dataCache('put', file, struct('profiles', profiles));
 end
 
 function list = withStats(profiles, dataDir)
 list = cell(1, numel(profiles));
 for k = 1:numel(profiles)
-    s = progressManager('peek', progressFile(dataDir, profiles(k).id));
-    list{k} = struct('id', profiles(k).id, 'name', profiles(k).name, 'roll', profiles(k).roll, ...
-        'created', profiles(k).created, 'xp', s.xp, 'level', s.level, ...
-        'badges', s.badgeCount, 'quizzes', s.quizzesTaken, 'accuracy', s.accuracy, ...
-        'bestScore', s.bestScore, 'dailyStreak', s.dailyStreak);
+    list{k} = statsRow(profiles(k), progressManager('peek', progressFile(dataDir, profiles(k).id)));
 end
+end
+
+function r = statsRow(pr, s)
+r = struct('id', pr.id, 'name', pr.name, 'roll', pr.roll, ...
+    'created', pr.created, 'xp', s.xp, 'level', s.level, ...
+    'badges', s.badgeCount, 'quizzes', s.quizzesTaken, 'accuracy', s.accuracy, ...
+    'bestScore', s.bestScore, 'dailyStreak', s.dailyStreak, ...
+    'codeTasks', s.codeTasks, 'lastActive', s.lastActive);
 end
 
 function tf = validId(id)

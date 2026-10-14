@@ -7,6 +7,8 @@ import ThemeToggle from './components/ThemeToggle'
 import { Modal } from './components/ui'
 import { LABS, UNITS } from './content/missions'
 import Landing from './pages/Landing'
+import Start from './pages/Start'
+import { TeacherProvider } from './pages/teacher/TeacherData'
 
 // Every page except the landing page is loaded on demand (its own JS chunk)
 const PAGES = {
@@ -34,10 +36,23 @@ const PAGES = {
   reports: lazy(() => import('./pages/Reports')),
   docs: lazy(() => import('./pages/Documentation')),
   about: lazy(() => import('./pages/About')),
-  teacher: lazy(() => import('./pages/Teacher')),
   animate: lazy(() => import('./pages/Animations')),
   code: lazy(() => import('./pages/CodeLab')),
+  // teacher mode
+  class: lazy(() => import('./pages/teacher/ClassDashboard')),
+  students: lazy(() => import('./pages/teacher/Students')),
+  student: lazy(() => import('./pages/teacher/StudentDetail')),
+  assign: lazy(() => import('./pages/teacher/Assignments')),
+  submissions: lazy(() => import('./pages/teacher/Submissions')),
+  classroom: lazy(() => import('./pages/teacher/ClassSettings')),
 }
+
+// Pages that belong to one role only. Everything else (labs, Learn, Code Lab,
+// Arcade ...) is open to both: the teacher uses it to demonstrate, and MATLAB
+// records nothing in teacher mode.
+const TEACHER_ONLY = ['class', 'students', 'student', 'assign', 'submissions', 'classroom']
+const STUDENT_ONLY = ['dashboard', 'achievements']
+const HOME = { student: 'dashboard', teacher: 'class' }
 
 const LAB_KEYS = UNITS.flatMap((u) => u.labs).filter((k) => k !== 'workspace')
 
@@ -65,7 +80,7 @@ function NavLink({ to, icon, label, route }) {
   )
 }
 
-function Sidebar({ route }) {
+function LabsNav({ route }) {
   const inLab = LAB_KEYS.includes(route) || route === 'labs'
   const [labsOpen, setLabsOpen] = useState(inLab)
   useEffect(() => { if (inLab) setLabsOpen(true) }, [inLab])
@@ -76,48 +91,89 @@ function Sidebar({ route }) {
     ['Unit IV', ['edges', 'segmentation', 'morphology', 'regions']],
   ]
   return (
-    <aside className="sidebar" id="sidebar">
-      <a className="brand" href="#home">
+    <>
+      <button className={`nav-link ${labsOpen ? 'open' : ''} ${route === 'labs' ? 'active' : ''}`} onClick={() => setLabsOpen((o) => !o)}
+        aria-expanded={labsOpen} aria-controls="nav-labs">
+        <Icon name="flask" size={18} /> Labs <span className="chev"><Icon name="chevron" size={15} /></span>
+      </button>
+      {labsOpen && (
+        <div className="nav-sub" id="nav-labs">
+          <a href="#labs" className={`nav-link ${route === 'labs' ? 'active' : ''}`} aria-current={route === 'labs' ? 'page' : undefined}>All labs</a>
+          {unitLabs.map(([unit, keys]) => (
+            <div key={unit} role="group" aria-label={unit}>
+              <div className="nav-unit" aria-hidden="true">{unit}</div>
+              {keys.map((k) => (
+                <a key={k} href={`#${k}`} className={`nav-link ${route === k ? 'active' : ''}`} aria-current={route === k ? 'page' : undefined}>{LABS[k].label}</a>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+function StudentNav({ route }) {
+  return (
+    <>
+      <NavLink to="dashboard" icon="dashboard" label="My dashboard" route={route} />
+      <NavLink to="workspace" icon="image" label="Workspace" route={route} />
+
+      <div className="nav-section">Study</div>
+      <NavLink to="learn" icon="book" label="Learn" route={route} />
+      <NavLink to="animate" icon="play" label="Animations" route={route} />
+      <LabsNav route={route} />
+      <NavLink to="experiments" icon="file" label="Experiments" route={route} />
+      <NavLink to="code" icon="code" label="Code Lab" route={route} />
+
+      <div className="nav-section">Play</div>
+      <NavLink to="quiz" icon="gamepad" label="Arcade" route={route} />
+      <NavLink to="leaderboard" icon="trophy" label="Leaderboard" route={route} />
+      <NavLink to="achievements" icon="award" label="Achievements" route={route} />
+
+      <div className="nav-section">More</div>
+      <NavLink to="reports" icon="download" label="Reports" route={route} />
+      <NavLink to="docs" icon="help" label="Documentation" route={route} />
+      <NavLink to="about" icon="info" label="About" route={route} />
+    </>
+  )
+}
+
+function TeacherNav({ route }) {
+  return (
+    <>
+      <NavLink to="class" icon="dashboard" label="Class dashboard" route={route} />
+      <NavLink to="students" icon="users" label="Students" route={route === 'student' ? 'students' : route} />
+      <NavLink to="assign" icon="calendar" label="Assignments" route={route} />
+      <NavLink to="submissions" icon="code" label="Code submissions" route={route} />
+      <NavLink to="classroom" icon="sliders" label="Class settings" route={route} />
+
+      <div className="nav-section">Teach & demonstrate</div>
+      <NavLink to="workspace" icon="image" label="Workspace" route={route} />
+      <NavLink to="learn" icon="book" label="Learn" route={route} />
+      <NavLink to="animate" icon="play" label="Animations" route={route} />
+      <LabsNav route={route} />
+      <NavLink to="experiments" icon="file" label="Experiments" route={route} />
+      <NavLink to="code" icon="code" label="Code Lab (preview)" route={route} />
+      <NavLink to="quiz" icon="gamepad" label="Arcade & Classroom Mode" route={route} />
+      <NavLink to="leaderboard" icon="trophy" label="Leaderboard" route={route} />
+
+      <div className="nav-section">More</div>
+      <NavLink to="docs" icon="help" label="Documentation" route={route} />
+      <NavLink to="about" icon="info" label="About" route={route} />
+    </>
+  )
+}
+
+function Sidebar({ route, role }) {
+  return (
+    <aside className={`sidebar ${role === 'teacher' ? 'sidebar-teacher' : ''}`} id="sidebar">
+      <a className="brand" href={`#${HOME[role]}`}>
         <span className="logo" aria-hidden="true"><i /><i /><i /><i /></span>
-        <span><b>ImageLab</b><small>Image Processing Laboratory</small></span>
+        <span><b>ImageLab</b><small>{role === 'teacher' ? 'Teacher' : 'Image Processing Laboratory'}</small></span>
       </a>
       <nav aria-label="Main">
-        <NavLink to="dashboard" icon="dashboard" label="Dashboard" route={route} />
-        <NavLink to="workspace" icon="image" label="Workspace" route={route} />
-
-        <div className="nav-section">Study</div>
-        <NavLink to="learn" icon="book" label="Learn" route={route} />
-        <NavLink to="animate" icon="play" label="Animations" route={route} />
-        <button className={`nav-link ${labsOpen ? 'open' : ''} ${route === 'labs' ? 'active' : ''}`} onClick={() => setLabsOpen((o) => !o)}
-          aria-expanded={labsOpen} aria-controls="nav-labs">
-          <Icon name="flask" size={18} /> Labs <span className="chev"><Icon name="chevron" size={15} /></span>
-        </button>
-        {labsOpen && (
-          <div className="nav-sub" id="nav-labs">
-            <a href="#labs" className={`nav-link ${route === 'labs' ? 'active' : ''}`} aria-current={route === 'labs' ? 'page' : undefined}>All labs</a>
-            {unitLabs.map(([unit, keys]) => (
-              <div key={unit} role="group" aria-label={unit}>
-                <div className="nav-unit" aria-hidden="true">{unit}</div>
-                {keys.map((k) => (
-                  <a key={k} href={`#${k}`} className={`nav-link ${route === k ? 'active' : ''}`} aria-current={route === k ? 'page' : undefined}>{LABS[k].label}</a>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-        <NavLink to="experiments" icon="file" label="Experiments" route={route} />
-        <NavLink to="code" icon="code" label="Code Lab" route={route} />
-
-        <div className="nav-section">Play</div>
-        <NavLink to="quiz" icon="gamepad" label="Arcade" route={route} />
-        <NavLink to="leaderboard" icon="trophy" label="Leaderboard" route={route} />
-        <NavLink to="achievements" icon="award" label="Achievements" route={route} />
-
-        <div className="nav-section">More</div>
-        <NavLink to="reports" icon="download" label="Reports" route={route} />
-        <NavLink to="teacher" icon="lock" label="Teacher" route={route} />
-        <NavLink to="docs" icon="help" label="Documentation" route={route} />
-        <NavLink to="about" icon="info" label="About" route={route} />
+        {role === 'teacher' ? <TeacherNav route={route} /> : <StudentNav route={route} />}
       </nav>
       <div className="sidebar-foot">Spatial-domain image processing · MATLAB</div>
     </aside>
@@ -125,7 +181,7 @@ function Sidebar({ route }) {
 }
 
 function TopBar({ onMenu, navOpen }) {
-  const { matlab, meta, current, progress } = useApp()
+  const { matlab, meta, current, progress, role } = useApp()
   const xp = progress?.xp || 0
   const level = progress?.level || 1
   const lo = (level - 1) ** 2 * 100
@@ -145,11 +201,12 @@ function TopBar({ onMenu, navOpen }) {
       <span className="spacer" />
       <ThemeToggle />
       <ProfileMenu />
+      {role === 'teacher' ? <span className="pill teacher-pill"><Icon name="lock" size={14} /> Teacher mode</span> : (
       <a className="level-chip" href="#achievements" title={`${xp} XP`} aria-label={`Level ${level}, ${xp} XP — achievements`}>
         <span className="lv">{level}</span>
         <span>Level {level}</span>
         <span className="xpbar" aria-hidden="true"><i style={{ width: `${Math.min(100, ((xp - lo) / (hi - lo)) * 100)}%` }} /></span>
-      </a>
+      </a>)}
     </header>
   )
 }
@@ -177,7 +234,15 @@ function PageFallback() {
 
 export default function App() {
   const route = useHashRoute()
-  const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify } = useApp()
+  const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify, role } = useApp()
+
+  // Keep each role on its own side of the app
+  const redirect = !role ? null
+    : route === 'teacher' ? HOME[role]
+      : role === 'student' && TEACHER_ONLY.includes(route) ? HOME.student
+        : role === 'teacher' && STUDENT_ONLY.includes(route) ? HOME.teacher
+          : null
+  useEffect(() => { if (redirect) window.location.replace(`#${redirect}`) }, [redirect])
   const [navOpen, setNavOpen] = useState(false)
   const [help, setHelp] = useState(false)
   const [canCancel, setCanCancel] = useState(false)
@@ -228,14 +293,25 @@ export default function App() {
     </>
   )
 
-  if (route === 'home' || !PAGES[route]) {
+  if (route === 'home' || (!PAGES[route] && route !== 'start' && route !== 'teacher')) {
     return <><Landing />{overlays}</>
   }
+  // No role chosen yet (or switching student): the start screen. A deep link
+  // (#code?task=..., #student?id=...) is opened once the role is chosen.
+  if (!role || route === 'start') {
+    const hash = window.location.hash.replace('#', '')
+    const next = route === 'start' || !PAGES[route] ? {} : {
+      student: TEACHER_ONLY.includes(route) ? undefined : hash,
+      teacher: STUDENT_ONLY.includes(route) ? undefined : hash,
+    }
+    return <><Start next={next} />{overlays}</>
+  }
+  if (redirect) return null
   const PageComponent = PAGES[route]
-  return (
-    <div className={`app ${navOpen ? 'nav-open' : ''}`}>
+  const shell = (
+    <div className={`app ${navOpen ? 'nav-open' : ''} ${role === 'teacher' ? 'app-teacher' : ''}`}>
       <a className="skip-link" href="#main-content" onClick={(e) => { e.preventDefault(); main.current?.focus() }}>Skip to content</a>
-      <Sidebar route={route} />
+      <Sidebar route={route} role={role} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="main-col">
         <TopBar onMenu={() => setNavOpen((o) => !o)} navOpen={navOpen} />
@@ -248,4 +324,6 @@ export default function App() {
       {overlays}
     </div>
   )
+  // Teacher pages share one class overview (fetched once, reused while fresh)
+  return role === 'teacher' ? <TeacherProvider>{shell}</TeacherProvider> : shell
 }
