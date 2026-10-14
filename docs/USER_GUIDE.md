@@ -14,14 +14,21 @@ base-MATLAB implementations automatically (identical results, verified by the un
 
 First start takes 10–60 s (MATLAB start-up and graphics warm-up).
 
-### Student or teacher
+### Signing in
 
-**Enter the Lab** opens the start screen:
+**Enter the Lab** opens the sign-in page.
 
-* **I am a student** — click your name (or **I am new — add me**). Your dashboard, missions, XP,
-  badges, quizzes and Code Lab work belong to that name. The menu at the top right has
-  **Switch student** and **Sign out**. The computer remembers the last student.
-* **I am the teacher** — enter the teacher PIN. The teacher side has its own navigation:
+* **Students** sign in with their **roll number** (or name) and **password**.
+  * *Added by the teacher:* use the first password the teacher gives you; ImageLab then asks you to
+    choose your own.
+  * *Already a student before passwords existed:* type your roll number or name and the password you
+    want — ImageLab asks you to repeat it and it becomes your password.
+  * *New to the class:* **Create an account** (if the teacher allows it) with name, roll number and password.
+  * **Keep me signed in on this computer** stays signed in until you sign out; otherwise the session
+    ends with the browser tab. The menu at the top right has **Change password** and **Sign out**.
+  * Forgot your password? The teacher resets it (Class settings → Manage students → Reset password).
+  * Five wrong passwords lock sign-in for five minutes.
+* **The teacher** signs in with the teacher PIN. The teacher side has its own navigation:
   * **Class dashboard** — key numbers, students who need attention (overdue work, inactive for a week,
     low quiz accuracy, stuck on a Code Lab task), recent activity of the class and the demo tour.
   * **Students** — roster (search, sort by any column), topic heatmap and weakest topics. Click a name
@@ -30,13 +37,16 @@ First start takes 10–60 s (MATLAB start-up and graphics warm-up).
     Assigned work appears on the students' dashboards; locked work cannot be run by students.
   * **Code submissions** — a students × tasks grid (✓ solved, best match %, number of runs). Click a
     cell to read the student's passing code and latest attempt.
-  * **Class settings** — add, rename or delete students, set the PIN, export CSV / Excel.
+  * **Class settings** — add students (each gets a first password, shown once), reset passwords,
+    rename or delete students, allow or forbid self sign-up, change the PIN (the current PIN is asked
+    again), export CSV / Excel.
 
   The teacher can also open every lab, the Code Lab (all tasks, with model solutions) and Classroom
-  Mode to demonstrate. Nothing done in teacher mode is recorded as student progress. Teacher mode
-  lasts until the browser tab is closed or **Lock teacher mode** is chosen.
+  Mode to demonstrate. Nothing done as the teacher is recorded as student progress. The teacher
+  session ends when the browser tab is closed or on **Sign out**.
 
-Without a teacher PIN anybody can enter the teacher side — set one under **Class settings**.
+Sessions live in MATLAB's memory: restarting ImageLab signs everybody out. Without a teacher PIN
+anybody can sign in as the teacher — set one under **Class settings**.
 
 ## 2. Loading an image
 

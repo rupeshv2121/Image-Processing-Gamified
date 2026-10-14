@@ -869,6 +869,12 @@ pre.console .muted { color: #8592a8; }
 .start-add input { flex: 1 1 150px; }
 .start-pin { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .start-pin input { flex: 1 1 160px; }
+.start-main.signin { max-width: 520px; }
+.signin-form { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+.signin-form .btn { align-self: flex-start; }
+.link-btn { border: 0; background: none; padding: 0; font: inherit; color: var(--navy-600); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; align-self: flex-start; }
+.link-btn:hover { color: var(--green-600); }
+.issued-pw { font-size: 16px; font-weight: 700; letter-spacing: 1px; padding: 2px 8px; user-select: all; }
 
 /* ==========================================================================
    Teacher mode

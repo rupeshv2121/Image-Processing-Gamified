@@ -39,7 +39,7 @@ interaction**, and the Python server is only a bridge between the two.
 
 | Area | What you can do |
 |---|---|
-| Student / teacher modes | A start screen asks who is using ImageLab. **Students** pick (or add) their profile and get their own dashboard and navigation. The **teacher** enters the PIN and gets a separate teacher side. Each mode only sees its own pages; MATLAB records nothing in teacher mode |
+| Sign-in | **Students** sign in with roll number (or name) and password and get their own dashboard; the **teacher** signs in with the PIN and gets a separate teacher side. MATLAB issues a session token per sign-in and takes the student's identity from it (never from the browser). Passwords: PBKDF2-HMAC-SHA256, 120 000 iterations, random salt (`data/accounts.mat`); temporary passwords from the teacher must be changed at the next sign-in; 5 wrong attempts lock sign-in for 5 minutes; optional self sign-up |
 | Student dashboard | Missions, assigned experiments and Code Lab tasks with due dates, daily challenge, experiments / filters / quiz score / code tasks, XP and badges |
 | Learn | 22 theory topics following the syllabus, each linked to a lab |
 | Animations | Step-by-step playback (play / pause / step / scrub) of the median filter, histogram equalisation, erosion & dilation and region growing — every step computed by MATLAB on a small matrix |
@@ -338,6 +338,7 @@ ImageLab/
 ├── steps/         step-by-step data for the animations (median, histeq, morphology, region growing)
 ├── color/         channels, RGB↔YCbCr, RGB↔Lab, enhancement
 ├── fundamentals/  sampling, quantisation, neighbourhoods, distances
+├── auth/          authManager: student passwords (PBKDF2), sessions, lock-out
 ├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, teacher settings,
 │                  class analytics (teacher views), pipeline problems
 ├── experiments/   experimentCatalog, runExperiment

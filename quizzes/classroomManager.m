@@ -9,6 +9,7 @@ function out = classroomManager(action, varargin)
 %   s = classroomManager('setExperiment', n, status, due, note)
 %        status: 'open' | 'assigned' | 'locked'   due: 'yyyy-mm-dd' or ''
 %   s = classroomManager('setCodeTask', id, status, due, note)   same for a Code Lab task
+%   s = classroomManager('setSelfRegister', tf)       may students create their own account?
 %   classroomManager('assertRunnable', n)            error if experiment n is locked
 %   classroomManager('assertCodeRunnable', id)       error if Code Lab task id is locked
 %   r = classroomManager('report')                   class overview (all student profiles)
@@ -81,6 +82,11 @@ switch action
         saveSettings(file, S);
         out = publicView(S);
 
+    case 'setSelfRegister'
+        S.selfRegister = logical(varargin{1});
+        saveSettings(file, S);
+        out = publicView(S);
+
     case 'assertCodeRunnable'
         idx = find(strcmp({S.codeTasks.id}, char(varargin{1})), 1);
         if ~isempty(idx) && strcmp(S.codeTasks(idx).status, 'locked')
@@ -119,7 +125,7 @@ end
 function S = loadSettings(file)
 E = experimentCatalog();
 T = codeTasks('list');
-S = struct('pinHash', '', 'salt', '', ...
+S = struct('pinHash', '', 'salt', '', 'selfRegister', true, ...
     'experiments', struct('number', num2cell([E.number]), 'title', {E.title}, ...
         'status', 'open', 'due', '', 'note', ''), ...
     'codeTasks', struct('id', cellfun(@(t) t.id, T, 'UniformOutput', false), ...
@@ -129,6 +135,7 @@ if isfile(file)
     try
         s = dataCache('load', file);
         if isfield(s.S, 'pinHash'), S.pinHash = s.S.pinHash; S.salt = s.S.salt; end
+        if isfield(s.S, 'selfRegister'), S.selfRegister = s.S.selfRegister; end
         for k = 1:numel(s.S.experiments)          % keep saved states, catalogue may grow
             idx = find([S.experiments.number] == s.S.experiments(k).number, 1);
             if ~isempty(idx)
@@ -176,7 +183,8 @@ if numel(note) > 120, note = note(1:120); end
 end
 
 function v = publicView(S)
-v = struct('hasPin', ~isempty(S.pinHash), 'experiments', {num2cell(S.experiments)}, ...
+v = struct('hasPin', ~isempty(S.pinHash), 'selfRegister', S.selfRegister, ...
+    'experiments', {num2cell(S.experiments)}, ...
     'codeTasks', {num2cell(S.codeTasks)});
 end
 

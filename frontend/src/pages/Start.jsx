@@ -1,70 +1,65 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
-import { asArray, run } from '../api'
+import { run } from '../api'
 import Icon from '../components/Icon'
-import { initials } from '../components/Profiles'
 import ThemeToggle from '../components/ThemeToggle'
-import { Note } from '../components/ui'
+import { Note, Tabs } from '../components/ui'
 
-// Entry screen: every visit starts as a student (pick your profile) or as the
-// teacher (PIN). The two modes have separate dashboards and navigation.
+// Sign-in page. Students sign in with their roll number (or name) and
+// password; the teacher with the PIN. MATLAB checks the credentials
+// (authManager.m) and returns a session token.
 export default function Start({ next }) {
-  const { matlab, profiles, refreshProfiles, enterStudent, enterTeacher } = useApp()
-  const [query, setQuery] = useState('')
-  const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [roll, setRoll] = useState('')
-  const [pin, setPin] = useState('')
-  const [hasPin, setHasPin] = useState(true)
+  const { matlab, login, register, teacherLogin, sessionMessage } = useApp()
+  const [tab, setTab] = useState('student')
+  const [mode, setMode] = useState('login')        // login | claim | register
+  const [options, setOptions] = useState({ selfRegister: false, hasPin: true })
+  const [form, setForm] = useState({ identifier: '', password: '', repeat: '', name: '', roll: '', pin: '' })
+  const [remember, setRemember] = useState(true)
   const [error, setError] = useState(null)
-  const [teacherError, setTeacherError] = useState(null)
+  const [info, setInfo] = useState(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (!matlab.ok) return
-    refreshProfiles()
-    run('classroom', { action: 'get' }).then((s) => setHasPin(!!s.hasPin)).catch(() => {})
-  }, [matlab.ok, refreshProfiles])
+    if (matlab.ok) run('auth', { action: 'options' }).then(setOptions).catch(() => {})
+  }, [matlab.ok])
 
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return q ? profiles.filter((p) => p.name.toLowerCase().includes(q) || (p.roll || '').toLowerCase().includes(q)) : profiles
-  }, [profiles, query])
-
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const go = (hash) => { window.location.hash = hash }
-
-  const pickStudent = async (id) => {
-    await enterStudent(id)
-    go(next?.student || 'dashboard')
-  }
-
-  const addMe = async (e) => {
+  const submit = (fn) => async (e) => {
     e.preventDefault()
     setError(null); setBusy(true)
-    try {
-      const list = asArray(await run('profiles', { action: 'add', name, roll }))
-      await refreshProfiles()
-      const me = list.find((p) => p.name.toLowerCase() === name.trim().toLowerCase()) || list[list.length - 1]
-      await pickStudent(me.id)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setBusy(false)
-    }
+    try { await fn() } catch (err) { setError(err) } finally { setBusy(false) }
   }
 
-  const teacher = async (e) => {
-    e.preventDefault()
-    setTeacherError(null); setBusy(true)
+  const studentLogin = submit(async () => {
     try {
-      await enterTeacher(pin)
-      go(next?.teacher || 'class')
+      await login(form.identifier, form.password, remember)
+      go(next?.student || 'dashboard')
     } catch (err) {
-      setTeacherError(err.message)
-    } finally {
-      setBusy(false)
+      if (err.errorId === 'ImageLab:needsPassword') {     // first sign-in: choose a password
+        setMode('claim'); setInfo(err.message); setForm((f) => ({ ...f, password: '', repeat: '' }))
+        return
+      }
+      throw err
     }
-  }
+  })
+  const claim = submit(async () => {
+    if (form.password !== form.repeat) throw new Error('The two passwords do not match.')
+    await login(form.identifier, form.password, remember, true)
+    go(next?.student || 'dashboard')
+  })
+  const signUp = submit(async () => {
+    if (form.password !== form.repeat) throw new Error('The two passwords do not match.')
+    await register(form.name, form.roll, form.password, remember)
+    go(next?.student || 'dashboard')
+  })
+  const teacher = submit(async () => {
+    await teacherLogin(form.pin)
+    go(next?.teacher || 'class')
+  })
+
+  const switchMode = (m) => { setMode(m); setError(null); setInfo(null); setForm((f) => ({ ...f, password: '', repeat: '' })) }
+  const disabled = !matlab.ok || busy
 
   return (
     <div className="start">
@@ -75,58 +70,73 @@ export default function Start({ next }) {
         </a>
         <ThemeToggle />
       </header>
-      <main className="start-main">
-        <h1>Who is using ImageLab?</h1>
-        <p className="subtitle">Students learn and practise; the teacher follows the class and sets the work.</p>
+      <main className="start-main signin">
+        <h1>Sign in to ImageLab</h1>
+        <p className="subtitle">Your dashboard, progress and Code Lab work are kept under your own account.</p>
         {!matlab.ok && <Note kind="warn">{matlab.ready ? 'MATLAB is not available.' : 'Starting MATLAB… this takes up to a minute the first time.'}</Note>}
+        {sessionMessage && <Note kind="warn">{sessionMessage}</Note>}
 
-        <div className="start-grid">
-          <section className="card start-card" aria-labelledby="start-student">
-            <div className="start-ic"><Icon name="user" size={26} /></div>
-            <h2 id="start-student">I am a student</h2>
-            <p className="small muted">Choose your name. Your XP, badges, quizzes and Code Lab work are saved under it.</p>
-            {profiles.length > 8 && (
-              <input type="search" className="mt-sm" placeholder="Search name or roll no." value={query}
-                onChange={(e) => setQuery(e.target.value)} aria-label="Search students" />
-            )}
-            <div className="start-students" role="list">
-              {shown.map((p) => (
-                <button key={p.id} role="listitem" className="start-student" onClick={() => pickStudent(p.id)} disabled={!matlab.ok}>
-                  <span className="avatar">{initials(p.name)}</span>
-                  <span className="grow">{p.name}<small>{p.roll ? `${p.roll} · ` : ''}Level {p.level}</small></span>
-                  <Icon name="chevron" size={16} />
-                </button>
-              ))}
-              {matlab.ok && shown.length === 0 && <p className="small muted">No student matches “{query}”.</p>}
-            </div>
-            {adding ? (
-              <form className="start-add" onSubmit={addMe}>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" maxLength={40} aria-label="Your name" autoFocus />
-                <input type="text" value={roll} onChange={(e) => setRoll(e.target.value)} placeholder="Roll no. (optional)" maxLength={20} aria-label="Roll number" />
-                <button className="btn btn-primary" type="submit" disabled={!name.trim() || busy}>Start</button>
-                <button className="btn btn-ghost" type="button" onClick={() => setAdding(false)}>Cancel</button>
-              </form>
-            ) : (
-              <button className="btn btn-ghost mt-sm" onClick={() => setAdding(true)} disabled={!matlab.ok}><Icon name="user" size={16} /> I am new — add me</button>
-            )}
-            {error && <Note kind="error">{error}</Note>}
-          </section>
+        <section className="card start-card">
+          <Tabs tabs={[{ key: 'student', label: 'Student' }, { key: 'teacher', label: 'Teacher' }]} active={tab}
+            onChange={(t) => { setTab(t); setError(null) }} />
 
-          <section className="card start-card teacher" aria-labelledby="start-teacher">
-            <div className="start-ic navy"><Icon name="lock" size={26} /></div>
-            <h2 id="start-teacher">I am the teacher</h2>
-            <p className="small muted">Class dashboard, every student's progress and code, assignments and exports.</p>
-            <form className="start-pin" onSubmit={teacher}>
-              {hasPin && (
-                <input type="password" inputMode="numeric" autoComplete="current-password" value={pin}
-                  onChange={(e) => setPin(e.target.value)} placeholder="Teacher PIN" aria-label="Teacher PIN" />
+          {tab === 'student' && mode === 'login' && (
+            <form className="signin-form" onSubmit={studentLogin}>
+              <label className="field"><span className="field-label">Roll number or name</span>
+                <input type="text" autoComplete="username" value={form.identifier} onChange={set('identifier')} autoFocus required /></label>
+              <label className="field"><span className="field-label">Password</span>
+                <input type="password" autoComplete="current-password" value={form.password} onChange={set('password')} required /></label>
+              <label className="check"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Keep me signed in on this computer</label>
+              <button className="btn btn-primary" type="submit" disabled={disabled || !form.identifier || !form.password}>Sign in</button>
+              <p className="small muted">First time? Type your roll number and the password you want — ImageLab will ask you to confirm it.
+                Forgot your password? Ask your teacher to reset it.</p>
+              {options.selfRegister && (
+                <p className="small">New to the class? <button type="button" className="link-btn" onClick={() => switchMode('register')}>Create an account</button></p>
               )}
-              <button className="btn btn-navy" type="submit" disabled={!matlab.ok || busy || (hasPin && !pin)}>Enter as teacher</button>
             </form>
-            {!hasPin && matlab.ok && <p className="small muted mt-sm">No teacher PIN is set yet — set one in <b>Class settings</b> so students cannot open the teacher side.</p>}
-            {teacherError && <Note kind="error">{teacherError}</Note>}
-          </section>
-        </div>
+          )}
+
+          {tab === 'student' && mode === 'claim' && (
+            <form className="signin-form" onSubmit={claim}>
+              {info && <Note>{info}</Note>}
+              <label className="field"><span className="field-label">New password (at least 6 characters)</span>
+                <input type="password" autoComplete="new-password" value={form.password} onChange={set('password')} minLength={6} autoFocus required /></label>
+              <label className="field"><span className="field-label">Repeat the password</span>
+                <input type="password" autoComplete="new-password" value={form.repeat} onChange={set('repeat')} required /></label>
+              <button className="btn btn-primary" type="submit" disabled={disabled || form.password.length < 6}>Set password and sign in</button>
+              <button type="button" className="link-btn" onClick={() => switchMode('login')}>← Back</button>
+            </form>
+          )}
+
+          {tab === 'student' && mode === 'register' && (
+            <form className="signin-form" onSubmit={signUp}>
+              <label className="field"><span className="field-label">Your name</span>
+                <input type="text" autoComplete="name" value={form.name} onChange={set('name')} maxLength={40} autoFocus required /></label>
+              <label className="field"><span className="field-label">Roll number (you sign in with it)</span>
+                <input type="text" autoComplete="username" value={form.roll} onChange={set('roll')} maxLength={20} required /></label>
+              <label className="field"><span className="field-label">Password (at least 6 characters)</span>
+                <input type="password" autoComplete="new-password" value={form.password} onChange={set('password')} minLength={6} required /></label>
+              <label className="field"><span className="field-label">Repeat the password</span>
+                <input type="password" autoComplete="new-password" value={form.repeat} onChange={set('repeat')} required /></label>
+              <label className="check"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Keep me signed in on this computer</label>
+              <button className="btn btn-primary" type="submit" disabled={disabled || !form.name.trim() || !form.roll.trim() || form.password.length < 6}>Create account</button>
+              <button type="button" className="link-btn" onClick={() => switchMode('login')}>← I already have an account</button>
+            </form>
+          )}
+
+          {tab === 'teacher' && (
+            <form className="signin-form" onSubmit={teacher}>
+              {options.hasPin ? (
+                <label className="field"><span className="field-label">Teacher PIN</span>
+                  <input type="password" inputMode="numeric" autoComplete="current-password" value={form.pin} onChange={set('pin')} autoFocus required /></label>
+              ) : <Note kind="warn">No teacher PIN is set yet — set one in Class settings right after signing in.</Note>}
+              <button className="btn btn-navy" type="submit" disabled={disabled || (options.hasPin && !form.pin)}>Sign in as teacher</button>
+              <p className="small muted">The teacher session ends when this browser tab is closed.</p>
+            </form>
+          )}
+
+          {error && <Note kind="error">{error.message}</Note>}
+        </section>
       </main>
     </div>
   )

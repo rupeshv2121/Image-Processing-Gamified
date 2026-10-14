@@ -8,6 +8,7 @@ import { Modal } from './components/ui'
 import { LABS, UNITS } from './content/missions'
 import Landing from './pages/Landing'
 import Start from './pages/Start'
+import { ForcedPasswordChange } from './components/Account'
 import { TeacherProvider } from './pages/teacher/TeacherData'
 
 // Every page except the landing page is loaded on demand (its own JS chunk)
@@ -234,11 +235,11 @@ function PageFallback() {
 
 export default function App() {
   const route = useHashRoute()
-  const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify, role } = useApp()
+  const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify, role, mustChangePassword } = useApp()
 
   // Keep each role on its own side of the app
   const redirect = !role ? null
-    : route === 'teacher' ? HOME[role]
+    : route === 'teacher' || route === 'start' ? HOME[role]
       : role === 'student' && TEACHER_ONLY.includes(route) ? HOME.student
         : role === 'teacher' && STUDENT_ONLY.includes(route) ? HOME.teacher
           : null
@@ -296,9 +297,9 @@ export default function App() {
   if (route === 'home' || (!PAGES[route] && route !== 'start' && route !== 'teacher')) {
     return <><Landing />{overlays}</>
   }
-  // No role chosen yet (or switching student): the start screen. A deep link
-  // (#code?task=..., #student?id=...) is opened once the role is chosen.
-  if (!role || route === 'start') {
+  // Not signed in: the sign-in page. A deep link (#code?task=..., #student?id=...)
+  // is opened after signing in.
+  if (!role) {
     const hash = window.location.hash.replace('#', '')
     const next = route === 'start' || !PAGES[route] ? {} : {
       student: TEACHER_ONLY.includes(route) ? undefined : hash,
@@ -306,6 +307,7 @@ export default function App() {
     }
     return <><Start next={next} />{overlays}</>
   }
+  if (mustChangePassword) return <><ForcedPasswordChange />{overlays}</>
   if (redirect) return null
   const PageComponent = PAGES[route]
   const shell = (
