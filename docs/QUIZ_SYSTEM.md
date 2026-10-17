@@ -40,6 +40,46 @@ Q = add(Q, 'NON9', 'Non-Linear Filters', 'easy', 'mcq', ...
 | Build the Pipeline | `pipelineProblems.m`: e.g. "Remove noise and improve contrast" → Median → CLAHE |
 | Challenge Mode | Timed restoration; score = 40·ΔPSNR + 600·ΔSSIM + time bonus |
 | Classroom Mode | Projector layout, big timer, reveal and explanation, class score |
+| Live Quiz | Mentimeter/Kahoot style: the teacher hosts, students join on their own devices with a code (below) |
+
+## Live quiz — `quizzes/liveQuizManager.m`
+
+The teacher (**Live quiz** in the teacher menu) builds a quiz and runs it from the projector; students
+open **Live quiz** on their own phone or laptop and type the 6-digit code.
+
+**Network.** Start ImageLab with `start_imagelab_lan.bat` (or `ImageLab('lan')` in MATLAB). The server then
+also listens on the local network and prints the address students open, e.g. `http://192.168.1.20:8765/#live`.
+Other devices can **only** sign in and play the live quiz — labs, Code Lab and teacher sign-in stay on the
+ImageLab computer. If Windows Firewall asks, allow Python on *private* networks.
+
+**What the teacher sets**
+
+| Setting | Meaning |
+|---|---|
+| Title, instructions | Shown to students in the lobby (instructions up to 1500 characters) |
+| Questions | From `questionBank.m` (picker or random by topic/difficulty) and/or own questions (2–6 answers, explanation) — max. 50 |
+| Time per question | 5–300 s; each question can override the quiz default |
+| Speed bonus | Correct = `round(1000 × (1 − 0.5 × time / limit))` (500–1000); off = always 1000 |
+| Leaderboard | Top 5 / Top 10 / All, optionally also on the students' devices after each question |
+| Reveal when everyone answered | Otherwise when the timer ends (or the teacher clicks *Reveal*) |
+| Late joining, shuffle questions / answers | Answer order is shuffled once, so the projector matches every device |
+
+Quizzes can be saved (`data/liveQuizSets.mat`) and reused.
+
+**Timing.** MATLAB keeps the only clock. A student's answer time runs from the moment MATLAB first sent them
+the question (their first poll) until their answer arrived, so a slow poll costs nobody time; answers up to
+1 s after the deadline still count (network delay). Ranking: points, then total answer time (an unanswered
+question counts its full time limit). The teacher sees every answer time per question (Top 5 / All) and
+each student's average time.
+
+**Flow.** lobby → question (timer) → reveal (answer distribution, answer times, leaderboard with rank
+movement) → … → final results (podium, leaderboard, per-question accuracy and average time). Students poll
+`live/state` every second; the answer is never sent to a device before the reveal.
+
+**Results.** A finished quiz is stored in `data/liveQuizResults.mat` (last 100, *Past results* tab), exported
+to `reports/output/ImageLab_live_quiz_*.csv/.xlsx` (sheets *Leaderboard*, *Questions*, *Answers* with every
+student's answer, time and points per question) and recorded in every participant's progress as a
+"Live Quiz" (topic accuracy, XP, badges — scored with the normal quiz formula).
 
 ## Leaderboard — `quizzes/leaderboardManager.m`
 

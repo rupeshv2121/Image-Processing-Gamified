@@ -559,6 +559,10 @@ switch op
     case 'challengeScore'
         data = scoreChallenge(p);
 
+    case 'live'
+        % Live classroom quiz: the teacher hosts, students join with a code (checkAccess)
+        data = liveQuizManager(char(P(p, 'action', 'state')), session(), p);
+
     case 'leaderboard'
         action = char(P(p, 'action', 'get'));
         if strcmp(action, 'add')
@@ -1110,9 +1114,10 @@ function checkAccess(op, p, sess)
 action = char(P(p, 'action', ''));
 teacherOnly = (strcmp(op, 'classroom') && ~any(strcmp(action, {'', 'get'}))) || ...
     (strcmp(op, 'profiles') && ~any(strcmp(action, {'', 'list'}))) || ...
-    (strcmp(op, 'leaderboard') && ~any(strcmp(action, {'', 'get', 'add'})));
+    (strcmp(op, 'leaderboard') && ~any(strcmp(action, {'', 'get', 'add'}))) || ...
+    (strcmp(op, 'live') && ~any(strcmp(action, {'', 'join', 'state', 'answer', 'leave'})));
 signedIn = any(strcmp(op, {'profiles', 'progress', 'codeTaskSolution', 'quizSubmit', 'report', ...
-    'runExperiment'})) || (strcmp(op, 'leaderboard') && strcmp(action, 'add'));
+    'runExperiment', 'live'})) || (strcmp(op, 'leaderboard') && strcmp(action, 'add'));
 if teacherOnly && (isempty(sess) || ~strcmp(sess.role, 'teacher'))
     if isempty(sess)
         error('ImageLab:auth', 'Please sign in again (your session has ended).');
