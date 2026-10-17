@@ -238,6 +238,7 @@ whole project.
 | `IMAGELAB_NO_BROWSER` | environment variable | If set, the browser is not opened automatically |
 | `--no-browser` | `server.py` argument | Same as above |
 | `--connect <name>` | `server.py` argument | Attach to a shared MATLAB session instead of starting one (used by `ImageLab.m`) |
+| `--lan` / `IMAGELAB_LAN=1` | `server.py` argument / environment variable | Classroom network mode for the live quiz (`start_imagelab_lan.bat`, `ImageLab('lan')`) |
 | `ILAB_FORCE_MANUAL=1` | environment variable (MATLAB) | Simulate a missing Image Processing Toolbox |
 
 ---
@@ -248,7 +249,9 @@ whole project.
 - **Maximum upload size:** 25 MB
 - **Working resolution:** images larger than 640 px on the longest side are resized on import
 - **Colour handling:** indexed → RGB; RGBA → RGB (alpha removed); grayscale and RGB kept
-- **Server binding:** `127.0.0.1` only, so the app is not reachable from other machines
+- **Server binding:** `127.0.0.1` only, so the app is not reachable from other machines. In classroom network mode
+  (`--lan`) it listens on the local network, but other devices may only sign in and use the live quiz
+  (`auth` and `live` operations); labs, uploads, images, reports, Code Lab and teacher sign-in stay on this computer
 
 ---
 
@@ -256,7 +259,7 @@ whole project.
 
 | Method & path | Purpose |
 |---|---|
-| `GET /api/status` | `{ready, matlab, error}`: whether the MATLAB engine is running |
+| `GET /api/status` | `{ready, matlab, error, remote, lan}`: whether the MATLAB engine is running, whether this browser is another device, and the classroom-network addresses |
 | `POST /api/upload` | `{name, data(base64)}` → imports the image, returns `{id, info, original, resized}` |
 | `POST /api/run` | `{op, params}` → forwarded to `ilab_dispatch.m`, returns `{ok, op, data, elapsedMs}` or `{ok:false, error}` |
 | `GET /api/image/<id>.png` | Result image |

@@ -5,7 +5,9 @@ const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
 
 export function AppProvider({ children }) {
-  const [matlab, setMatlab] = useState({ ready: false, ok: false, error: null, ipt: false, release: '' })
+  // remote: this browser is a student device on the classroom network (live quiz only)
+  // lan: the addresses students open to join (classroom network mode, server.py --lan)
+  const [matlab, setMatlab] = useState({ ready: false, ok: false, error: null, ipt: false, release: '', remote: false, lan: [] })
   const [history, setHistory] = useState([]) // [{id, label}]
   const [index, setIndex] = useState(-1)
   const [meta, setMeta] = useState(null) // {name, info, original, resized}
@@ -44,7 +46,7 @@ export function AppProvider({ children }) {
         if (s.ready) {
           if (s.matlab) {
             const ping = await run('ping')
-            if (!stop) setMatlab({ ready: true, ok: true, error: null, ipt: ping.ipt, iptLicensed: ping.iptLicensed, release: ping.release })
+            if (!stop) setMatlab({ ready: true, ok: true, error: null, ipt: ping.ipt, iptLicensed: ping.iptLicensed, release: ping.release, remote: !!s.remote, lan: s.lan || [] })
             // A remembered session is only valid while MATLAB still knows its token
             if (getSession()) {
               const me = await run('auth', { action: 'me' }).catch(() => null)
@@ -55,7 +57,7 @@ export function AppProvider({ children }) {
             }
             // Deep link for demos: #filters?sample=peppers.png loads a sample image
             const m = window.location.hash.match(/[?&]sample=([\w.-]+)/)
-            if (m && !stop) {
+            if (m && !stop && !s.remote) {
               const data = await run('loadSample', { name: m[1] }).catch(() => null)
               if (data && !stop) {
                 setHistory([{ id: data.id, label: `Loaded ${data.name}` }])
@@ -63,7 +65,7 @@ export function AppProvider({ children }) {
                 setMeta({ name: data.name, info: data.info, original: data.original, resized: data.resized })
               }
             }
-          } else if (!stop) setMatlab({ ready: true, ok: false, error: s.error })
+          } else if (!stop) setMatlab({ ready: true, ok: false, error: s.error, remote: !!s.remote, lan: s.lan || [] })
           return
         }
       } catch {

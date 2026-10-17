@@ -1,4 +1,4 @@
-function ImageLab()
+function ImageLab(mode)
 %IMAGELAB Start ImageLab - Interactive Image Processing Laboratory.
 %   Type  ImageLab  in the MATLAB Command Window (with this folder as the
 %   current folder). This function:
@@ -10,6 +10,9 @@ function ImageLab()
 %   All image processing then runs here, in this MATLAB session, using the
 %   functions in algorithms/, noise/, histogram/, metrics/, segmentation/ ...
 %   Close the "ImageLab server" window to stop the interface.
+%
+%   ImageLab('lan')  classroom network mode: students join the live quiz
+%   from their own devices (they can do nothing else from there).
 %
 %   Requirements: Python 3.9-3.12 with the MATLAB Engine API
 %   (run setup_imagelab.bat once), see README.md.
@@ -28,11 +31,14 @@ if ~isfile(python)
     python = 'python';
 end
 server = fullfile(root, 'server', 'server.py');
+lan = nargin > 0 && strcmpi(mode, 'lan');
+extra = '';
+if lan, extra = ' --lan'; end
 
 if ispc
-    cmd = sprintf('start "ImageLab server" /min "%s" "%s" --connect %s', python, server, name);
+    cmd = sprintf('start "ImageLab server" /min "%s" "%s" --connect %s%s', python, server, name, extra);
 else
-    cmd = sprintf('"%s" "%s" --connect %s &', python, server, name);
+    cmd = sprintf('"%s" "%s" --connect %s%s &', python, server, name, extra);
 end
 status = system(cmd);
 if status ~= 0
@@ -43,6 +49,9 @@ end
 fprintf('\n  ImageLab is starting at http://localhost:8765\n');
 fprintf('  MATLAB session "%s" is shared - all image processing runs here.\n', name);
 fprintf('  Image Processing Toolbox: %s\n\n', yesno(hasIPT()));
+if lan
+    fprintf('  Classroom network mode: the server window shows the address students open.\n\n');
+end
 end
 
 function s = yesno(tf)

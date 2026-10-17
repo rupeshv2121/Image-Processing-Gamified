@@ -77,8 +77,10 @@ export default function Start({ next }) {
         {sessionMessage && <Note kind="warn">{sessionMessage}</Note>}
 
         <section className="card start-card">
-          <Tabs tabs={[{ key: 'student', label: 'Student' }, { key: 'teacher', label: 'Teacher' }]} active={tab}
-            onChange={(t) => { setTab(t); setError(null) }} />
+          {matlab.remote ? <Note>Sign in with your student account to join the live quiz.</Note> : (
+            <Tabs tabs={[{ key: 'student', label: 'Student' }, { key: 'teacher', label: 'Teacher' }]} active={tab}
+              onChange={(t) => { setTab(t); setError(null) }} />
+          )}
 
           {tab === 'student' && mode === 'login' && (
             <form className="signin-form" onSubmit={studentLogin}>

@@ -130,6 +130,7 @@ if ~isempty(token)
             call('auth', struct('action', 'changePassword', 'oldPassword', '', 'newPassword', 'smoke-pass-2', 'token', st));
             call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;', 'token', st));
             call('auth', struct('action', 'me', 'token', st));
+            liveQuizCycle(st);
             expectError('classroom', struct('action', 'overview', 'token', st));      % students are not teachers
             call('auth', struct('action', 'logout', 'token', st));
             expectError('progress', struct('token', st));                            % signed out
@@ -157,6 +158,40 @@ expectError('codeTaskSolution', struct('taskId', 'otsu'));
 leaderboardManager('clear');
 if ~isempty(token), call('auth', struct('action', 'logout')); end
 fprintf('\nSmoke test finished: %d failure(s)\n', failures);
+
+    function liveQuizCycle(st)
+        % The teacher hosts a 2-question live quiz, the student joins and answers
+        call('live', struct('action', 'bank'));
+        call('live', struct('action', 'pick', 'n', 3, 'categories', {{'Histogram'}}));
+        lq = call('live', struct('action', 'create', 'quiz', struct('title', 'Smoke live quiz', ...
+            'instructions', 'Answer quickly.', 'settings', struct('timeLimit', 10), ...
+            'questions', {{struct('bankId', 'FUN2'), struct('question', 'Is 2 + 2 = 4?', ...
+                'options', {{'Yes', 'No'}}, 'answer', 1, 'timeLimit', 5)}})));
+        if ~lq.ok, return; end
+        expectError('live', struct('action', 'join', 'code', '000000', 'token', st));     % wrong code
+        call('live', struct('action', 'join', 'code', lq.data.code, 'token', st));
+        expectError('live', struct('action', 'start', 'token', st));                      % students do not host
+        call('live', struct('action', 'start', 'qIndex', 0));
+        s = call('live', struct('action', 'state', 'token', st));
+        if s.ok && isfield(s.data.question, 'answer')
+            failures = failures + 1;
+            fprintf('  FAIL %-18s the answer was sent before the reveal\n', 'live');
+        end
+        call('live', struct('action', 'answer', 'qIndex', 1, 'choice', 3, 'token', st));
+        expectError('live', struct('action', 'answer', 'qIndex', 1, 'choice', 1, 'token', st));  % once only
+        call('live', struct('action', 'next', 'qIndex', 1));     % the only student answered: revealed
+        call('live', struct('action', 'answer', 'qIndex', 2, 'choice', 1, 'token', st));
+        call('live', struct('action', 'host'));
+        call('live', struct('action', 'finish'));
+        call('live', struct('action', 'state', 'token', st));
+        e = call('live', struct('action', 'export'));
+        call('live', struct('action', 'history'));
+        call('live', struct('action', 'close'));
+        call('live', struct('action', 'deleteResult', 'id', lq.data.id));
+        if e.ok
+            delete(fullfile(root, 'reports', 'output', e.data.csv), fullfile(root, 'reports', 'output', e.data.xlsx));
+        end
+    end
 
     function r = signedIn(op, params)
         if isempty(token)

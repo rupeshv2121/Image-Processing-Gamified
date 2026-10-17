@@ -33,6 +33,7 @@ const PAGES = {
   compare: lazy(() => import('./pages/FilterComparison')),
   experiments: lazy(() => import('./pages/Experiments')),
   quiz: lazy(() => import('./pages/QuizHub')),
+  live: lazy(() => import('./pages/LiveQuiz')),
   leaderboard: lazy(() => import('./pages/Leaderboard')),
   reports: lazy(() => import('./pages/Reports')),
   docs: lazy(() => import('./pages/Documentation')),
@@ -46,13 +47,14 @@ const PAGES = {
   assign: lazy(() => import('./pages/teacher/Assignments')),
   submissions: lazy(() => import('./pages/teacher/Submissions')),
   classroom: lazy(() => import('./pages/teacher/ClassSettings')),
+  livehost: lazy(() => import('./pages/teacher/LiveHost')),
 }
 
 // Pages that belong to one role only. Everything else (labs, Learn, Code Lab,
 // Arcade ...) is open to both: the teacher uses it to demonstrate, and MATLAB
 // records nothing in teacher mode.
-const TEACHER_ONLY = ['class', 'students', 'student', 'assign', 'submissions', 'classroom']
-const STUDENT_ONLY = ['dashboard', 'achievements']
+const TEACHER_ONLY = ['class', 'students', 'student', 'assign', 'submissions', 'classroom', 'livehost']
+const STUDENT_ONLY = ['dashboard', 'achievements', 'live']
 const HOME = { student: 'dashboard', teacher: 'class' }
 
 const LAB_KEYS = UNITS.flatMap((u) => u.labs).filter((k) => k !== 'workspace')
@@ -128,6 +130,7 @@ function StudentNav({ route }) {
       <NavLink to="code" icon="code" label="Code Lab" route={route} />
 
       <div className="nav-section">Play</div>
+      <NavLink to="live" icon="zap" label="Live quiz" route={route} />
       <NavLink to="quiz" icon="gamepad" label="Arcade" route={route} />
       <NavLink to="leaderboard" icon="trophy" label="Leaderboard" route={route} />
       <NavLink to="achievements" icon="award" label="Achievements" route={route} />
@@ -146,6 +149,7 @@ function TeacherNav({ route }) {
       <NavLink to="class" icon="dashboard" label="Class dashboard" route={route} />
       <NavLink to="students" icon="users" label="Students" route={route === 'student' ? 'students' : route} />
       <NavLink to="assign" icon="calendar" label="Assignments" route={route} />
+      <NavLink to="livehost" icon="zap" label="Live quiz" route={route} />
       <NavLink to="submissions" icon="code" label="Code submissions" route={route} />
       <NavLink to="classroom" icon="sliders" label="Class settings" route={route} />
 
@@ -166,7 +170,17 @@ function TeacherNav({ route }) {
   )
 }
 
-function Sidebar({ route, role }) {
+// A student's own phone / laptop on the classroom network: only the live quiz
+function RemoteNav({ route }) {
+  return (
+    <>
+      <NavLink to="live" icon="zap" label="Live quiz" route={route} />
+      <p className="nav-note">On this device you can join the live quiz. The labs and everything else are on the ImageLab computer.</p>
+    </>
+  )
+}
+
+function Sidebar({ route, role, remote }) {
   return (
     <aside className={`sidebar ${role === 'teacher' ? 'sidebar-teacher' : ''}`} id="sidebar">
       <a className="brand" href={`#${HOME[role]}`}>
@@ -174,7 +188,7 @@ function Sidebar({ route, role }) {
         <span><b>ImageLab</b><small>{role === 'teacher' ? 'Teacher' : 'Image Processing Laboratory'}</small></span>
       </a>
       <nav aria-label="Main">
-        {role === 'teacher' ? <TeacherNav route={route} /> : <StudentNav route={route} />}
+        {remote ? <RemoteNav route={route} /> : role === 'teacher' ? <TeacherNav route={route} /> : <StudentNav route={route} />}
       </nav>
       <div className="sidebar-foot">Spatial-domain image processing · MATLAB</div>
     </aside>
@@ -202,7 +216,7 @@ function TopBar({ onMenu, navOpen }) {
       <span className="spacer" />
       <ThemeToggle />
       <ProfileMenu />
-      {role === 'teacher' ? <span className="pill teacher-pill"><Icon name="lock" size={14} /> Teacher mode</span> : (
+      {role === 'teacher' ? <span className="pill teacher-pill"><Icon name="lock" size={14} /> Teacher mode</span> : matlab.remote ? null : (
       <a className="level-chip" href="#achievements" title={`${xp} XP`} aria-label={`Level ${level}, ${xp} XP — achievements`}>
         <span className="lv">{level}</span>
         <span>Level {level}</span>
@@ -235,10 +249,12 @@ function PageFallback() {
 
 export default function App() {
   const route = useHashRoute()
-  const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify, role, mustChangePassword } = useApp()
+  const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify, role, mustChangePassword, matlab } = useApp()
+  const remote = matlab.remote
 
-  // Keep each role on its own side of the app
+  // Keep each role on its own side of the app (a remote device: live quiz only)
   const redirect = !role ? null
+    : remote && route !== 'live' ? 'live'
     : route === 'teacher' || route === 'start' ? HOME[role]
       : role === 'student' && TEACHER_ONLY.includes(route) ? HOME.student
         : role === 'teacher' && STUDENT_ONLY.includes(route) ? HOME.teacher
@@ -294,14 +310,15 @@ export default function App() {
     </>
   )
 
-  if (route === 'home' || (!PAGES[route] && route !== 'start' && route !== 'teacher')) {
+  // A student device on the classroom network skips the landing page (its demo runs image operations)
+  if (!remote && (route === 'home' || (!PAGES[route] && route !== 'start' && route !== 'teacher'))) {
     return <><Landing />{overlays}</>
   }
   // Not signed in: the sign-in page. A deep link (#code?task=..., #student?id=...)
   // is opened after signing in.
   if (!role) {
     const hash = window.location.hash.replace('#', '')
-    const next = route === 'start' || !PAGES[route] ? {} : {
+    const next = remote ? { student: route === 'live' ? window.location.hash.replace('#', '') : 'live' } : route === 'start' || !PAGES[route] ? {} : {
       student: TEACHER_ONLY.includes(route) ? undefined : hash,
       teacher: STUDENT_ONLY.includes(route) ? undefined : hash,
     }
@@ -313,7 +330,7 @@ export default function App() {
   const shell = (
     <div className={`app ${navOpen ? 'nav-open' : ''} ${role === 'teacher' ? 'app-teacher' : ''}`}>
       <a className="skip-link" href="#main-content" onClick={(e) => { e.preventDefault(); main.current?.focus() }}>Skip to content</a>
-      <Sidebar route={route} role={role} />
+      <Sidebar route={route} role={role} remote={remote} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="main-col">
         <TopBar onMenu={() => setNavOpen((o) => !o)} navOpen={navOpen} />

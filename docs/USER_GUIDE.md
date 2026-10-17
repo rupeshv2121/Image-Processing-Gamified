@@ -139,7 +139,8 @@ Open **Code Lab** in the sidebar to write real MATLAB code in the browser.
 * **Stop** interrupts code that runs too long (for example an endless loop).
 * Calls that could change files or the shared MATLAB session (`system`, `delete`, `cd`, `save`,
   `clear all`, `input` …) are rejected. This guards against accidents. It is not a security sandbox:
-  run the server only on a computer you trust (it listens on 127.0.0.1 only).
+  run the server only on a computer you trust. Code Lab only works on the ImageLab computer itself — in
+  classroom network mode other devices can only sign in and play the live quiz.
 * Without the Image Processing Toolbox, `imfilter`, `fspecial`, `medfilt2`, `imnoise`, `imhist`,
   `histeq`, `padarray`, `mat2gray`, `graythresh`, `imbinarize`, `strel`, `imerode` and `imdilate`
   are ImageLab stand-ins with the same calling syntax.

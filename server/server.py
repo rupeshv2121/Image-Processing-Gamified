@@ -8,10 +8,16 @@ This file does NO image processing. It only:
   3. serves the PNG images that MATLAB writes, and the built React UI,
   4. deletes result images older than IMAGELAB_KEEP_HOURS (default 24 h).
 
+Classroom network mode (--lan or IMAGELAB_LAN=1): the server also listens on
+the local network so students can join a live quiz from their own phones and
+laptops. Other devices may ONLY sign in and use the live quiz - the labs and
+Code Lab (which runs MATLAB code) stay on this computer.
+
 All algorithms live in the MATLAB .m files of this project.
 
 Run:  python server/server.py   (or start_imagelab.bat)
 Then open http://localhost:8765
+Classroom network:  python server/server.py --lan   (or start_imagelab_lan.bat)
 """
 
 import base64
@@ -19,6 +25,7 @@ import json
 import mimetypes
 import os
 import re
+import socket
 import sys
 import threading
 import time
@@ -47,6 +54,32 @@ SAFE_NAME = re.compile(r"^[A-Za-z0-9_\-.]+$")
 # "--connect NAME": attach to a MATLAB session shared by ImageLab.m instead of
 # starting a new one (so the user's own MATLAB does the processing).
 SHARED_SESSION = sys.argv[sys.argv.index("--connect") + 1] if "--connect" in sys.argv[:-1] else None
+LAN = "--lan" in sys.argv or os.environ.get("IMAGELAB_LAN", "") not in ("", "0")
+# What a device other than this computer may do (classroom network mode)
+REMOTE_OPS = {"ping", "auth", "live"}
+REMOTE_AUTH = {"options", "login", "register", "logout", "me", "changePassword"}
+
+
+def lan_addresses():
+    """IPv4 addresses of this computer on the local network (best first)."""
+    found = []
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("10.255.255.255", 1))  # picks the outgoing interface, sends nothing
+        found.append(s.getsockname()[0])
+        s.close()
+    except OSError:
+        pass
+    try:
+        found += socket.gethostbyname_ex(socket.gethostname())[2]
+    except OSError:
+        pass
+    # skip loopback and link-local (169.254.x.x: no DHCP, unreachable for students)
+    return [ip for i, ip in enumerate(found)
+            if not ip.startswith(("127.", "169.254.")) and ip not in found[:i]]
+
+
+LAN_URLS = [f"http://{ip}:{PORT}" for ip in lan_addresses()] if LAN else []
 
 
 class Matlab:
@@ -160,6 +193,18 @@ class Handler(BaseHTTPRequestHandler):
             sys.stdout.write("[http] " + (fmt % args) + "\n")
 
     # ------------------------------------------------------------- helpers
+    def is_remote(self):
+        return self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
+    def remote_allowed(self, path, body):
+        """Other devices on the classroom network: sign-in and the live quiz only."""
+        if not self.is_remote():
+            return True
+        if path != "/api/run" or body.get("op") not in REMOTE_OPS:
+            return False
+        params = body.get("params") or {}
+        return body.get("op") != "auth" or params.get("action", "me") in REMOTE_AUTH
+
     def send_json(self, payload, status=200):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
@@ -200,7 +245,13 @@ class Handler(BaseHTTPRequestHandler):
                 "ready": MATLAB.ready.is_set(),
                 "matlab": MATLAB.engine is not None,
                 "error": MATLAB.error,
+                "remote": self.is_remote(),   # a student device on the classroom network
+                "lan": LAN_URLS,              # addresses students type to join
             })
+            return
+
+        if self.is_remote() and path.startswith(("/api/", "/reports/")):
+            self.send_error(403, "Only available on the ImageLab computer")
             return
 
         m = re.match(r"^/api/image/([A-Za-z0-9_\-]+)\.png$", path)
@@ -241,6 +292,12 @@ class Handler(BaseHTTPRequestHandler):
             body = self.read_json()
         except Exception as exc:
             self.send_json({"ok": False, "error": f"Bad request: {exc}"}, 400)
+            return
+
+        if not self.remote_allowed(path, body):
+            self.send_json({"ok": False, "errorId": "ImageLab:remote", "error":
+                            "On this device you can join the live quiz. Everything else "
+                            "(labs, Code Lab, teacher sign-in) works on the ImageLab computer."}, 403)
             return
 
         if path == "/api/cancel":
@@ -293,9 +350,14 @@ def main():
     if KEEP_HOURS > 0:
         threading.Thread(target=cleanup_loop, daemon=True).start()
     threading.Thread(target=MATLAB.start, daemon=True).start()
-    httpd = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    httpd = ThreadingHTTPServer(("0.0.0.0" if LAN else "127.0.0.1", PORT), Handler)
     url = f"http://localhost:{PORT}"
     print(f"[ImageLab] Server on {url}  (Ctrl+C to stop)")
+    if LAN:
+        print("[ImageLab] Classroom network mode: students join the live quiz at "
+              + (" or ".join(LAN_URLS) or f"http://<this computer's IP>:{PORT}"))
+        print("[ImageLab] Other devices can only sign in and play the live quiz. "
+              "If Windows asks, allow Python on PRIVATE networks.")
     if "--no-browser" not in sys.argv and not os.environ.get("IMAGELAB_NO_BROWSER"):
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     try:
