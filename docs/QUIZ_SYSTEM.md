@@ -2,7 +2,7 @@
 
 ## Question bank — `backend/imagelab/content/question_bank.json`
 
-104 questions. Each question is a JSON object:
+103 questions. Each question is a JSON object:
 
 | Field | Meaning |
 |---|---|
