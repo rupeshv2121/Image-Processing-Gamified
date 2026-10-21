@@ -1,5 +1,5 @@
 // Gamified "quest" structure: each syllabus unit is a level made of missions.
-// Completion is read from the progress that MATLAB stores (progressManager.m).
+// Completion is read from the progress the backend stores (services/progress.py).
 import { asArray } from '../api'
 
 const has = (p, area, item) => asArray(p?.activities?.[area]).includes(item)

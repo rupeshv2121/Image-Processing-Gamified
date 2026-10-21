@@ -6,8 +6,8 @@ import ThemeToggle from '../components/ThemeToggle'
 import { Note, Tabs } from '../components/ui'
 
 // Sign-in page. Students sign in with their roll number (or name) and
-// password; the teacher with the PIN. MATLAB checks the credentials
-// (authManager.m) and returns a session token.
+// password; the teacher with the PIN. The backend checks the credentials
+// (services/auth.py) and returns a session token.
 export default function Start({ next }) {
   const { matlab, login, register, teacherLogin, sessionMessage } = useApp()
   const [tab, setTab] = useState('student')

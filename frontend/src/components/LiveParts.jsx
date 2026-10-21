@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { asArray } from '../api'
 
 // Shared pieces of the live quiz (student page and the teacher's projector
-// screen). MATLAB (liveQuizManager.m) keeps the clock and scores; the browser
-// only counts down between two polls and shows what MATLAB sent.
+// screen). The backend (services/live_quiz.py) keeps the clock and scores; the
+// browser only counts down between two polls and shows what the server sent.
 
 export const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 export const fmtTime = (t) => (t == null || Number.isNaN(t) ? '—' : `${Number(t).toFixed(2)} s`)

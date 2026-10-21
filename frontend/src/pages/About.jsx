@@ -20,7 +20,7 @@ export default function About() {
             <li><b>MATLAB {matlab.release || ''}</b> — all image processing (algorithms/, noise/, histogram/, metrics/, segmentation/, color/ …)</li>
             <li><b>Image Processing Toolbox</b> — used when installed ({matlab.ipt ? 'installed' : 'not installed: manual implementations are used'})</li>
             <li><b>matlab.unittest</b> — unit tests (tests/ImageLabTests.m)</li>
-            <li><b>MATLAB Engine API for Python</b> — thin bridge (server/server.py), no processing</li>
+            <li><b>Python + FastAPI</b> — backend (sign-in, progress, quizzes, classroom) and the MATLAB Engine API bridge, no image processing</li>
             <li><b>React</b> — user interface only</li>
             <li>Fully offline: no internet, cloud or external API.</li>
           </ul>

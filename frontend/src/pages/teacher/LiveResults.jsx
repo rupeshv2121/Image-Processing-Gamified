@@ -5,7 +5,7 @@ import Icon from '../../components/Icon'
 import { LETTERS, LeaderboardTable, Podium, fmtTime } from '../../components/LiveParts'
 import { Card, Modal } from '../../components/ui'
 
-// Finished live quizzes (data/liveQuizResults.mat): list, details, Excel export
+// Finished live quizzes (saved by the backend): list, details, Excel export
 
 export function ExportButtons({ id = '' }) {
   const { call } = useApp()

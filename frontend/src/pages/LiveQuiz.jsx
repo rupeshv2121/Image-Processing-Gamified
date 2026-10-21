@@ -6,8 +6,8 @@ import { LETTERS, LeaderboardTable, OptionGrid, RulesList, TimerRing, boardLimit
 import { Card, Note, Page } from '../components/ui'
 
 // Student side of the live quiz: join with the code on the teacher's screen,
-// then follow the teacher's pace. MATLAB (liveQuizManager.m) is polled every
-// second; it measures the answer time and keeps the scores.
+// then follow the teacher's pace. The backend (services/live_quiz.py) is polled
+// every second; it measures the answer time and keeps the scores.
 const codeFromHash = () => (window.location.hash.match(/[?&]code=(\d{6})/) || [])[1] || ''
 
 export default function LiveQuiz() {

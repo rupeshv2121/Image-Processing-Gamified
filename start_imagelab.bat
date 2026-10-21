@@ -1,5 +1,5 @@
 @echo off
-REM Start ImageLab without opening MATLAB yourself: the bridge server starts a
+REM Start ImageLab without opening MATLAB yourself: the backend (FastAPI) starts a
 REM MATLAB engine in the background and opens http://localhost:8765
 REM (Alternatively, open MATLAB in this folder and type:  ImageLab)
 REM start_imagelab_lan.bat = the same in classroom network mode (live quiz on students' devices)
@@ -14,4 +14,5 @@ if not exist frontend\dist\index.html (
     pause
     exit /b 1
 )
-.venv\Scripts\python.exe server\server.py %*
+set "PYTHONPATH=%~dp0backend"
+.venv\Scripts\python.exe -m imagelab %*

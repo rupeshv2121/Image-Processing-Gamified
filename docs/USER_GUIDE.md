@@ -83,7 +83,7 @@ Images larger than 640 px are resized so the manual loop implementations stay fa
 * **Correlation & Convolution** — enter a matrix and a kernel (fractions like 1/9 are allowed), then
   press Play or step with Next/Prev. Convolution first shows the kernel being flipped.
 * **Kernel Playground** — edit any cell; with *Apply automatically* the result updates as you type.
-  You can load presets, normalise the kernel and save kernels (`data/kernels.mat`).
+  You can load presets, normalise the kernel and save kernels to your kernel library.
 * **Sharpening Lab** — Laplacian (α, strength, 8-neighbour), Sobel/Prewitt, unsharp, high-boost.
 * **Noise Lab** — adds noise to the current image and shows the original, noisy and difference images
   with MSE / PSNR / SSIM.
@@ -120,7 +120,7 @@ it in Word. A DOCX is also produced when MATLAB Report Generator is installed.
 * **Classroom Mode** — large type for a projector; the class answers together and the teacher can
   reveal the answer early.
 
-The leaderboard and progress are stored by MATLAB in `quizzes/leaderboard.mat` and `data/userProgress.mat`.
+The leaderboard and progress are stored by the backend in `data/imagelab.db`.
 
 ### MATLAB Code Lab
 

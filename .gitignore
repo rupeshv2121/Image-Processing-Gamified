@@ -7,3 +7,4 @@ data/
 quizzes/leaderboard.mat
 *.asv
 __pycache__/
+.pytest_cache/

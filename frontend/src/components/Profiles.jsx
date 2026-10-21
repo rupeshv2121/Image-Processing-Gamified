@@ -16,7 +16,7 @@ function AccountBadge({ a }) {
 }
 
 // Teacher: add, rename, delete students and reset their passwords
-// (stored by MATLAB: data/profiles.mat, data/accounts.mat)
+// (stored by the backend in data/imagelab.db)
 export function StudentsModal({ onClose }) {
   const { profiles, editProfiles, refreshProfiles, call } = useApp()
   const [accounts, setAccounts] = useState({})

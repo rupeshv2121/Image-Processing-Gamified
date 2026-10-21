@@ -11,7 +11,9 @@ execution time). Built-in experiments, quizzes and games reinforce the theory.
 **All image processing is written in MATLAB.** Most algorithms exist in two forms: the
 Image Processing Toolbox call and a hand-written manual implementation (loops / matrix operations), so
 results can be compared side by side. The React web interface is used **only for display and
-interaction**, and the Python server is only a bridge between the two.
+interaction**. A Python backend (FastAPI) handles everything that is not image processing: sign-in,
+student progress, quizzes, the live classroom quiz and the teacher's views. It hands every image
+operation to MATLAB.
 
 ---
 
@@ -39,7 +41,7 @@ interaction**, and the Python server is only a bridge between the two.
 
 | Area | What you can do |
 |---|---|
-| Sign-in | **Students** sign in with roll number (or name) and password and get their own dashboard; the **teacher** signs in with the PIN and gets a separate teacher side. MATLAB issues a session token per sign-in and takes the student's identity from it (never from the browser). Passwords: PBKDF2-HMAC-SHA256, 120 000 iterations, random salt (`data/accounts.mat`); temporary passwords from the teacher must be changed at the next sign-in; 5 wrong attempts lock sign-in for 5 minutes; optional self sign-up |
+| Sign-in | **Students** sign in with roll number (or name) and password and get their own dashboard; the **teacher** signs in with the PIN and gets a separate teacher side. The backend issues a session token per sign-in and takes the student's identity from it (never from the browser). Passwords: PBKDF2-HMAC-SHA256, 120 000 iterations, random salt (`data/imagelab.db`); temporary passwords from the teacher must be changed at the next sign-in; 5 wrong attempts lock sign-in for 5 minutes; optional self sign-up |
 | Student dashboard | Missions, assigned experiments and Code Lab tasks with due dates, daily challenge, experiments / filters / quiz score / code tasks, XP and badges |
 | Learn | 22 theory topics following the syllabus, each linked to a lab |
 | Animations | Step-by-step playback (play / pause / step / scrub) of the median filter, histogram equalisation, erosion & dilation and region growing — every step computed by MATLAB on a small matrix |
@@ -60,13 +62,13 @@ interaction**, and the Python server is only a bridge between the two.
 | Code Lab | **MATLAB editor in the browser** (syntax highlighting, Ctrl+Enter to run): MATLAB runs the code and returns the Command Window, figures and a workspace table. 11 graded programming tasks (negative, gamma, contrast stretch, histogram, equalisation, mean / median filters with loops, Laplacian, Sobel, Otsu, erosion) with hints, a "write it yourself" function blacklist, automatic checking against MATLAB's reference result, difference images and a model solution after solving |
 | Experiments | 13 experiments with aim, theory, algorithm, MATLAB code (toolbox / manual), run, observation, conclusion, quiz |
 | Quiz & games | Daily Challenge (same “match the target” puzzle for everyone each day, streaks), Weak-Topic Practice (questions weighted by your error rate), Rapid Fire (10 s timer), Kernel Quiz, Guess the Filter, Build the Pipeline, Challenge Mode, Classroom Mode |
-| Students | Up to 500 student profiles on one computer, each with its own XP, badges, quiz history, streak and Code Lab work (`data/profiles.mat`, `data/codelab/`) |
-| Teacher side | **Class dashboard** (active students, average XP, quiz accuracy, code tasks solved, assigned-work completion, who needs attention, recent activity feed, demo tour) · **Students** (searchable, sortable roster, topic heatmap, weakest topics) · **Student detail** (progress, quiz topics, experiments, badges, activity, every Code Lab task) · **Assignments** (open / assign with due date and note / lock each experiment and Code Lab task) · **Code submissions** (students × tasks matrix; read any student's latest and passing code) · **Class settings** (manage students, PIN, CSV / Excel export). PIN stored as a salted SHA-256 hash (`data/classroom.mat`) |
-| Leaderboard | Quiz scores in `quizzes/leaderboard.mat` (MATLAB table) and a class ranking of all student profiles |
+| Students | Up to 500 student profiles on one computer, each with its own XP, badges, quiz history, streak and Code Lab work (`data/imagelab.db`) |
+| Teacher side | **Class dashboard** (active students, average XP, quiz accuracy, code tasks solved, assigned-work completion, who needs attention, recent activity feed, demo tour) · **Students** (searchable, sortable roster, topic heatmap, weakest topics) · **Student detail** (progress, quiz topics, experiments, badges, activity, every Code Lab task) · **Assignments** (open / assign with due date and note / lock each experiment and Code Lab task) · **Code submissions** (students × tasks matrix; read any student's latest and passing code) · **Class settings** (manage students, PIN, CSV / Excel export). PIN stored as a salted SHA-256 hash |
+| Leaderboard | Quiz scores and a class ranking of all student profiles |
 | Reports | A4 PDF written by base MATLAB (`generateReportPdf`), HTML report, DOCX if MATLAB Report Generator is installed |
 | Every lab | Compare input and result **side by side, with a before/after slider or as an error heat map** (\|result − input\| with PSNR / SSIM); pixel inspector (value + 3×3 neighbourhood) on every image |
 | Interface | Responsive (phone to desktop), light / dark / system theme, keyboard shortcuts (press `?`), accessible focus outlines and labels, pages loaded on demand, works offline once loaded (service worker) |
-| Performance | MATLAB caches results of repeated operations (same image + parameters → instant), a **Cancel** button interrupts slow manual-loop runs, result images older than 24 h are deleted automatically |
+| Performance | the backend caches results of repeated operations (same image + parameters → instant, without waiting for MATLAB); sign-in, quizzes and the live quiz never wait for MATLAB, a **Cancel** button interrupts slow manual-loop runs, result images older than 24 h are deleted automatically |
 
 Frequency-domain filtering is intentionally **not** included (out of scope).
 
@@ -75,21 +77,21 @@ Frequency-domain filtering is intentionally **not** included (out of scope).
 ## Architecture
 
 ```
-┌──────────────────────┐  POST /api/run {op, params}  ┌───────────────────┐  MATLAB Engine API  ┌──────────────────────────┐
-│  React UI (browser)  │ ───────────────────────────▶ │ server/server.py  │ ──────────────────▶ │ api/ilab_dispatch.m       │
-│  frontend/src        │ ◀─────────────────────────── │ (bridge only)     │ ◀────────────────── │  routes to algorithms/,   │
-│                      │  JSON {ok, data}             │                   │  JSON string        │  noise/, histogram/ …     │
-│ <img src=/api/image> │ ◀── PNG files ────────────── │ serves runtime/   │ ◀── imwrite ─────── │  ilab_store('save', I)    │
-└──────────────────────┘                              └───────────────────┘                     └──────────────────────────┘
+┌──────────────────────┐  POST /api/run {op, params}  ┌──────────────────────┐  MATLAB Engine API  ┌──────────────────────────┐
+│  React UI (browser)  │ ───────────────────────────▶ │ backend/ (FastAPI)   │ ──────────────────▶ │ api/ilab_dispatch.m       │
+│  frontend/src        │ ◀─────────────────────────── │ sign-in, progress,   │ ◀────────────────── │  -> api/handlers/*Ops.m   │
+│                      │  JSON {ok, data}             │ quizzes, classroom   │  JSON (image ops)   │  -> algorithms/, noise/ … │
+│ <img src=/api/image> │ ◀── PNG files ────────────── │ SQLite data/imagelab │ ◀── imwrite ─────── │  ilab_store('save', I)    │
+└──────────────────────┘                              └──────────────────────┘                     └──────────────────────────┘
 ```
 
 | Layer | Folder | Responsibility |
 |---|---|---|
-| Algorithms | `algorithms/ noise/ histogram/ metrics/ segmentation/ color/ fundamentals/` | Pure MATLAB functions: image in, image out. Usable from the command line, tests and the Live Script. |
+| Algorithms | `algorithms/ noise/ histogram/ metrics/ segmentation/ color/ fundamentals/ morphology/ steps/` | Pure MATLAB functions: image in, image out. Usable from the command line, tests and the Live Script. |
 | Core helpers | `core/` | Type conversion, padding, neighbourhood stacks, fast / loop filtering, toolbox detection (`hasIPT`). |
-| Learning content | `quizzes/ experiments/ reports/` | Question bank, scoring, leaderboard, progress, experiment catalogue and runner, report generator. |
-| API | `api/` | `ilab_dispatch.m` decodes a JSON request, calls the algorithms, stores result images (`ilab_store.m`) and returns JSON. |
-| Bridge | `server/server.py` | Python standard-library HTTP server + `matlab.engine`. Starts or connects to MATLAB, forwards requests, serves PNGs, reports and the built UI. **No image processing.** |
+| MATLAB content | `experiments/ codelab/ games/ reports/` | Experiment catalogue and runner, Code Lab tasks with their MATLAB graders, image degradations for the games, report generator. |
+| MATLAB API | `api/` | `ilab_dispatch.m` routes each image operation to one handler file in `api/handlers/` (`imageOps`, `filterOps`, `analysisOps`, `gameOps`, `codeLabOps`, `experimentOps`), stores result images (`ilab_store.m`) and returns JSON. |
+| Backend | `backend/imagelab/` | Python + FastAPI. `web/` HTTP routes · `rpc/` op registry, access rules, result cache, XP tracking · `services/` sign-in, profiles, progress, quizzes, live quiz, classroom, games, Code Lab and experiment rules · `storage/` SQLite (`data/imagelab.db`) · `matlab.py` the only module that talks to MATLAB. **No image processing.** |
 | UI | `frontend/` | React 18 + Vite. One page per lab; no pixel processing in JavaScript. |
 
 ### Toolbox vs manual
@@ -106,10 +108,10 @@ teaching purposes.
 ## How an uploaded image is processed
 
 1. **Browser.** The file is read, base64-encoded and sent to `POST /api/upload` as `{name, data}`.
-2. **Python bridge** (`server/server.py`). Checks the extension and size (≤ 25 MB), writes a temporary
+2. **Backend** (`backend/imagelab/web/app.py`). Checks the extension and size (≤ 25 MB), writes a temporary
    file to `runtime/uploads/` and calls `ilab_dispatch` with
    `{"op": "importImage", "params": {"path": …, "name": …}}`. The temporary file is deleted afterwards.
-3. **MATLAB import** (`importImage` in `api/ilab_dispatch.m`):
+3. **MATLAB import** (`importImage` in `api/handlers/imageOps.m`):
    - reads the file with `imread` / `imfinfo`;
    - converts indexed images to RGB and drops any alpha channel;
    - converts to `double` in [0, 1] (`core/toDouble.m`);
@@ -136,12 +138,12 @@ Results are stored as 8-bit PNGs, so every step in a chain of operations is quan
 |---|---|---|
 | MATLAB | R2023b or newer (tested with **R2026a**) | Required |
 | Image Processing Toolbox | any | **Optional**: manual implementations are used without it |
-| Python | 3.9 – 3.12 | For the bridge server |
-| MATLAB Engine API for Python (`matlabengine`) | must match your MATLAB release | See `server/requirements.txt` |
+| Python | 3.9 – 3.12 | For the backend (FastAPI, uvicorn, openpyxl - `backend/requirements.txt`) |
+| MATLAB Engine API for Python (`matlabengine`) | must match your MATLAB release | Installed by `setup_imagelab.bat` |
 | Node.js | 18+ | Only needed to build the UI |
 
 `matlabengine` versions per MATLAB release: R2026a = `26.1.*`, R2025b = `25.2.*`, R2025a = `25.1.*`,
-R2024b = `24.2.*`, R2023b = `23.2.*`. Edit `server/requirements.txt` if your release differs.
+R2024b = `24.2.*`, R2023b = `23.2.*`. The setup script picks the right one for your MATLAB.
 
 ---
 
@@ -156,7 +158,8 @@ setup_imagelab.bat
 This script:
 
 1. creates a Python virtual environment in `.venv`,
-2. installs `matlabengine` from `server/requirements.txt`,
+2. installs the `matlabengine` version that matches your MATLAB and the backend packages
+   (`backend/requirements.txt`),
 3. runs `npm install` and `npm run build` in `frontend/` (output in `frontend/dist`).
 
 <details>
@@ -164,7 +167,8 @@ This script:
 
 ```bash
 python -m venv .venv
-.venv/Scripts/python -m pip install -r server/requirements.txt   # Linux/macOS: .venv/bin/python
+.venv/Scripts/python -m pip install -r backend/requirements.txt  # Linux/macOS: .venv/bin/python
+.venv/Scripts/python -m pip install "matlabengine==26.1.*"      # match your MATLAB release
 
 # If matlabengine cannot be installed from PyPI, install it from your MATLAB folder:
 #   cd "<MATLAB root>/extern/engines/python"
@@ -188,7 +192,7 @@ ImageLab
 ```
 
 `ImageLab.m` adds the project folders to the path, shares the current MATLAB session
-(`matlab.engine.shareEngine`) and starts the bridge with `--connect <session>`. All processing then
+(`matlab.engine.shareEngine`) and starts the backend with `--connect <session>`. All processing then
 runs in *your* MATLAB session. The browser opens at **http://localhost:8765**. Close the
 "ImageLab server" window to stop the interface.
 
@@ -198,8 +202,18 @@ runs in *your* MATLAB session. The browser opens at **http://localhost:8765**. C
 start_imagelab.bat
 ```
 
-The bridge starts its own MATLAB engine in the background (10–60 s on first start). The UI shows a
-loading state until MATLAB is ready.
+The backend starts its own MATLAB engine in the background (10–60 s on first start). Signing in and
+the quizzes work immediately; image operations wait until MATLAB is ready.
+
+`start_imagelab_lan.bat` (or `ImageLab('lan')`) does the same in classroom network mode.
+
+### Data
+
+Everything the app remembers (students, passwords, progress, Code Lab submissions, teacher settings,
+leaderboard, saved and finished live quizzes, the kernel library) is in one SQLite file,
+`data/imagelab.db`. On the first start after upgrading from ImageLab 1.x, the old `.mat` files in
+`data/` and `quizzes/leaderboard.mat` are imported once through MATLAB
+(`migration/exportLegacyData.m`); they are left untouched.
 
 ---
 
@@ -218,7 +232,7 @@ R = runExperiment(4, I);                     % Experiment 4: Median filter
 struct2table(R.metrics)
 ```
 
-You can also call the UI's API from MATLAB:
+You can also call the MATLAB side of the API directly (image operations only):
 
 ```matlab
 ilab_dispatch('{"op":"loadSample","params":{"name":"peppers.png"}}')
@@ -236,9 +250,10 @@ whole project.
 | `IMAGELAB_PORT` | environment variable | HTTP port (default `8765`) |
 | `IMAGELAB_KEEP_HOURS` | environment variable | Delete result images in `runtime/images` older than this many hours, at start-up and hourly (default `24`, `0` = keep all) |
 | `IMAGELAB_NO_BROWSER` | environment variable | If set, the browser is not opened automatically |
-| `--no-browser` | `server.py` argument | Same as above |
-| `--connect <name>` | `server.py` argument | Attach to a shared MATLAB session instead of starting one (used by `ImageLab.m`) |
-| `--lan` / `IMAGELAB_LAN=1` | `server.py` argument / environment variable | Classroom network mode for the live quiz (`start_imagelab_lan.bat`, `ImageLab('lan')`) |
+| `IMAGELAB_DATA_DIR` | environment variable | Folder of `imagelab.db` (default `data/`) |
+| `--no-browser` | `python -m imagelab` argument | Same as `IMAGELAB_NO_BROWSER` |
+| `--connect <name>` | `python -m imagelab` argument | Attach to a shared MATLAB session instead of starting one (used by `ImageLab.m`) |
+| `--lan` / `IMAGELAB_LAN=1` | `python -m imagelab` argument / environment variable | Classroom network mode for the live quiz (`start_imagelab_lan.bat`, `ImageLab('lan')`) |
 | `ILAB_FORCE_MANUAL=1` | environment variable (MATLAB) | Simulate a missing Image Processing Toolbox |
 
 ---
@@ -287,23 +302,29 @@ MATLAB errors with `ImageLab:*` identifiers are returned as readable messages an
 
 ## Development
 
-Run the bridge and the Vite dev server together for hot reload:
+Run the backend and the Vite dev server together for hot reload:
 
 ```bat
-:: terminal 1 — MATLAB bridge on :8765
-.venv\Scripts\python.exe server\server.py --no-browser
+:: terminal 1 — backend on :8765
+cd backend
+..\.venv\Scripts\python.exe -m imagelab --no-browser
 
 :: terminal 2 — UI on :5173 (proxies /api and /reports to :8765)
 cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173. To add a new operation:
+Open http://localhost:5173. To add a new **image** operation:
 
 1. write the algorithm as a `.m` function in the appropriate folder;
-2. add a `case '<op>'` to `route` in `api/ilab_dispatch.m` that loads the image by id, calls the
-   function and returns new ids / metrics;
-3. call it from the UI with `POST /api/run {op: '<op>', params: {...}}` (see `frontend/src/api.js`).
+2. add a `case '<op>'` to the matching handler in `api/handlers/` and list the op in the routing table of
+   `api/ilab_dispatch.m`;
+3. register it in `backend/imagelab/rpc/handlers/labs.py` (`CACHEABLE` if the result only depends on the
+   image and parameters, otherwise `COMPUTED`) and, if it should earn XP, add a rule to `rpc/activity.py`;
+4. call it from the UI with `POST /api/run {op: '<op>', params: {...}}` (see `frontend/src/api.js`).
+
+Operations without image processing (quizzes, classroom …) are plain Python: a service in
+`backend/imagelab/services/` and a handler in `backend/imagelab/rpc/handlers/`.
 
 ---
 
@@ -311,7 +332,15 @@ Open http://localhost:5173. To add a new operation:
 
 ```matlab
 run_tests                       % matlab.unittest suite; runs toolbox AND manual code paths
-addpath tests; smokeTestApi     % calls every UI operation once through ilab_dispatch
+addpath tests; smokeTestApi     % calls every MATLAB operation once through ilab_dispatch
+```
+
+```bat
+cd backend
+..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+..\.venv\Scripts\python.exe -m pytest                     :: unit tests with a fake MATLAB (~5 s)
+set IMAGELAB_MATLAB_TESTS=1
+..\.venv\Scripts\python.exe -m pytest tests\test_integration_matlab.py   :: real MATLAB, on a copy of data/
 ```
 
 ---
@@ -320,13 +349,13 @@ addpath tests; smokeTestApi     % calls every UI operation once through ilab_dis
 
 ```
 ImageLab/
-├── ImageLab.m                  start from MATLAB (shares the session, starts the bridge)
+├── ImageLab.m                  start from MATLAB (shares the session, starts the backend)
 ├── ImageLab_Demonstration.mlx  Live Script walkthrough (+ .m source)
 ├── ilab_setup.m                adds project folders to the MATLAB path
 ├── run_tests.m                 runs the unit tests on both code paths
 ├── setup_imagelab.bat / .ps1   one-click setup: finds MATLAB + a matching Python, installs matlabengine, builds the UI
 │                               (setup_imagelab.bat -CheckOnly only reports what is installed)
-├── start_imagelab.bat          start without opening MATLAB
+├── start_imagelab.bat          start without opening MATLAB (start_imagelab_lan.bat: classroom network)
 ├── core/          toDouble, toGray, padImage, filter2D, neighborhoodStack, resizeImage, hasIPT …
 ├── algorithms/    mean, weighted, Gaussian, median, min, max, midpoint, order statistic, alpha-trimmed,
 │                  correlation, convolution, Laplacian, Sobel, Prewitt, Roberts, LoG, Canny,
@@ -341,17 +370,17 @@ ImageLab/
 ├── steps/         step-by-step data for the animations (median, histeq, morphology, region growing)
 ├── color/         channels, RGB↔YCbCr, RGB↔Lab, enhancement
 ├── fundamentals/  sampling, quantisation, neighbourhoods, distances
-├── auth/          authManager: student passwords (PBKDF2), sessions, lock-out
-├── quizzes/       question bank, quiz engine, leaderboard, progress, student profiles, teacher settings,
-│                  class analytics (teacher views), pipeline problems
+├── games/         degradeImage, applyBlock (image work of the games)
 ├── experiments/   experimentCatalog, runExperiment
 ├── reports/       generateReport (HTML) + generateReportPdf (PDF) — output in reports/output/
-├── codelab/       runStudentCode (runs student code), codeTasks (tasks + grading), submissionStore, figurePool,
+├── codelab/       runStudentCode (runs student code), codeTasks (tasks + grading), figurePool,
 │                  shims/ (toolbox stand-ins used only while student code runs without the toolbox)
-├── api/           ilab_dispatch (single entry point), ilab_store (image store), samples, charts
+├── api/           ilab_dispatch (entry point for the backend), handlers/ (one file per area),
+│                  ilab_store (image store), samples, charts
+├── migration/     exportLegacyData (one-time import of the ImageLab 1.x .mat files)
 ├── tests/         ImageLabTests (matlab.unittest), smokeTestApi
 ├── sample_images/ peppers.png + generated teaching images
-├── server/        server.py (bridge only), requirements.txt
+├── backend/       FastAPI backend: imagelab/ (web, rpc, services, storage, matlab.py, content/), tests/
 ├── frontend/      React + Vite user interface
 ├── docs/          documentation
 └── runtime/       generated at run time: images/ (results), uploads/ (temporary) — git-ignored
@@ -363,7 +392,7 @@ ImageLab/
 
 | Problem | Fix |
 |---|---|
-| "Could not start MATLAB through the MATLAB Engine API" | `matlabengine` is missing or does not match your MATLAB release. Fix the version in `server/requirements.txt`, or install it from `<MATLAB root>/extern/engines/python`. |
+| "Could not start MATLAB through the MATLAB Engine API" | `matlabengine` is missing or does not match your MATLAB release. Run `setup_imagelab.bat` again, or install it from `<MATLAB root>/extern/engines/python`. |
 | Page says "The UI is not built yet" | Run `npm install && npm run build` in `frontend/`. |
 | "Run setup_imagelab.bat first" | `.venv` does not exist; run the setup script. |
 | Slow first start | Starting a MATLAB engine takes 10–60 s. Option A (`ImageLab` in MATLAB) reuses your open session. |

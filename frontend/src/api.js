@@ -1,10 +1,10 @@
-// Thin client for the ImageLab bridge server.
-// Every call is forwarded to the MATLAB function ilab_dispatch.m —
-// the browser never processes pixels itself, it only displays MATLAB's output.
+// Thin client for the ImageLab backend (backend/imagelab, FastAPI).
+// Every operation is POST /api/run {op, params}. Image operations are run by
+// MATLAB (api/ilab_dispatch.m) — the browser never processes pixels itself.
 
 // ------------------------------------------------------------------ session
-// Signing in (authManager.m) returns a session token. It travels with every
-// request and MATLAB derives WHO is asking from it - the browser never says
+// Signing in (backend services/auth.py) returns a session token. It travels with every
+// request and the backend derives WHO is asking from it - the browser never says
 // which student it is. Students may stay signed in on this computer
 // ("remember me": localStorage); otherwise, and always for the teacher, the
 // session ends with the browser tab (sessionStorage).
@@ -30,8 +30,8 @@ export function setSession(next, remember = false) {
   try { (remember && next.role === 'student' ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(keep)) } catch { /* storage unavailable */ }
 }
 
-// Called when MATLAB no longer knows the token (expired, signed out elsewhere,
-// password reset by the teacher, MATLAB restarted)
+// Called when the backend no longer knows the token (expired, signed out elsewhere,
+// password reset by the teacher, server restarted)
 let onSessionLost = null
 export const setSessionLostHandler = (fn) => { onSessionLost = fn }
 
@@ -65,7 +65,7 @@ export async function run(op, params = {}) {
   return json.data
 }
 
-// Interrupts the MATLAB computation that is running right now (server.py → engine cancel)
+// Interrupts the MATLAB computation that is running right now (backend → MATLAB engine cancel)
 export async function cancelRun() {
   try {
     const res = await fetch('/api/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })

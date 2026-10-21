@@ -1,0 +1,7 @@
+# ImageLab backend (FastAPI). setup_imagelab.bat installs these into .venv:
+#   .venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+fastapi>=0.115
+uvicorn>=0.30
+openpyxl>=3.1          # Excel exports for the teacher
+# The MATLAB Engine API for Python (matlabengine) must match your MATLAB release,
+# so setup_imagelab.ps1 installs it separately (R2026a = 26.1.x, R2025b = 25.2.x ...).

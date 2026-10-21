@@ -1,0 +1,1744 @@
+[
+  {
+    "id": "FUN1",
+    "category": "Fundamentals",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "A digital image is best described as:",
+    "options": [
+      "A continuous function f(x,y)",
+      "A 2-D array of sampled and quantised values",
+      "A frequency spectrum",
+      "A set of vectors"
+    ],
+    "answer": 2,
+    "explanation": "Digitisation = sampling (choosing the pixel grid) + quantisation (choosing a finite set of grey levels), giving a matrix.",
+    "kernel": []
+  },
+  {
+    "id": "FUN2",
+    "category": "Fundamentals",
+    "difficulty": "easy",
+    "type": "numerical",
+    "question": "How many grey levels can an 8-bit image represent?",
+    "options": [
+      "8",
+      "128",
+      "256",
+      "1024"
+    ],
+    "answer": 3,
+    "explanation": "2^8 = 256 levels: 0 (black) to 255 (white).",
+    "kernel": []
+  },
+  {
+    "id": "FUN3",
+    "category": "Fundamentals",
+    "difficulty": "medium",
+    "type": "numerical",
+    "question": "What is the city-block (D4) distance between pixels (2,3) and (5,7)?",
+    "options": [
+      "5",
+      "7",
+      "4",
+      "3.5"
+    ],
+    "answer": 2,
+    "explanation": "D4 = |2-5| + |3-7| = 3 + 4 = 7.",
+    "kernel": []
+  },
+  {
+    "id": "FUN4",
+    "category": "Fundamentals",
+    "difficulty": "medium",
+    "type": "numerical",
+    "question": "What is the chessboard (D8) distance between pixels (2,3) and (5,7)?",
+    "options": [
+      "4",
+      "5",
+      "7",
+      "3"
+    ],
+    "answer": 1,
+    "explanation": "D8 = max(|2-5|, |3-7|) = max(3,4) = 4.",
+    "kernel": []
+  },
+  {
+    "id": "FUN5",
+    "category": "Fundamentals",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "How many pixels are in the 8-neighbourhood N8(p) of an interior pixel?",
+    "options": [
+      "4",
+      "8",
+      "9",
+      "6"
+    ],
+    "answer": 2,
+    "explanation": "N8(p) = the 4 horizontal/vertical neighbours N4(p) plus the 4 diagonal neighbours ND(p).",
+    "kernel": []
+  },
+  {
+    "id": "FUN6",
+    "category": "Fundamentals",
+    "difficulty": "hard",
+    "type": "conceptual",
+    "question": "Why was m-adjacency (mixed adjacency) introduced?",
+    "options": [
+      "To make images smaller",
+      "To remove the ambiguous multiple paths of 8-adjacency",
+      "To speed up convolution",
+      "To define colour neighbours"
+    ],
+    "answer": 2,
+    "explanation": "With 8-adjacency two pixels can be connected by more than one path; m-adjacency only allows a diagonal link when no 4-path exists.",
+    "kernel": []
+  },
+  {
+    "id": "FUN7",
+    "category": "Fundamentals",
+    "difficulty": "medium",
+    "type": "truefalse",
+    "question": "Reducing the number of grey levels too much can cause false contouring.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "Too few quantisation levels turn smooth gradients into visible bands (false contours).",
+    "kernel": []
+  },
+  {
+    "id": "FUN8",
+    "category": "Fundamentals",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "The visible spectrum spans approximately:",
+    "options": [
+      "0.01 - 10 nm",
+      "400 - 700 nm",
+      "1 - 10 mm",
+      "10 - 100 m"
+    ],
+    "answer": 2,
+    "explanation": "Visible light is roughly 400 nm (violet) to 700 nm (red) in the electromagnetic spectrum.",
+    "kernel": []
+  },
+  {
+    "id": "FUN9",
+    "category": "Fundamentals",
+    "difficulty": "hard",
+    "type": "conceptual",
+    "question": "Mach bands and simultaneous contrast show that:",
+    "options": [
+      "Perceived brightness is not a simple function of intensity",
+      "The eye sees only 16 grey levels",
+      "Cones detect brightness only",
+      "Images must be sharpened"
+    ],
+    "answer": 1,
+    "explanation": "The visual system enhances edges and judges brightness relative to the surroundings, so perceived brightness differs from the physical intensity.",
+    "kernel": []
+  },
+  {
+    "id": "FUN10",
+    "category": "Fundamentals",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Which MATLAB function reads an image file?",
+    "options": [
+      "imshow",
+      "imread",
+      "imwrite",
+      "load"
+    ],
+    "answer": 2,
+    "explanation": "imread reads the image into a matrix; imshow displays it; imwrite saves it.",
+    "kernel": []
+  },
+  {
+    "id": "FUN11",
+    "category": "Fundamentals",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Which receptors in the retina are responsible for colour vision in bright light?",
+    "options": [
+      "Rods",
+      "Cones",
+      "Ganglion cells",
+      "Lens fibres"
+    ],
+    "answer": 2,
+    "explanation": "Cones (6-7 million, concentrated in the fovea) give photopic colour vision; rods give scotopic low-light vision.",
+    "kernel": []
+  },
+  {
+    "id": "HIS1",
+    "category": "Histogram",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "An image whose histogram is concentrated in a narrow band has:",
+    "options": [
+      "High contrast",
+      "Low contrast",
+      "Salt & pepper noise",
+      "Many edges"
+    ],
+    "answer": 2,
+    "explanation": "A narrow histogram means only a few grey levels are used, i.e. low contrast.",
+    "kernel": []
+  },
+  {
+    "id": "HIS2",
+    "category": "Histogram",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Histogram equalisation maps grey level r_k using:",
+    "options": [
+      "The PDF",
+      "The scaled cumulative distribution function (CDF)",
+      "The mean",
+      "A Gaussian"
+    ],
+    "answer": 2,
+    "explanation": "s_k = (L-1) * sum_{j<=k} p(r_j): the scaled CDF.",
+    "kernel": []
+  },
+  {
+    "id": "HIS3",
+    "category": "Histogram",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "What does CLAHE add to adaptive histogram equalisation?",
+    "options": [
+      "Colour conversion",
+      "A clip limit that limits contrast amplification",
+      "Frequency filtering",
+      "Edge detection"
+    ],
+    "answer": 2,
+    "explanation": "CLAHE clips each tile histogram so noise in flat regions is not over-amplified, then interpolates between tiles.",
+    "kernel": []
+  },
+  {
+    "id": "HIS4",
+    "category": "Histogram",
+    "difficulty": "easy",
+    "type": "truefalse",
+    "question": "Gamma correction with gamma < 1 brightens dark regions.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "s = r^gamma with gamma < 1 lifts small values (e.g. 0.25^0.5 = 0.5).",
+    "kernel": []
+  },
+  {
+    "id": "HIS5",
+    "category": "Histogram",
+    "difficulty": "medium",
+    "type": "numerical",
+    "question": "A 4-pixel image has levels [0 0 1 3] (L = 4). What is the CDF value at r = 1?",
+    "options": [
+      "0.25",
+      "0.5",
+      "0.75",
+      "1"
+    ],
+    "answer": 3,
+    "explanation": "p(0) = 2/4, p(1) = 1/4, so CDF(1) = 0.75.",
+    "kernel": []
+  },
+  {
+    "id": "HIS6",
+    "category": "Histogram",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Which MATLAB function performs histogram equalisation?",
+    "options": [
+      "imhist",
+      "histeq",
+      "imadjust",
+      "adapthisteq"
+    ],
+    "answer": 2,
+    "explanation": "histeq = global equalisation; adapthisteq = CLAHE; imadjust = contrast stretching; imhist = compute histogram.",
+    "kernel": []
+  },
+  {
+    "id": "HIS7",
+    "category": "Histogram",
+    "difficulty": "hard",
+    "type": "conceptual",
+    "question": "Why is the equalised histogram of a digital image usually NOT perfectly flat?",
+    "options": [
+      "Because of rounding errors in MATLAB",
+      "Because pixels with the same level are all mapped to the same new level",
+      "Because the CDF is not monotonic",
+      "Because the mean changes"
+    ],
+    "answer": 2,
+    "explanation": "The mapping is a function of grey level: all pixels of one level move together, so bins can be merged or left empty but never split.",
+    "kernel": []
+  },
+  {
+    "id": "HIS8",
+    "category": "Histogram",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "The log transformation s = c log(1 + r) is mainly used to:",
+    "options": [
+      "Compress a large dynamic range",
+      "Remove noise",
+      "Detect edges",
+      "Binarise an image"
+    ],
+    "answer": 1,
+    "explanation": "It expands dark values and compresses bright ones - ideal for displaying images with a huge range of values.",
+    "kernel": []
+  },
+  {
+    "id": "HIS9",
+    "category": "Histogram",
+    "difficulty": "hard",
+    "type": "numerical",
+    "question": "An image with all 256 grey levels equally likely has entropy:",
+    "options": [
+      "1 bit",
+      "4 bits",
+      "8 bits",
+      "256 bits"
+    ],
+    "answer": 3,
+    "explanation": "H = -sum p log2 p = -256 * (1/256) log2(1/256) = 8 bits.",
+    "kernel": []
+  },
+  {
+    "id": "SPA1",
+    "category": "Spatial Filters",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Spatial-domain processing operates directly on:",
+    "options": [
+      "The Fourier transform",
+      "The image pixels",
+      "The histogram only",
+      "The colour map"
+    ],
+    "answer": 2,
+    "explanation": "Spatial domain = the image plane itself: g(x,y) = T[f(x,y)] using a pixel and its neighbourhood.",
+    "kernel": []
+  },
+  {
+    "id": "SPA2",
+    "category": "Spatial Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Why are spatial filter kernels usually of odd size (3x3, 5x5)?",
+    "options": [
+      "They are faster",
+      "They have a well-defined centre pixel",
+      "MATLAB requires it",
+      "Even kernels cannot be stored"
+    ],
+    "answer": 2,
+    "explanation": "An odd-sized kernel is symmetric around its centre, so the output is aligned with the input pixel.",
+    "kernel": []
+  },
+  {
+    "id": "SPA3",
+    "category": "Spatial Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "What happens at the image border during filtering if padding is \"replicate\"?",
+    "options": [
+      "Outside pixels are 0",
+      "Outside pixels copy the nearest border pixel",
+      "The border is cropped",
+      "The kernel is flipped"
+    ],
+    "answer": 2,
+    "explanation": "Replicate padding repeats the edge pixel, avoiding the dark frame that zero padding produces.",
+    "kernel": []
+  },
+  {
+    "id": "SPA4",
+    "category": "Spatial Filters",
+    "difficulty": "easy",
+    "type": "truefalse",
+    "question": "Increasing the size of a mean filter increases the blurring.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "A larger window averages over more pixels, removing more detail.",
+    "kernel": []
+  },
+  {
+    "id": "SPA5",
+    "category": "Spatial Filters",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "A kernel whose coefficients sum to 0 will produce, in a flat (constant) region:",
+    "options": [
+      "The original value",
+      "0",
+      "1",
+      "The maximum"
+    ],
+    "answer": 2,
+    "explanation": "Sum of products = constant * sum(weights) = 0: derivative kernels respond only to changes.",
+    "kernel": []
+  },
+  {
+    "id": "LIN1",
+    "category": "Linear Filters",
+    "difficulty": "easy",
+    "type": "kernel",
+    "question": "Identify this kernel:",
+    "options": [
+      "Mean (box) filter",
+      "Laplacian",
+      "Sobel X",
+      "Gaussian"
+    ],
+    "answer": 1,
+    "explanation": "All nine weights are equal (1/9): the arithmetic mean filter.",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        0.1111111111111111,
+        0.1111111111111111,
+        0.1111111111111111,
+        0.1111111111111111,
+        0.1111111111111111,
+        0.1111111111111111,
+        0.1111111111111111,
+        0.1111111111111111,
+        0.1111111111111111
+      ]
+    }
+  },
+  {
+    "id": "LIN2",
+    "category": "Linear Filters",
+    "difficulty": "medium",
+    "type": "kernel",
+    "question": "Identify this kernel:",
+    "options": [
+      "Mean",
+      "Weighted mean (Gaussian-like)",
+      "Laplacian",
+      "Prewitt"
+    ],
+    "answer": 2,
+    "explanation": "Larger weights in the centre falling off with distance: a weighted average / binomial approximation of the Gaussian.",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        0.0625,
+        0.125,
+        0.0625,
+        0.125,
+        0.25,
+        0.125,
+        0.0625,
+        0.125,
+        0.0625
+      ]
+    }
+  },
+  {
+    "id": "LIN3",
+    "category": "Linear Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Which property defines a LINEAR filter?",
+    "options": [
+      "It sorts the neighbourhood",
+      "Its output is a weighted sum of the neighbourhood (superposition holds)",
+      "It works only on binary images",
+      "It uses the median"
+    ],
+    "answer": 2,
+    "explanation": "Linear: T[a f + b g] = a T[f] + b T[g]. Every linear spatial filter is a sum of products with a kernel.",
+    "kernel": []
+  },
+  {
+    "id": "LIN4",
+    "category": "Linear Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "In a Gaussian filter, increasing sigma:",
+    "options": [
+      "Reduces blurring",
+      "Increases blurring",
+      "Detects edges",
+      "Has no effect"
+    ],
+    "answer": 2,
+    "explanation": "A larger sigma spreads the weights over more neighbours, so the image is smoothed more.",
+    "kernel": []
+  },
+  {
+    "id": "LIN5",
+    "category": "Linear Filters",
+    "difficulty": "easy",
+    "type": "numerical",
+    "question": "Apply a 3x3 mean filter to the centre of [1 2 3; 4 5 6; 7 8 9]. Result?",
+    "options": [
+      "4",
+      "5",
+      "6",
+      "45"
+    ],
+    "answer": 2,
+    "explanation": "(1+2+...+9)/9 = 45/9 = 5.",
+    "kernel": []
+  },
+  {
+    "id": "LIN6",
+    "category": "Linear Filters",
+    "difficulty": "hard",
+    "type": "conceptual",
+    "question": "Why does the mean filter perform badly on salt & pepper noise?",
+    "options": [
+      "It cannot be computed at borders",
+      "It spreads the extreme impulse value over the neighbourhood instead of removing it",
+      "It sharpens the noise",
+      "It changes colours"
+    ],
+    "answer": 2,
+    "explanation": "An impulse of 255 among values of ~100 raises the average of every window that contains it - the noise is smeared, not removed.",
+    "kernel": []
+  },
+  {
+    "id": "LIN7",
+    "category": "Linear Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Which MATLAB call creates a 5x5 Gaussian kernel with sigma = 1?",
+    "options": [
+      "fspecial('average',5)",
+      "fspecial('gaussian',5,1)",
+      "imgaussfilt(5)",
+      "gauss(5,1)"
+    ],
+    "answer": 2,
+    "explanation": "fspecial('gaussian', hsize, sigma) returns the normalised kernel.",
+    "kernel": []
+  },
+  {
+    "id": "NON1",
+    "category": "Non-Linear Filters",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Which filter is best suited for salt-and-pepper noise?",
+    "options": [
+      "Mean",
+      "Median",
+      "Laplacian",
+      "Sobel"
+    ],
+    "answer": 2,
+    "explanation": "Impulses are extreme values; after sorting they land at the ends of the list and the median ignores them.",
+    "kernel": []
+  },
+  {
+    "id": "NON2",
+    "category": "Non-Linear Filters",
+    "difficulty": "easy",
+    "type": "numerical",
+    "question": "What is the median of the window [10 200 12; 11 0 13; 9 14 255]?",
+    "options": [
+      "12",
+      "13",
+      "11",
+      "58"
+    ],
+    "answer": 1,
+    "explanation": "Sorted: 0 9 10 11 12 13 14 200 255 -> 5th value = 12. The impulses 0, 200, 255 are ignored.",
+    "kernel": []
+  },
+  {
+    "id": "NON3",
+    "category": "Non-Linear Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "In ordfilt2(I, 1, true(3)), which filter is applied?",
+    "options": [
+      "Median",
+      "Maximum",
+      "Minimum",
+      "Mean"
+    ],
+    "answer": 3,
+    "explanation": "Rank 1 of the sorted 3x3 window = the smallest value = minimum filter.",
+    "kernel": []
+  },
+  {
+    "id": "NON4",
+    "category": "Non-Linear Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "The maximum filter is most useful for removing:",
+    "options": [
+      "Pepper (black) noise",
+      "Salt (white) noise",
+      "Gaussian noise",
+      "Blur"
+    ],
+    "answer": 1,
+    "explanation": "Taking the maximum discards dark impulses; salt (white) noise would instead be enlarged.",
+    "kernel": []
+  },
+  {
+    "id": "NON5",
+    "category": "Non-Linear Filters",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "For a 5x5 window, which rank gives the median?",
+    "options": [
+      "12",
+      "13",
+      "25",
+      "5"
+    ],
+    "answer": 2,
+    "explanation": "N = 25 values, median = ceil(25/2) = 13th smallest.",
+    "kernel": []
+  },
+  {
+    "id": "NON6",
+    "category": "Non-Linear Filters",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "The midpoint filter computes:",
+    "options": [
+      "(min + max)/2",
+      "median",
+      "mean of the middle 50%",
+      "max - min"
+    ],
+    "answer": 1,
+    "explanation": "Midpoint = average of the minimum and maximum in the window; good for uniform / Gaussian noise.",
+    "kernel": []
+  },
+  {
+    "id": "NON7",
+    "category": "Non-Linear Filters",
+    "difficulty": "hard",
+    "type": "truefalse",
+    "question": "The median filter is a linear filter because it uses a sliding window.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 2,
+    "explanation": "False. median(f + g) ~= median(f) + median(g) - sorting is a non-linear operation.",
+    "kernel": []
+  },
+  {
+    "id": "NON8",
+    "category": "Non-Linear Filters",
+    "difficulty": "medium",
+    "type": "conceptual",
+    "question": "Why does the median filter preserve edges better than the mean filter?",
+    "options": [
+      "It uses a larger window",
+      "It outputs an existing neighbourhood value rather than creating intermediate values",
+      "It works in the frequency domain",
+      "It sharpens edges"
+    ],
+    "answer": 2,
+    "explanation": "At an edge, more than half the window lies on one side, so the median picks a value from that side and the edge stays sharp.",
+    "kernel": []
+  },
+  {
+    "id": "NOI1",
+    "category": "Noise",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Which noise model sets random pixels to 0 or 255?",
+    "options": [
+      "Gaussian",
+      "Salt & pepper",
+      "Speckle",
+      "Poisson"
+    ],
+    "answer": 2,
+    "explanation": "Impulse (salt & pepper) noise replaces pixels with the extreme values.",
+    "kernel": []
+  },
+  {
+    "id": "NOI2",
+    "category": "Noise",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Speckle noise is:",
+    "options": [
+      "Additive",
+      "Multiplicative",
+      "Impulse",
+      "Periodic"
+    ],
+    "answer": 2,
+    "explanation": "Speckle: g = f + n*f - its strength depends on the signal (ultrasound, radar).",
+    "kernel": []
+  },
+  {
+    "id": "NOI3",
+    "category": "Noise",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Poisson (shot) noise has the property that:",
+    "options": [
+      "Variance equals the mean",
+      "It is always zero-mean",
+      "It affects only edges",
+      "It is periodic"
+    ],
+    "answer": 1,
+    "explanation": "Photon counting follows a Poisson distribution, whose variance equals its mean - brighter pixels are noisier in absolute terms.",
+    "kernel": []
+  },
+  {
+    "id": "NOI4",
+    "category": "Noise",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Which MATLAB call adds Gaussian noise with variance 0.01?",
+    "options": [
+      "imnoise(I,'gaussian',0,0.01)",
+      "imnoise(I,0.01)",
+      "randn(I,0.01)",
+      "noise(I,'g')"
+    ],
+    "answer": 1,
+    "explanation": "imnoise(I, 'gaussian', mean, variance).",
+    "kernel": []
+  },
+  {
+    "id": "NOI5",
+    "category": "Noise",
+    "difficulty": "medium",
+    "type": "numerical",
+    "question": "If the MSE between two [0,1] images is 0.01, what is the PSNR?",
+    "options": [
+      "10 dB",
+      "20 dB",
+      "40 dB",
+      "100 dB"
+    ],
+    "answer": 2,
+    "explanation": "PSNR = 10 log10(1 / 0.01) = 10 * 2 = 20 dB.",
+    "kernel": []
+  },
+  {
+    "id": "NOI6",
+    "category": "Noise",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "A degradation model is written g(x,y) = h(x,y) * f(x,y) + eta(x,y). What is h?",
+    "options": [
+      "The noise",
+      "The degradation (point-spread) function",
+      "The restored image",
+      "The histogram"
+    ],
+    "answer": 2,
+    "explanation": "h is the linear, position-invariant degradation (e.g. blur) and eta is additive noise.",
+    "kernel": []
+  },
+  {
+    "id": "NOI7",
+    "category": "Noise",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Which metric compares luminance, contrast and structure?",
+    "options": [
+      "MSE",
+      "PSNR",
+      "SSIM",
+      "Entropy"
+    ],
+    "answer": 3,
+    "explanation": "SSIM (structural similarity) is closer to human perception than MSE/PSNR.",
+    "kernel": []
+  },
+  {
+    "id": "NOI8",
+    "category": "Noise",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "Which restoration filter is best for a MIX of Gaussian and impulse noise?",
+    "options": [
+      "Mean",
+      "Alpha-trimmed mean",
+      "Max",
+      "Laplacian"
+    ],
+    "answer": 2,
+    "explanation": "Alpha-trimmed mean drops the d/2 smallest and largest values (impulses) and averages the rest (Gaussian).",
+    "kernel": []
+  },
+  {
+    "id": "COR1",
+    "category": "Correlation",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "In spatial correlation the kernel is:",
+    "options": [
+      "Flipped by 180 degrees",
+      "Not flipped",
+      "Transposed",
+      "Inverted"
+    ],
+    "answer": 2,
+    "explanation": "Correlation slides the kernel as it is; convolution first rotates it by 180 degrees.",
+    "kernel": []
+  },
+  {
+    "id": "COR2",
+    "category": "Correlation",
+    "difficulty": "medium",
+    "type": "numerical",
+    "question": "Correlate [1 2 3; 4 5 6; 7 8 9] with [1 0 -1; 1 0 -1; 1 0 -1] at the centre. Result?",
+    "options": [
+      "6",
+      "-6",
+      "0",
+      "18"
+    ],
+    "answer": 2,
+    "explanation": "(1+4+7) - (3+6+9) = 12 - 18 = -6.",
+    "kernel": []
+  },
+  {
+    "id": "COR3",
+    "category": "Correlation",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Correlating an image with a discrete unit impulse gives:",
+    "options": [
+      "The kernel",
+      "A rotated (180 degree) copy of the kernel",
+      "Zero",
+      "The image"
+    ],
+    "answer": 2,
+    "explanation": "Correlation with an impulse produces the kernel rotated by 180 degrees; convolution reproduces the kernel itself.",
+    "kernel": []
+  },
+  {
+    "id": "COR4",
+    "category": "Correlation",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "Correlation is commonly used for:",
+    "options": [
+      "Template matching",
+      "Histogram equalisation",
+      "Colour conversion",
+      "Quantisation"
+    ],
+    "answer": 1,
+    "explanation": "The correlation output is largest where the image looks most like the kernel (template).",
+    "kernel": []
+  },
+  {
+    "id": "COR5",
+    "category": "Correlation",
+    "difficulty": "easy",
+    "type": "truefalse",
+    "question": "imfilter performs correlation by default.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "imfilter(I,h) uses 'corr' unless 'conv' is specified.",
+    "kernel": []
+  },
+  {
+    "id": "CON1",
+    "category": "Convolution",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Convolution differs from correlation because the kernel is:",
+    "options": [
+      "Normalised",
+      "Rotated by 180 degrees",
+      "Squared",
+      "Transposed"
+    ],
+    "answer": 2,
+    "explanation": "Flip horizontally and vertically (rot90(K,2)), then proceed exactly like correlation.",
+    "kernel": []
+  },
+  {
+    "id": "CON2",
+    "category": "Convolution",
+    "difficulty": "medium",
+    "type": "truefalse",
+    "question": "For a symmetric kernel such as the Gaussian, correlation and convolution give the same result.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "Rotating a symmetric kernel by 180 degrees does not change it.",
+    "kernel": []
+  },
+  {
+    "id": "CON3",
+    "category": "Convolution",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "What is rot90([1 2; 3 4], 2)?",
+    "options": [
+      "[4 3; 2 1]",
+      "[1 3; 2 4]",
+      "[3 4; 1 2]",
+      "[2 1; 4 3]"
+    ],
+    "answer": 1,
+    "explanation": "A 180 degree rotation reverses both row and column order.",
+    "kernel": []
+  },
+  {
+    "id": "CON4",
+    "category": "Convolution",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "Size of conv2(A, B, 'full') for A 5x5 and B 3x3?",
+    "options": [
+      "5x5",
+      "3x3",
+      "7x7",
+      "8x8"
+    ],
+    "answer": 3,
+    "explanation": "Full output: (5+3-1) x (5+3-1) = 7x7.",
+    "kernel": []
+  },
+  {
+    "id": "CON5",
+    "category": "Convolution",
+    "difficulty": "hard",
+    "type": "conceptual",
+    "question": "Which property does convolution have that correlation lacks?",
+    "options": [
+      "Linearity",
+      "Commutativity (f*g = g*f)",
+      "Shift invariance",
+      "Speed"
+    ],
+    "answer": 2,
+    "explanation": "Both are linear and shift-invariant, but only convolution is commutative and associative, so filters can be combined into one kernel.",
+    "kernel": []
+  },
+  {
+    "id": "CON6",
+    "category": "Convolution",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Which base MATLAB function performs 2-D convolution?",
+    "options": [
+      "conv2",
+      "corr2",
+      "histeq",
+      "imadjust"
+    ],
+    "answer": 1,
+    "explanation": "conv2 convolves two matrices; corr2 returns a single correlation COEFFICIENT, not a filtered image.",
+    "kernel": []
+  },
+  {
+    "id": "SHA1",
+    "category": "Sharpening",
+    "difficulty": "easy",
+    "type": "kernel",
+    "question": "Identify this kernel:",
+    "options": [
+      "Mean",
+      "Laplacian",
+      "Sobel Y",
+      "Identity"
+    ],
+    "answer": 2,
+    "explanation": "Centre -4 and the four neighbours 1: the 4-neighbour Laplacian (second derivative).",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        0,
+        1,
+        0,
+        1,
+        -4,
+        1,
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "id": "SHA2",
+    "category": "Sharpening",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "With a Laplacian kernel whose centre is NEGATIVE, sharpening is:",
+    "options": [
+      "g = f + lap(f)",
+      "g = f - lap(f)",
+      "g = lap(f)",
+      "g = f * lap(f)"
+    ],
+    "answer": 2,
+    "explanation": "Subtract the Laplacian when the centre coefficient is negative (add it if the centre is positive).",
+    "kernel": []
+  },
+  {
+    "id": "SHA3",
+    "category": "Sharpening",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Unsharp masking computes:",
+    "options": [
+      "f + k (f - blur(f))",
+      "blur(f) - f",
+      "f * f",
+      "median(f)"
+    ],
+    "answer": 1,
+    "explanation": "mask = f - blurred; g = f + k*mask. k = 1: unsharp masking, k > 1: high-boost.",
+    "kernel": []
+  },
+  {
+    "id": "SHA4",
+    "category": "Sharpening",
+    "difficulty": "hard",
+    "type": "kernel",
+    "question": "Identify this kernel:",
+    "options": [
+      "Laplacian",
+      "Sharpening (identity - Laplacian)",
+      "Mean",
+      "Emboss"
+    ],
+    "answer": 2,
+    "explanation": "Centre 5, neighbours -1: identity [0 0 0;0 1 0;0 0 0] minus the Laplacian -> sharpening in one pass.",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        0,
+        -1,
+        0,
+        -1,
+        5,
+        -1,
+        0,
+        -1,
+        0
+      ]
+    }
+  },
+  {
+    "id": "SHA5",
+    "category": "Sharpening",
+    "difficulty": "medium",
+    "type": "truefalse",
+    "question": "Sharpening also amplifies noise.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "Derivatives respond to every rapid change, including noise; smoothing first helps.",
+    "kernel": []
+  },
+  {
+    "id": "SHA6",
+    "category": "Sharpening",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "In high-boost filtering g = f + k * mask, the case k > 1 means:",
+    "options": [
+      "Less sharpening",
+      "The detail (mask) is amplified more strongly",
+      "The image is blurred",
+      "The image is inverted"
+    ],
+    "answer": 2,
+    "explanation": "k > 1 emphasises the high-frequency detail more than standard unsharp masking (k = 1).",
+    "kernel": []
+  },
+  {
+    "id": "EDG1",
+    "category": "Edge Detection",
+    "difficulty": "easy",
+    "type": "kernel",
+    "question": "Identify this kernel:",
+    "options": [
+      "Mean",
+      "Sobel X",
+      "Prewitt Y",
+      "Laplacian"
+    ],
+    "answer": 2,
+    "explanation": "Columns -1/0/+1 with weights 1-2-1: Sobel X, the horizontal derivative (detects vertical edges).",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        -1,
+        0,
+        1,
+        -2,
+        0,
+        2,
+        -1,
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "id": "EDG2",
+    "category": "Edge Detection",
+    "difficulty": "medium",
+    "type": "kernel",
+    "question": "Identify this kernel:",
+    "options": [
+      "Sobel X",
+      "Prewitt X",
+      "Prewitt Y",
+      "Roberts"
+    ],
+    "answer": 3,
+    "explanation": "Rows -1/0/+1 with equal weights: Prewitt Y (vertical derivative, horizontal edges).",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  {
+    "id": "EDG3",
+    "category": "Edge Detection",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Which detector uses non-maximum suppression and hysteresis thresholding?",
+    "options": [
+      "Roberts",
+      "Sobel",
+      "Canny",
+      "Prewitt"
+    ],
+    "answer": 3,
+    "explanation": "Canny: Gaussian smoothing, gradient, non-maximum suppression (thin edges), double threshold + hysteresis (edge linking).",
+    "kernel": []
+  },
+  {
+    "id": "EDG4",
+    "category": "Edge Detection",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "The gradient magnitude is:",
+    "options": [
+      "gx + gy",
+      "sqrt(gx^2 + gy^2)",
+      "gx * gy",
+      "max(gx)"
+    ],
+    "answer": 2,
+    "explanation": "Edge strength |grad f| = sqrt(gx^2 + gy^2) (approximated by |gx|+|gy|).",
+    "kernel": []
+  },
+  {
+    "id": "EDG5",
+    "category": "Edge Detection",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "Edges in the LoG (Marr-Hildreth) method are located at:",
+    "options": [
+      "Maxima of the response",
+      "Zero crossings of the response",
+      "Pixels above the mean",
+      "Corners"
+    ],
+    "answer": 2,
+    "explanation": "The second derivative changes sign across an edge, so edges are the zero crossings.",
+    "kernel": []
+  },
+  {
+    "id": "EDG6",
+    "category": "Edge Detection",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Compared with Prewitt, the Sobel operator:",
+    "options": [
+      "Has no smoothing",
+      "Gives more weight to the centre row/column, adding smoothing",
+      "Is a second-derivative operator",
+      "Uses 2x2 kernels"
+    ],
+    "answer": 2,
+    "explanation": "The 1-2-1 weights act as a small smoothing filter perpendicular to the derivative.",
+    "kernel": []
+  },
+  {
+    "id": "EDG7",
+    "category": "Edge Detection",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "The Roberts operator uses kernels of size:",
+    "options": [
+      "2x2",
+      "3x3",
+      "5x5",
+      "1x3"
+    ],
+    "answer": 1,
+    "explanation": "Roberts cross: two 2x2 diagonal difference kernels.",
+    "kernel": []
+  },
+  {
+    "id": "EDG8",
+    "category": "Edge Detection",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "What is an edge?",
+    "options": [
+      "A pixel with value 255",
+      "A place where intensity changes abruptly",
+      "The image border",
+      "A noise pixel"
+    ],
+    "answer": 2,
+    "explanation": "Edges are boundaries between regions with significantly different intensities (large first derivative).",
+    "kernel": []
+  },
+  {
+    "id": "SEG1",
+    "category": "Segmentation",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Otsu's method selects the threshold that maximises:",
+    "options": [
+      "Within-class variance",
+      "Between-class variance",
+      "Entropy",
+      "The mean"
+    ],
+    "answer": 2,
+    "explanation": "Maximising between-class variance = minimising within-class variance: the best separation of the two classes.",
+    "kernel": []
+  },
+  {
+    "id": "SEG2",
+    "category": "Segmentation",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "When is ADAPTIVE thresholding preferred?",
+    "options": [
+      "Uniform illumination",
+      "Uneven illumination",
+      "Binary images",
+      "Colour images only"
+    ],
+    "answer": 2,
+    "explanation": "With a lighting gradient no single threshold works; a local threshold follows the illumination.",
+    "kernel": []
+  },
+  {
+    "id": "SEG3",
+    "category": "Segmentation",
+    "difficulty": "medium",
+    "type": "kernel",
+    "question": "Identify this mask:",
+    "options": [
+      "Point detection",
+      "Mean",
+      "Horizontal line detection",
+      "Sobel"
+    ],
+    "answer": 1,
+    "explanation": "Centre 8, all neighbours -1: responds strongly to an isolated point (sums to zero).",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        -1,
+        -1,
+        -1,
+        -1,
+        8,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    }
+  },
+  {
+    "id": "SEG4",
+    "category": "Segmentation",
+    "difficulty": "hard",
+    "type": "kernel",
+    "question": "This mask detects lines in which direction?",
+    "options": [
+      "Vertical",
+      "Horizontal",
+      "+45 degrees",
+      "-45 degrees"
+    ],
+    "answer": 2,
+    "explanation": "The middle ROW has weight 2: it responds to 1-pixel-thick horizontal lines.",
+    "kernel": {
+      "rows": 3,
+      "cols": 3,
+      "data": [
+        -1,
+        -1,
+        -1,
+        2,
+        2,
+        2,
+        -1,
+        -1,
+        -1
+      ]
+    }
+  },
+  {
+    "id": "SEG5",
+    "category": "Segmentation",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Region growing starts from:",
+    "options": [
+      "The image border",
+      "Seed points",
+      "The histogram",
+      "Edge pixels only"
+    ],
+    "answer": 2,
+    "explanation": "Neighbours similar to the seed (within a tolerance) are added until no more pixels qualify.",
+    "kernel": []
+  },
+  {
+    "id": "SEG6",
+    "category": "Segmentation",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "Region splitting and merging typically uses which data structure?",
+    "options": [
+      "Stack of histograms",
+      "Quadtree",
+      "Linked list of edges",
+      "Hash table"
+    ],
+    "answer": 2,
+    "explanation": "Non-homogeneous regions are split into four quadrants recursively (quadtree), then similar neighbours are merged.",
+    "kernel": []
+  },
+  {
+    "id": "SEG7",
+    "category": "Segmentation",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Which MATLAB function labels connected components?",
+    "options": [
+      "bwlabel",
+      "imhist",
+      "edge",
+      "fspecial"
+    ],
+    "answer": 1,
+    "explanation": "bwlabel assigns a number to each connected region; regionprops then measures area, centroid, etc.",
+    "kernel": []
+  },
+  {
+    "id": "SEG8",
+    "category": "Segmentation",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Edge linking is needed because:",
+    "options": [
+      "Edge detectors produce broken, discontinuous edges",
+      "Edges are too thick",
+      "Thresholds are global",
+      "Images are coloured"
+    ],
+    "answer": 1,
+    "explanation": "Noise and uneven lighting break edges; linking (e.g. Canny hysteresis) joins edge pixels into boundaries.",
+    "kernel": []
+  },
+  {
+    "id": "COL1",
+    "category": "Color Processing",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "In the HSV model, which channel represents the colour type?",
+    "options": [
+      "Hue",
+      "Saturation",
+      "Value",
+      "Luma"
+    ],
+    "answer": 1,
+    "explanation": "Hue = colour angle (red, green, ...); Saturation = purity; Value = brightness.",
+    "kernel": []
+  },
+  {
+    "id": "COL2",
+    "category": "Color Processing",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "To equalise a colour image without changing its hues, equalise:",
+    "options": [
+      "R, G and B separately",
+      "Only the V (or Y / L) channel",
+      "Only the hue",
+      "The saturation"
+    ],
+    "answer": 2,
+    "explanation": "Equalising R, G, B independently changes their ratios and shifts colours; equalising brightness keeps them.",
+    "kernel": []
+  },
+  {
+    "id": "COL3",
+    "category": "Color Processing",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "In YCbCr, the Y channel carries:",
+    "options": [
+      "Blue difference",
+      "Luminance (brightness)",
+      "Red difference",
+      "Hue"
+    ],
+    "answer": 2,
+    "explanation": "Y = luma; Cb, Cr = colour differences. Used in JPEG/video.",
+    "kernel": []
+  },
+  {
+    "id": "COL4",
+    "category": "Color Processing",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "Which colour space is designed to be approximately perceptually uniform?",
+    "options": [
+      "RGB",
+      "CMY",
+      "CIE L*a*b*",
+      "HSV"
+    ],
+    "answer": 3,
+    "explanation": "In Lab, equal distances correspond to roughly equal perceived colour differences.",
+    "kernel": []
+  },
+  {
+    "id": "COL5",
+    "category": "Color Processing",
+    "difficulty": "easy",
+    "type": "truefalse",
+    "question": "RGB is an additive colour model.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "Red, green and blue light are added; CMY(K) is subtractive.",
+    "kernel": []
+  },
+  {
+    "id": "COL6",
+    "category": "Color Processing",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Multiplying the S channel of an HSV image by 1.5 will:",
+    "options": [
+      "Make colours more vivid",
+      "Brighten the image",
+      "Rotate hues",
+      "Convert to grayscale"
+    ],
+    "answer": 1,
+    "explanation": "Higher saturation = purer, more vivid colours.",
+    "kernel": []
+  },
+  {
+    "id": "MOR1",
+    "category": "Morphology",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Binary erosion of an object by a 3x3 square structuring element will:",
+    "options": [
+      "Make the object grow",
+      "Shrink the object and remove specks smaller than 3x3",
+      "Fill the holes in the object",
+      "Leave the object unchanged"
+    ],
+    "answer": 2,
+    "explanation": "Erosion keeps a pixel only if the whole structuring element fits inside the object, so objects shrink and small specks vanish.",
+    "kernel": []
+  },
+  {
+    "id": "MOR2",
+    "category": "Morphology",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "Opening is defined as:",
+    "options": [
+      "Dilation followed by erosion",
+      "Erosion followed by dilation",
+      "Erosion minus dilation",
+      "Two erosions"
+    ],
+    "answer": 2,
+    "explanation": "Opening = erosion then dilation, (A ⊖ B) ⊕ B. Closing is the reverse order: dilation then erosion.",
+    "kernel": []
+  },
+  {
+    "id": "MOR3",
+    "category": "Morphology",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "A scanned page has small black gaps inside the letters. Which operation joins them without making the letters much thicker?",
+    "options": [
+      "Opening",
+      "Closing",
+      "Erosion",
+      "Boundary extraction"
+    ],
+    "answer": 2,
+    "explanation": "Closing (dilate, then erode) fills gaps and holes smaller than the structuring element and restores the original thickness.",
+    "kernel": []
+  },
+  {
+    "id": "MOR4",
+    "category": "Morphology",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "The boundary of a region A can be extracted with:",
+    "options": [
+      "A − (A ⊖ B)",
+      "A ⊕ B",
+      "(A ⊕ B) ⊖ B",
+      "A ∪ (A ⊖ B)"
+    ],
+    "answer": 1,
+    "explanation": "Erosion removes exactly the outer layer of pixels, so A minus its erosion is the boundary.",
+    "kernel": []
+  },
+  {
+    "id": "MOR5",
+    "category": "Morphology",
+    "difficulty": "medium",
+    "type": "truefalse",
+    "question": "Opening an image twice with the same structuring element gives the same result as opening it once.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "answer": 1,
+    "explanation": "Opening and closing are idempotent.",
+    "kernel": []
+  },
+  {
+    "id": "MOR6",
+    "category": "Morphology",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "In hole filling, which pixels are holes?",
+    "options": [
+      "Background pixels inside the bounding box",
+      "Background pixels that cannot be reached from the image border",
+      "All pixels removed by erosion",
+      "Pixels with grey level 0"
+    ],
+    "answer": 2,
+    "explanation": "Grow the background from the border by conditional dilation, Xk = (Xk-1 ⊕ B) ∩ Ac; background that is never reached is a hole.",
+    "kernel": []
+  },
+  {
+    "id": "MOR7",
+    "category": "Morphology",
+    "difficulty": "hard",
+    "type": "conceptual",
+    "question": "Grayscale erosion with a flat structuring element is equivalent to:",
+    "options": [
+      "A mean filter",
+      "A min filter over the structuring element",
+      "A max filter",
+      "A median filter"
+    ],
+    "answer": 2,
+    "explanation": "Flat grayscale erosion takes the minimum under the SE (dilation takes the maximum) - the min/max order-statistic filters.",
+    "kernel": []
+  },
+  {
+    "id": "REP1",
+    "category": "Representation",
+    "difficulty": "easy",
+    "type": "mcq",
+    "question": "In the Freeman 8-direction chain code, direction 0 means a step:",
+    "options": [
+      "Up",
+      "Right (east)",
+      "Down",
+      "Diagonally up-right"
+    ],
+    "answer": 2,
+    "explanation": "Directions are numbered anticlockwise from east: 0 = E, 2 = N, 4 = W, 6 = S; odd numbers are diagonals.",
+    "kernel": []
+  },
+  {
+    "id": "REP2",
+    "category": "Representation",
+    "difficulty": "medium",
+    "type": "numerical",
+    "question": "A boundary has chain code 0 0 2 2 4 4 6 6. What is its perimeter?",
+    "options": [
+      "4",
+      "8",
+      "8√2",
+      "16"
+    ],
+    "answer": 2,
+    "explanation": "All codes are even (straight steps of length 1): 8 × 1 = 8.",
+    "kernel": []
+  },
+  {
+    "id": "REP3",
+    "category": "Representation",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Why is the FIRST DIFFERENCE of a chain code used?",
+    "options": [
+      "It makes the code independent of rotation (in 45° steps)",
+      "It compresses the image",
+      "It gives the area",
+      "It removes noise"
+    ],
+    "answer": 1,
+    "explanation": "Rotating the object adds the same constant to every direction; the differences between consecutive directions stay the same.",
+    "kernel": []
+  },
+  {
+    "id": "REP4",
+    "category": "Representation",
+    "difficulty": "hard",
+    "type": "mcq",
+    "question": "The SHAPE NUMBER of a boundary is:",
+    "options": [
+      "The number of pixels on the boundary",
+      "The circular rotation of the first difference that forms the smallest number",
+      "The chain code read backwards",
+      "The area divided by the perimeter"
+    ],
+    "answer": 2,
+    "explanation": "Taking the smallest circular rotation of the first difference also removes the dependence on the starting point.",
+    "kernel": []
+  },
+  {
+    "id": "REP5",
+    "category": "Representation",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Which pair of pixels is connected under 8-connectivity but NOT under 4-connectivity?",
+    "options": [
+      "(2,2) and (2,3)",
+      "(2,2) and (3,3)",
+      "(2,2) and (3,2)",
+      "(2,2) and (1,2)"
+    ],
+    "answer": 2,
+    "explanation": "Diagonal neighbours belong to N8 but not N4, so a diagonal chain is one region under 8-connectivity and several under 4-connectivity.",
+    "kernel": []
+  },
+  {
+    "id": "REP6",
+    "category": "Representation",
+    "difficulty": "medium",
+    "type": "mcq",
+    "question": "Circularity 4πA / P² equals 1 for:",
+    "options": [
+      "A square",
+      "A perfect circle",
+      "A long thin line",
+      "Any convex shape"
+    ],
+    "answer": 2,
+    "explanation": "The circle has the largest area for a given perimeter; every other shape scores below 1.",
+    "kernel": []
+  },
+  {
+    "id": "OUT1",
+    "category": "Spatial Filters",
+    "difficulty": "medium",
+    "type": "output",
+    "question": "An image with salt & pepper noise is filtered. The output is clean and edges are sharp. Which filter was used?",
+    "options": [
+      "3x3 mean",
+      "3x3 median",
+      "Laplacian",
+      "Sobel"
+    ],
+    "answer": 2,
+    "explanation": "Clean impulses + sharp edges is the signature of the median filter.",
+    "kernel": []
+  },
+  {
+    "id": "OUT2",
+    "category": "Edge Detection",
+    "difficulty": "medium",
+    "type": "output",
+    "question": "The output is mostly black with bright thin lines where objects meet. Which operation produced it?",
+    "options": [
+      "Gaussian blur",
+      "Histogram equalisation",
+      "Edge detection (gradient magnitude)",
+      "Median filter"
+    ],
+    "answer": 3,
+    "explanation": "Only intensity changes survive: an edge / gradient image.",
+    "kernel": []
+  },
+  {
+    "id": "OUT3",
+    "category": "Histogram",
+    "difficulty": "medium",
+    "type": "output",
+    "question": "A dull, greyish photo becomes high-contrast and its histogram now covers 0..255. Which operation?",
+    "options": [
+      "Histogram equalisation",
+      "Mean filter",
+      "Min filter",
+      "Quantisation to 1 bit"
+    ],
+    "answer": 1,
+    "explanation": "Equalisation spreads the grey levels over the full range.",
+    "kernel": []
+  }
+]
