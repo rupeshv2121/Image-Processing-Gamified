@@ -16,7 +16,7 @@ export default function Leaderboard() {
   const klass = profiles.slice().sort((a, b) => b.xp - a.xp || b.bestScore - a.bestScore)
 
   const load = async () => {
-    const d = await call('leaderboard', { action: 'get' }, { label: 'Loading leaderboard.mat' })
+    const d = await call('leaderboard', { action: 'get' }, { label: 'Loading leaderboard' })
     if (d) setRows(asArray(d))
   }
   useEffect(() => { if (matlab.ok) load() }, [matlab.ok]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -30,7 +30,7 @@ export default function Leaderboard() {
   const shown = rows.filter((r) => mode === 'all' || r.Mode === mode)
 
   return (
-    <Page eyebrow="Play" title="Leaderboard" subtitle="Top quiz scores (quizzes/leaderboard.mat) and the class ranking of every student profile on this computer."
+    <Page eyebrow="Play" title="Leaderboard" subtitle="Top quiz scores and the class ranking of every student profile on this computer."
       actions={tab === 'scores'
         ? <><button className="btn" onClick={load}>Refresh</button>{teacher && <button className="btn btn-danger" onClick={() => setConfirm(true)} disabled={!rows.length}>Clear…</button>}</>
         : <><button className="btn" onClick={refreshProfiles}>Refresh</button>{teacher && <button className="btn btn-navy" onClick={() => setManage(true)}>Manage students…</button>}</>}>
@@ -76,7 +76,7 @@ export default function Leaderboard() {
       {manage && <StudentsModal onClose={() => setManage(false)} />}
       {confirm && (
         <Modal title="Clear the leaderboard?" onClose={() => setConfirm(false)}>
-          <p>All {rows.length} entries in leaderboard.mat will be deleted. This cannot be undone.</p>
+          <p>All {rows.length} leaderboard entries will be deleted. This cannot be undone.</p>
           <div className="row right"><button className="btn" onClick={() => setConfirm(false)}>Cancel</button><button className="btn btn-primary" onClick={clear}>Clear</button></div>
         </Modal>
       )}

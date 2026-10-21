@@ -4,7 +4,8 @@ function ImageLab(mode)
 %   current folder). This function:
 %     1. adds all ImageLab folders to the MATLAB path,
 %     2. shares THIS MATLAB session (matlab.engine.shareEngine),
-%     3. starts the small bridge server, which connects back to this session,
+%     3. starts the ImageLab backend (backend/, FastAPI), which connects back
+%        to this session for all image processing,
 %     4. opens the user interface in the browser.
 %
 %   All image processing then runs here, in this MATLAB session, using the
@@ -30,15 +31,15 @@ python = fullfile(root, '.venv', 'Scripts', 'python.exe');
 if ~isfile(python)
     python = 'python';
 end
-server = fullfile(root, 'server', 'server.py');
+backend = fullfile(root, 'backend');          % python -m imagelab runs from here
 lan = nargin > 0 && strcmpi(mode, 'lan');
 extra = '';
 if lan, extra = ' --lan'; end
 
 if ispc
-    cmd = sprintf('start "ImageLab server" /min "%s" "%s" --connect %s%s', python, server, name, extra);
+    cmd = sprintf('start "ImageLab server" /min /D "%s" "%s" -m imagelab --connect %s%s', backend, python, name, extra);
 else
-    cmd = sprintf('"%s" "%s" --connect %s%s &', python, server, name, extra);
+    cmd = sprintf('cd "%s" && "%s" -m imagelab --connect %s%s &', backend, python, name, extra);
 end
 status = system(cmd);
 if status ~= 0

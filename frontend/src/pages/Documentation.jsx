@@ -39,10 +39,10 @@ const FOLDERS = {
     ['hasIPT', 'Toolbox detection'], ['toDouble', 'im2double equivalent'], ['toGray', 'rgb2gray equivalent'], ['padImage', 'padarray equivalent'],
     ['neighborhoodStack', 'Vectorised neighbourhoods'], ['filter2D', 'Fast correlation (imfilter / conv2)'], ['manualFilterLoop', 'Generic loop filter'],
   ],
-  'quizzes/, experiments/, reports/, api/': [
-    ['questionBank', 'All quiz questions'], ['quizEngine', 'Selection and scoring'], ['leaderboardManager', 'leaderboard.mat'],
-    ['progressManager', 'XP, badges, userProgress.mat'], ['pipelineProblems', 'Pipeline game problems'], ['experimentCatalog', '13 experiments'],
-    ['runExperiment', 'Runs an experiment'], ['generateReport', 'HTML/DOCX report'], ['ilab_dispatch', 'Single entry point for the UI'],
+  'games/, experiments/, reports/, codelab/, api/': [
+    ['degradeImage', 'Degradations for the games'], ['applyBlock', 'Pipeline / challenge blocks'], ['experimentCatalog', '13 experiments'],
+    ['runExperiment', 'Runs an experiment'], ['generateReport', 'HTML/PDF/DOCX report'], ['codeTasks', 'Code Lab tasks and graders'],
+    ['runStudentCode', 'Runs Code Lab code safely'], ['ilab_dispatch', 'Entry point for the backend'],
   ],
 }
 
@@ -54,14 +54,14 @@ export default function Documentation() {
         <Card title="Architecture">
           <div className="prose small">
             <p><b>MATLAB is the image-processing engine.</b> Every algorithm is a MATLAB function (.m file). The browser only displays results.</p>
-            <div className="formula" style={{ fontSize: 13 }}>{'React UI  ──JSON──▶  server/server.py  ──MATLAB Engine──▶  api/ilab_dispatch.m\n                                                         │\n            PNG images ◀── runtime/images ◀──────────────┘  algorithms/, noise/, histogram/ …'}</div>
-            <p>server.py contains no image processing: it starts MATLAB, forwards each request to <code>ilab_dispatch.m</code>, and serves the PNG files MATLAB writes.</p>
+            <div className="formula" style={{ fontSize: 13 }}>{'React UI  ──JSON──▶  backend/ (FastAPI)  ──MATLAB Engine──▶  api/ilab_dispatch.m\n                                                             │\n              PNG images ◀── runtime/images ◀──────────────┘  algorithms/, noise/, histogram/ …'}</div>
+            <p>The backend (Python, FastAPI) contains no image processing: it handles sign-in, progress, quizzes, the live quiz and the classroom, starts MATLAB, sends every image operation to <code>ilab_dispatch.m</code> and serves the PNG files MATLAB writes.</p>
             <p>Each algorithm has a <b>toolbox</b> version (imfilter, medfilt2, histeq, edge …) and a <b>manual</b> version written with loops / matrix operations. Without the Image Processing Toolbox, ImageLab automatically uses the manual base-MATLAB code.</p>
           </div>
         </Card>
         <Card title="User guide (short)">
           <ol className="prose small">
-            <li>Start with <code>start_imagelab.bat</code> (or <code>python server/server.py</code>). MATLAB starts in the background (~10 s).</li>
+            <li>Start with <code>start_imagelab.bat</code> (or <code>python -m imagelab</code> in the backend folder). MATLAB starts in the background (~10 s).</li>
             <li>Load an image in the <a href="#workspace">Workspace</a> (sample or your own file).</li>
             <li>Open any lab. Results can be sent back to the workspace with <b>➜ Workspace</b>, then undone/redone.</li>
             <li>Use <b>{'</>'} View MATLAB Code</b> buttons to show the real implementation.</li>

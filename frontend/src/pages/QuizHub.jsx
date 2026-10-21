@@ -42,7 +42,7 @@ function QuizSetup({ mode, onStart }) {
   const toggle = (c) => setChosen((s) => (s.includes(c) ? s.filter((x) => x !== c) : [...s, c]))
   const start = async () => {
     const params = mode === 'kernel' ? { mode: 'kernel', n } : { difficulty, categories: chosen.length ? chosen : 'all', n }
-    const qs = await call('quizQuestions', params, { label: 'quizEngine select' })
+    const qs = await call('quizQuestions', params, { label: 'quiz questions' })
     if (qs) onStart(asArray(qs))
   }
   return (
@@ -66,7 +66,7 @@ function QuizSetup({ mode, onStart }) {
   )
 }
 
-// Quiz built by quizEngine('weak'): categories are weighted by the error rate
+// Weak-topic quiz (services/quiz.py): categories are weighted by the error rate
 function WeakPractice() {
   const { call, refreshProgress, progress } = useApp()
   const [plan, setPlan] = useState(null)
@@ -202,7 +202,7 @@ function TimedQuiz({ mode }) {
         <QuizSetup mode={mode} onStart={(qs) => { setClassScore(null); setQuestions(qs) }} />
       </div>
       <p className="small muted" style={{ marginTop: 12 }}>
-        Scoring (quizEngine.m): 100 × difficulty (easy 1, medium 1.5, hard 2) + 5 per second left + 10 × streak bonus.
+        Scoring: 100 × difficulty (easy 1, medium 1.5, hard 2) + 5 per second left + 10 × streak bonus.
       </p>
     </Card>
   )

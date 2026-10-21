@@ -3,15 +3,17 @@
 ## Principle
 
 > **MATLAB is the image-processing engine.** Every pixel operation happens in a MATLAB `.m` function.
-> The React interface only sends requests and displays the PNG images MATLAB produces.
+> The React interface only sends requests and displays the PNG images MATLAB produces. A Python backend
+> (FastAPI) does everything that needs no MATLAB — sign-in, progress, quizzes, the live quiz and the
+> classroom — so `.m` files contain only MATLAB work and the frontend only UI code.
 
 ```
-┌──────────────────────┐   POST /api/run {op, params}   ┌───────────────────┐  MATLAB Engine API  ┌─────────────────────────┐
-│  React UI (browser)  │ ─────────────────────────────▶ │ server/server.py  │ ──────────────────▶ │ api/ilab_dispatch.m      │
-│  frontend/src        │ ◀───────────────────────────── │ (bridge only)     │ ◀────────────────── │  routes to algorithms/,  │
-│                      │   JSON {ok, data}              │                   │   JSON string       │  noise/, histogram/ …    │
-│  <img src=/api/image>│ ◀── PNG files ──────────────── │ serves runtime/   │ ◀── imwrite ─────── │  ilab_store('save', I)   │
-└──────────────────────┘                                └───────────────────┘                     └─────────────────────────┘
+┌──────────────────────┐   POST /api/run {op, params}   ┌──────────────────────┐  MATLAB Engine API  ┌─────────────────────────┐
+│  React UI (browser)  │ ─────────────────────────────▶ │ backend/ (FastAPI)   │ ──────────────────▶ │ api/ilab_dispatch.m      │
+│  frontend/src        │ ◀───────────────────────────── │ sign-in, progress,   │ ◀────────────────── │  -> api/handlers/*Ops.m  │
+│                      │   JSON {ok, data}              │ quizzes, classroom   │   JSON (image ops)  │  -> algorithms/ …        │
+│  <img src=/api/image>│ ◀── PNG files ──────────────── │ SQLite data/imagelab │ ◀── imwrite ─────── │  ilab_store('save', I)   │
+└──────────────────────┘                                └──────────────────────┘                     └─────────────────────────┘
 ```
 
 ### Layers
@@ -20,10 +22,25 @@
 |---|---|---|
 | Algorithms | `algorithms/ noise/ histogram/ metrics/ segmentation/ color/ fundamentals/` | Pure MATLAB functions: image in, image out. Reusable from the command line, tests and the Live Script. |
 | Core helpers | `core/` | Type conversion, padding, neighbourhood stacks, fast/loop filtering, toolbox detection (`hasIPT`). |
-| Learning content | `quizzes/ experiments/ reports/` | Question bank, scoring, leaderboard, progress, experiment catalogue and runner, report generator. |
-| API | `api/` | `ilab_dispatch.m` decodes a JSON request, calls the algorithms, stores result images (`ilab_store.m`) and returns JSON. It also contains sample-image discovery and MATLAB chart rendering. |
-| Bridge | `server/server.py` | Python standard library HTTP server plus `matlab.engine`. Starts or connects to MATLAB, forwards requests, serves PNGs, reports and the built UI. **No image processing.** |
+| MATLAB content | `experiments/ codelab/ games/ reports/` | Experiment catalogue and runner, Code Lab tasks with their MATLAB graders, image degradations for the games, report generator. |
+| MATLAB API | `api/` | `ilab_dispatch.m` decodes a JSON request and routes it through one table to a handler file in `api/handlers/` (`imageOps`, `filterOps`, `analysisOps`, `gameOps`, `codeLabOps`, `experimentOps`), which calls the algorithms, stores result images (`ilab_store.m`) and returns JSON. Shared helpers: `ilab_param`, `ilab_img`, `ilab_put`, `ilab_limitSize` … |
+| Backend | `backend/imagelab/` | Python + FastAPI, see below. **No image processing.** |
 | UI | `frontend/` | React (Vite). Pages for every lab; no pixel processing in JavaScript. |
+
+### Backend (`backend/imagelab/`)
+
+| Package | Responsibility |
+|---|---|
+| `web/app.py` | FastAPI routes: `/api/status`, `/api/run`, `/api/cancel`, `/api/upload`, result images, reports, the built UI; classroom-network policy (other devices: sign-in and live quiz only) |
+| `rpc/` | The `{op, params}` protocol: an operation registry (`handlers/`), access rules in one place (`access.py`), the LRU result cache for deterministic image operations (`cache.py`), the XP rules per operation (`activity.py`) and the dispatcher that builds the `{ok, data}` envelope |
+| `services/` | Application logic: `auth` (PBKDF2 passwords, sessions, lock-out), `profiles`, `progress` (XP, badges), `classroom`, `analytics` (teacher views), `quiz`, `live_quiz`, `games`, `labs` (Code Lab / experiment rules), `records` (leaderboard, kernels, submissions), `exports` (CSV / Excel), `catalog` (catalogues MATLAB owns, read once) |
+| `storage/` | SQLite (`data/imagelab.db`, WAL, one transaction per change) behind repositories; `legacy.py` imports the 1.x `.mat` files once via `migration/exportLegacyData.m` |
+| `matlab.py` | The only module that talks to MATLAB: starts or attaches to the engine, one call at a time, cancel |
+| `container.py` | Composition root: builds every service once and wires them |
+
+Only image operations wait for MATLAB. Sign-in, quizzes, progress and the live quiz (polled every second
+by every student) are answered by Python directly, and repeated image operations come from the result
+cache without calling MATLAB.
 
 ### Toolbox vs manual
 
@@ -47,22 +64,23 @@ interactive.
 POST /api/run
 {"op": "filter", "params": {"id": "orig_1f75cc35a755", "name": "median", "k": 3, "impl": "both", "refId": "orig_1f75cc35a755"}}
 ```
-→ `ilab_dispatch` → `ilab_runFilter` → `medianFilter` / `medianFilterManual` → two PNGs, times,
-PSNR/SSIM and the maximum difference.
+→ backend (access rules, result cache) → `ilab_dispatch` → `filterOps` → `ilab_runFilter` →
+`medianFilter` / `medianFilterManual` → two PNGs, times, PSNR/SSIM and the maximum difference; the
+backend then records the "median filter tried" XP for a signed-in student.
 
 ### Error handling
 
 MATLAB errors with identifiers `ImageLab:*` (no image, bad format, invalid kernel or kernel size,
 invalid parameter, missing sample, invalid quiz state, not colour …) are returned as readable
 messages. The UI shows them in a modal dialog (the web equivalent of `uialert`). Other MATLAB errors are
-prefixed with "MATLAB error:". Corrupted MAT files (leaderboard, progress) are replaced with fresh
-ones.
+prefixed with "MATLAB error:". The backend raises its own errors with the same identifiers
+(`ImageLab:auth`, `ImageLab:forbidden`, `ImageLab:invalidQuizState` …).
 
 ### Starting modes
 
-* `ImageLab.m` — `matlab.engine.shareEngine('ImageLab')`, then starts `server.py --connect ImageLab`.
-  The bridge attaches to that MATLAB session; if attaching fails it starts its own engine.
-* `start_imagelab.bat` — `server.py` starts a hidden MATLAB engine.
+* `ImageLab.m` — `matlab.engine.shareEngine('ImageLab')`, then starts `python -m imagelab --connect ImageLab`.
+  The backend attaches to that MATLAB session; if attaching fails it starts its own engine.
+* `start_imagelab.bat` — the backend starts a hidden MATLAB engine (`start_imagelab_lan.bat`: classroom network).
 
 ### Offline
 

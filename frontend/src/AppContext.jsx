@@ -6,7 +6,7 @@ export const useApp = () => useContext(AppContext)
 
 export function AppProvider({ children }) {
   // remote: this browser is a student device on the classroom network (live quiz only)
-  // lan: the addresses students open to join (classroom network mode, server.py --lan)
+  // lan: the addresses students open to join (classroom network mode, start_imagelab_lan.bat)
   const [matlab, setMatlab] = useState({ ready: false, ok: false, error: null, ipt: false, release: '', remote: false, lan: [] })
   const [history, setHistory] = useState([]) // [{id, label}]
   const [index, setIndex] = useState(-1)

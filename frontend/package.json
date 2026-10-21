@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "User interface for ImageLab. All image processing is done by MATLAB (see ../api/ilab_dispatch.m).",
+  "description": "User interface for ImageLab. Talks to the FastAPI backend (../backend); all image processing is done by MATLAB (../api).",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

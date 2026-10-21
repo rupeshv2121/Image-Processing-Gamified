@@ -1,26 +1,16 @@
 function failures = smokeTestApi()
-%SMOKETESTAPI Call every ilab_dispatch operation once and report problems.
+%SMOKETESTAPI Call every MATLAB operation of ilab_dispatch once and report problems.
 %   failures = smokeTestApi() returns the number of failed operations.
 %
-%   Most operations need a signed-in user. The test signs in as the teacher
-%   with the PIN in the environment variable ILAB_TEST_PIN (empty = no PIN
-%   set); without a teacher session those operations are skipped. With a
-%   session it also runs a whole student account cycle on a temporary
-%   student, which is deleted again at the end.
+%   Only the image work is tested here. Sign-in, progress, quizzes, the live
+%   quiz and the classroom live in the backend and are tested end to end by
+%   backend/tests/test_integration_matlab.py (which also runs these ops).
 
 root = fileparts(fileparts(mfilename('fullpath')));
 addpath(root);
 ilab_setup();
-ilab_store('init', fullfile(root, 'runtime', 'images'));
+ilab_store('init', fullfile(tempdir, 'ilab_smoke_images'));
 failures = 0;
-token = '';
-t = jsondecode(ilab_dispatch(jsonencode(struct('op', 'auth', 'params', ...
-    struct('action', 'teacherLogin', 'pin', getenv('ILAB_TEST_PIN'))))));
-if t.ok
-    token = t.data.token;
-else
-    fprintf('  skip signed-in operations (teacher sign-in failed: %s - setenv ILAB_TEST_PIN)\n', t.error);
-end
 
 r = call('loadSample', struct('name', 'peppers.png'));
 id = r.data.id;
@@ -31,6 +21,7 @@ call('ping', struct());
 call('samples', struct());
 call('imageInfo', struct('id', id));
 call('grayscale', struct('id', id));
+call('histogramOf', struct('id', id));
 n = call('noise', struct('id', id, 'type', 'saltpepper', 'density', 0.05, 'seed', 1));
 for t = {'gaussian', 'speckle', 'poisson'}
     call('noise', struct('id', id, 'type', t{1}));
@@ -39,6 +30,10 @@ for f = {'mean', 'weighted', 'gaussian', 'median', 'min', 'max', 'midpoint', 'or
     call('filter', struct('id', gid, 'name', f{1}, 'k', 3, 'impl', 'toolbox', 'refId', gid));
 end
 call('filter', struct('id', n.data.id, 'name', 'median', 'k', 3, 'impl', 'both', 'refId', id));
+for f = {'adaptivemedian', 'adaptivelocal'}
+    call('filter', struct('id', n.data.id, 'name', f{1}, 'k', 7, 'refId', id));
+end
+call('errorMap', struct('id', n.data.id, 'refId', id));
 call('gaussianKernel', struct('k', 5, 'sigma', 1));
 for m = {'none', 'histeq', 'histeqManual', 'clahe', 'stretch', 'gamma', 'log', 'negative'}
     call('histogram', struct('id', id, 'method', m{1}));
@@ -46,10 +41,9 @@ end
 call('correlation', struct('matrix', [1 2 3; 4 5 6; 7 8 9], 'kernel', [1 0 -1; 1 0 -1; 1 0 -1], 'mode', 'correlation'));
 call('correlation', struct('matrix', magic(5), 'kernel', [1 2 3; 4 5 6; 7 8 9], 'mode', 'convolution', 'shape', 'full'));
 call('kernelPreset', struct('name', 'sobelx', 'size', 5));
+call('kernelPresets', struct('names', {{'mean', 'sobelx'}}, 'size', 3));
 call('applyKernel', struct('id', id, 'kernel', [0 -1 0; -1 5 -1; 0 -1 0]));
 call('applyKernel', struct('id', id, 'kernel', [-1 0 1; -2 0 2; -1 0 1]));
-call('saveKernel', struct('name', 'smoke test', 'kernel', ones(3) / 9));
-call('listKernels', struct());
 for s = {'laplacian', 'sobel', 'prewitt', 'unsharp', 'highboost'}
     call('sharpen', struct('id', id, 'method', s{1}));
 end
@@ -57,6 +51,12 @@ call('edges', struct('id', gid, 'methods', {{'roberts', 'prewitt', 'sobel', 'can
 for s = {'global', 'iterative', 'otsu', 'adaptive', 'point', 'line', 'regiongrow', 'splitmerge', 'boundary'}
     call('segment', struct('id', gid, 'method', s{1}));
 end
+call('structuringElement', struct('shape', 'disk', 'size', 5));
+for op = {'erode', 'dilate', 'open', 'close', 'boundary', 'fill'}
+    call('morphology', struct('id', gid, 'operation', op{1}, 'se', ones(3)));
+end
+call('morphology', struct('id', id, 'operation', 'open', 'se', ones(3), 'mode', 'gray'));
+call('regions', struct('id', gid, 'conn', 4));
 for c = {'rgb', 'hsv', 'ycbcr', 'lab', 'gray'}
     call('color', struct('id', id, 'space', c{1}));
 end
@@ -66,144 +66,45 @@ call('neighborhood', struct('matrix', [0 1 1; 0 1 0; 0 0 1], 'row', 2, 'col', 2,
 call('sampling', struct('id', id));
 call('quantize', struct('id', id));
 call('compare', struct('id', id, 'noiseType', 'saltpepper', 'density', 0.05, 'seed', 3));
-call('quizCategories', struct());
-q = call('quizQuestions', struct('difficulty', 'easy', 'n', 10));
-call('quizQuestions', struct('mode', 'kernel', 'n', 5));
-res = struct('id', {'A', 'B'}, 'category', {'Noise', 'Histogram'}, 'difficulty', {'easy', 'hard'}, ...
-    'correct', {true, false}, 'timeLeft', {6, 0});
-signedIn('quizSubmit', struct('results', res, 'name', 'Smoke Test', 'roll', '000'));
-call('guessFilter', struct('id', id));
-call('pipelineProblems', struct());
-ps = call('pipelineStart', struct('id', id, 'problemId', 'spcontrast'));
-call('pipelineRun', struct('problemId', 'spcontrast', 'cleanId', ps.data.cleanId, ...
-    'degradedId', ps.data.degradedId, 'steps', {{'median', 'clahe'}}));
-cs = call('challengeStart', struct('id', id, 'level', 'medium'));
-steps = struct('block', {'median', 'gaussian'}, 'k', {3, 5});
-call('challengeScore', struct('cleanId', cs.data.cleanId, 'degradedId', cs.data.degradedId, ...
-    'steps', steps, 'timeUsed', 20, 'timeLimit', 60));
-call('leaderboard', struct('action', 'get'));
-signedIn('progress', struct('action', 'topic', 'value', 'Smoke'));
-call('experiments', struct());
-for e = 1:13
-    signedIn('runExperiment', struct('number', e));
-end
-call('source', struct('name', 'medianFilterManual'));
-signedIn('report', struct('title', 'Smoke report', 'students', 'Test', 'aim', 'Check', ...
-    'images', struct('label', {'Original'}, 'id', {id}), 'metrics', struct('name', {'PSNR'}, 'value', {30}), ...
-    'kernel', ones(3) / 9, 'observations', {{'ok'}}));
-% morphology, regions, error map, profiles, daily challenge, weak quiz
-call('structuringElement', struct('shape', 'disk', 'size', 5));
-for op = {'erode', 'dilate', 'open', 'close', 'boundary', 'fill'}
-    call('morphology', struct('id', gid, 'operation', op{1}, 'se', ones(3)));
-end
-call('morphology', struct('id', id, 'operation', 'open', 'se', ones(3), 'mode', 'gray'));
-call('regions', struct('id', gid, 'conn', 4));
-call('errorMap', struct('id', n.data.id, 'refId', id));
-for f = {'adaptivemedian', 'adaptivelocal'}
-    call('filter', struct('id', n.data.id, 'name', f{1}, 'k', 7, 'refId', id));
-end
-call('quizQuestions', struct('mode', 'weak', 'n', 5));
-signedIn('profiles', struct('action', 'list'));
-d = call('dailyStart', struct('date', '2026-01-01'));
-call('pipelineRun', struct('problemId', d.data.problemId, 'cleanId', d.data.cleanId, ...
-    'degradedId', d.data.degradedId, 'steps', {{'median'}}, 'daily', '2026-01-01'));
-
 call('steps', struct('algorithm', 'median', 'matrix', magic(5)));
 call('steps', struct('algorithm', 'histeq', 'matrix', [0 1 2; 3 2 1], 'levels', 4));
 call('steps', struct('algorithm', 'morphology', 'matrix', eye(5), 'se', ones(3), 'operation', 'dilate'));
 call('steps', struct('algorithm', 'regiongrow', 'matrix', magic(6), 'seedRow', 2, 'seedCol', 2, 'tolerance', 10));
-call('classroom', struct('action', 'get'));
-if ~isempty(token)
-    call('classroom', struct('action', 'overview'));
-    call('classroom', struct('action', 'submissions'));
-    call('classroom', struct('action', 'student', 'id', 'default'));
-    call('classroom', struct('action', 'submission', 'id', 'default', 'taskId', 'negative'));
-    call('classroom', struct('action', 'setCodeTask', 'taskId', 'negative', 'status', 'open'));
-    call('profiles', struct('action', 'accounts'));
-    % student account cycle on a temporary student
-    a = call('profiles', struct('action', 'add', 'name', 'Smoke Student', 'roll', 'SMOKE-1'));
-    if a.ok
-        sid = a.data.id;
-        l = call('auth', struct('action', 'login', 'identifier', 'smoke-1', 'password', a.data.password, 'token', ''));
-        if l.ok
-            st = l.data.token;
-            call('auth', struct('action', 'changePassword', 'oldPassword', '', 'newPassword', 'smoke-pass-2', 'token', st));
-            call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;', 'token', st));
-            call('auth', struct('action', 'me', 'token', st));
-            liveQuizCycle(st);
-            expectError('classroom', struct('action', 'overview', 'token', st));      % students are not teachers
-            call('auth', struct('action', 'logout', 'token', st));
-            expectError('progress', struct('token', st));                            % signed out
-        end
-        call('profiles', struct('action', 'remove', 'id', sid));
-    end
-end
-expectError('profiles', struct('action', 'list'));                                 % guests see no students
-expectError('auth', struct('action', 'login', 'identifier', 'nobody-here', 'password', 'whatever1'));
-call('codeTasks', struct());
+
+% games
+call('guessFilter', struct('id', id));
+d = call('degrade', struct('id', id, 'steps', struct('op', {'contrast', 'saltpepper'}, 'value', {0.35, 0.05}), 'seed', 4));
+call('degrade', struct('sample', 'peppers.png', 'maxSide', 400, 'steps', struct('op', 'blur', 'value', 1.5), 'seed', 20260101));
+call('applyPipeline', struct('cleanId', d.data.cleanId, 'degradedId', d.data.degradedId, ...
+    'steps', struct('block', {'median', 'clahe'}), 'intermediate', true));
+call('applyPipeline', struct('cleanId', d.data.cleanId, 'degradedId', d.data.degradedId, ...
+    'steps', {{struct('block', 'median', 'k', 3), struct('block', 'gaussian')}}));
+
+% Code Lab and experiments
+call('codeTaskList', struct());
 call('codeTaskStart', struct('taskId', 'meanfilter'));
-call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;', 'track', false));
+call('codeTaskSolution', struct('taskId', 'negative'));
+call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;'));
 call('runCode', struct('id', id, 'code', sprintf('J = rgb2gray(img);\nimshow(J)\nout = J;')));
+call('experimentCatalog', struct());
+for e = 1:13
+    call('runExperiment', struct('number', e));
+end
+call('report', struct('title', 'Smoke report', 'students', 'Test', 'aim', 'Check', ...
+    'images', struct('label', {'Original'}, 'id', {id}), 'metrics', struct('name', {'PSNR'}, 'value', {30}), ...
+    'kernel', ones(3) / 9, 'observations', {{'ok'}}));
 
 % expected errors
 expectError('morphology', struct('id', gid, 'se', zeros(3)));
-expectError('dailyStart', struct('date', 'not-a-date'));
 expectError('filter', struct('id', id, 'name', 'mean', 'k', 4));
 expectError('imageInfo', struct('id', '../../etc'));
 expectError('correlation', struct('matrix', magic(3), 'kernel', ones(2)));
 expectError('runCode', struct('code', 'system(''dir'')'));
-expectError('codeTaskSolution', struct('taskId', 'otsu'));
+expectError('auth', struct());                       % handled by the backend, not MATLAB
 
-% clean test entries from the leaderboard/progress files
-leaderboardManager('clear');
-if ~isempty(token), call('auth', struct('action', 'logout')); end
 fprintf('\nSmoke test finished: %d failure(s)\n', failures);
 
-    function liveQuizCycle(st)
-        % The teacher hosts a 2-question live quiz, the student joins and answers
-        call('live', struct('action', 'bank'));
-        call('live', struct('action', 'pick', 'n', 3, 'categories', {{'Histogram'}}));
-        lq = call('live', struct('action', 'create', 'quiz', struct('title', 'Smoke live quiz', ...
-            'instructions', 'Answer quickly.', 'settings', struct('timeLimit', 10), ...
-            'questions', {{struct('bankId', 'FUN2'), struct('question', 'Is 2 + 2 = 4?', ...
-                'options', {{'Yes', 'No'}}, 'answer', 1, 'timeLimit', 5)}})));
-        if ~lq.ok, return; end
-        expectError('live', struct('action', 'join', 'code', '000000', 'token', st));     % wrong code
-        call('live', struct('action', 'join', 'code', lq.data.code, 'token', st));
-        expectError('live', struct('action', 'start', 'token', st));                      % students do not host
-        call('live', struct('action', 'start', 'qIndex', 0));
-        s = call('live', struct('action', 'state', 'token', st));
-        if s.ok && isfield(s.data.question, 'answer')
-            failures = failures + 1;
-            fprintf('  FAIL %-18s the answer was sent before the reveal\n', 'live');
-        end
-        call('live', struct('action', 'answer', 'qIndex', 1, 'choice', 3, 'token', st));
-        expectError('live', struct('action', 'answer', 'qIndex', 1, 'choice', 1, 'token', st));  % once only
-        call('live', struct('action', 'next', 'qIndex', 1));     % the only student answered: revealed
-        call('live', struct('action', 'answer', 'qIndex', 2, 'choice', 1, 'token', st));
-        call('live', struct('action', 'host'));
-        call('live', struct('action', 'finish'));
-        call('live', struct('action', 'state', 'token', st));
-        e = call('live', struct('action', 'export'));
-        call('live', struct('action', 'history'));
-        call('live', struct('action', 'close'));
-        call('live', struct('action', 'deleteResult', 'id', lq.data.id));
-        if e.ok
-            delete(fullfile(root, 'reports', 'output', e.data.csv), fullfile(root, 'reports', 'output', e.data.xlsx));
-        end
-    end
-
-    function r = signedIn(op, params)
-        if isempty(token)
-            fprintf('  skip %-18s (needs a signed-in user)\n', op);
-            r = struct('ok', false);
-        else
-            r = call(op, params);
-        end
-    end
-
     function r = call(op, params)
-        if ~isempty(token) && ~isfield(params, 'token'), params.token = token; end
         tic;
         r = jsondecode(ilab_dispatch(jsonencode(struct('op', op, 'params', params))));
         t = toc;

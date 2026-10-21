@@ -85,9 +85,10 @@ every intermediate step on a small matrix (≤ 12×12) for the animations; each 
 `[J,levels] = quantizeImage(I,bits)`, `[display,small] = sampleImage(I,factor)`,
 `pixelDistances(p,q)`, `pixelNeighborhood(V,r,c,valueSet)`.
 
-## quizzes/
-`questionBank()`, `quizEngine(action,…)`, `leaderboardManager(action,entry)`,
-`progressManager(action,…)` (incl. daily challenges), `profileManager(action,…)` (student profiles), `classroomManager(action,…)` (teacher PIN, experiment states, class report, CSV/XLSX export), `pipelineProblems()`, `applyBlock(I,block,params)`, `degradeImage(I,steps)`.
+## games/
+`applyBlock(I,block,params)`, `degradeImage(I,steps)` — the image work of the pipeline, daily and
+challenge games. Quizzes, progress, profiles, the leaderboard and the classroom are not MATLAB code;
+they live in the Python backend (`backend/imagelab/services/`).
 
 ## experiments/ and reports/
 `experimentCatalog()`, `runExperiment(n,I)`, `generateReport(R)`, `generateReportPdf(R,file)`.

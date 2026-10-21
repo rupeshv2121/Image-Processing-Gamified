@@ -139,6 +139,14 @@ if ($python -and $matlab) {
             if ($installed) { Ok 'matlabengine installed' }
             else { Fail 'matlabengine could not be installed.' "Open a terminal as administrator in `"$($matlab.Root)\extern\engines\python`" and run: `"$venvPy`" -m pip install ." }
         }
+        # The backend itself (FastAPI, uvicorn, openpyxl)
+        if ($CheckOnly) { Warn 'would install backend\requirements.txt' }
+        else {
+            Write-Host '  installing the backend packages (backend\requirements.txt) ...'
+            & $venvPy -m pip install -r 'backend\requirements.txt' --quiet
+            if ($LASTEXITCODE -eq 0) { Ok 'backend packages installed' }
+            else { Fail 'The backend packages could not be installed.' "Run: `"$venvPy`" -m pip install -r backend\requirements.txt" }
+        }
     }
 } else { Warn 'skipped (MATLAB or Python missing)' }
 
@@ -173,6 +181,9 @@ if (Test-Path $venvPy) {
     $ok = (& $venvPy -c "import matlab.engine; print('ok')" 2>$null)
     if ($ok -eq 'ok') { Ok 'Python can import matlab.engine' }
     else { Fail 'Python cannot import matlab.engine.' 'Run setup again; if it keeps failing, install the engine from the MATLAB folder (see step 3).' }
+    $ok = (& $venvPy -c "import fastapi, uvicorn, openpyxl; print('ok')" 2>$null)
+    if ($ok -eq 'ok') { Ok 'Python can import the backend packages' }
+    else { Fail 'The backend packages are missing.' "Run: `"$venvPy`" -m pip install -r backend\requirements.txt" }
 } else { Fail '.venv is missing.' 'Run setup_imagelab.bat without -CheckOnly.' }
 
 Write-Host ''

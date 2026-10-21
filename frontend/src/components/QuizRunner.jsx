@@ -5,7 +5,7 @@ import { KernelGrid, Note } from './ui'
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 const MULT = { easy: 1, medium: 1.5, hard: 2 }
 
-// Runs a list of questions (from MATLAB questionBank.m / quizEngine.m).
+// Runs a list of questions (from the backend's question bank, services/quiz.py).
 // timePerQuestion = null disables the timer. Calls onFinish(results).
 export default function QuizRunner({ questions, timePerQuestion = 10, classroom = false, onFinish, onQuit }) {
   const [idx, setIdx] = useState(0)

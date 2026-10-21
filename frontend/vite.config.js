@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // During development (npm run dev) API calls are forwarded to the
-// MATLAB bridge server on port 8765.
+// ImageLab backend (FastAPI) on port 8765.
 export default defineConfig({
   plugins: [react()],
   server: {

@@ -1,0 +1,9 @@
+function s = ilab_describe(I)
+%ILAB_DESCRIBE Size, type and value range of a stored image (shown in every lab).
+[h, w, c] = size(I);
+if c == 3, space = 'RGB'; else, space = 'Grayscale'; end
+s = struct('width', w, 'height', h, 'channels', c, 'class', 'uint8', ...
+    'dataType', 'uint8 (8 bits per channel, 0-255)', 'colorSpace', space, ...
+    'pixels', h * w, 'memoryKB', h * w * c / 1024, ...
+    'min', round(255 * min(I(:))), 'max', round(255 * max(I(:))), 'mean', 255 * mean(I(:)));
+end

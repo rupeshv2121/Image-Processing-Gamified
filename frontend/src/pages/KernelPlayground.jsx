@@ -70,7 +70,7 @@ export default function KernelPlayground() {
   const save = async () => {
     try {
       const l = await call('saveKernel', { name: saveName || `kernel ${saved.length + 1}`, kernel: numeric() }, { label: 'Saving kernel' })
-      if (l) { setSaved(asArray(l)); notify('Kernel saved to data/kernels.mat'); setSaveName('') }
+      if (l) { setSaved(asArray(l)); notify('Kernel saved to your kernel library'); setSaveName('') }
     } catch (e) { setError(e.message) }
   }
 

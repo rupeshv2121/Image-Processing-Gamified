@@ -8,7 +8,7 @@ import LiveBuilder, { SavedSets, toDraft, toQuiz, useDraft } from './LiveBuilder
 import LiveResults, { ExportButtons, QuestionStats } from './LiveResults'
 
 // Teacher: build a live quiz, open it with a join code and run it from the
-// projector. All state, timing and scoring is in MATLAB (liveQuizManager.m);
+// projector. All state, timing and scoring is in the backend (services/live_quiz.py);
 // this page polls it every second while a quiz is open.
 
 export default function LiveHost() {
