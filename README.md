@@ -4,9 +4,9 @@
 > An interactive, MATLAB-based image processing and learning laboratory.
 
 ImageLab is an offline laboratory for an Image Processing course (Units I–IV). Load an image, apply
-spatial-domain operations (noise, filtering, histogram processing, sharpening, edge detection,
-segmentation, morphology, colour processing) and compare the results visually and numerically
-(MSE, PSNR, SSIM, execution time). Experiments, a MATLAB Code Lab, quizzes, games and a live classroom
+spatial-domain operations (noise, filtering, histogram processing, sharpening, restoration, colour
+processing, edge detection and linking, segmentation, representation and description) and compare the
+results visually and numerically (MSE, PSNR, execution time). Experiments, a MATLAB Code Lab, quizzes, games and a live classroom
 quiz reinforce the theory, and a teacher side tracks the whole class.
 
 **All image processing is written in MATLAB.** Most algorithms exist twice: the Image Processing
@@ -71,31 +71,30 @@ Sign in as the **teacher** (no PIN is set on a fresh install — set one under *
 | Lab | What you can do |
 |---|---|
 | Image Workspace | Load a sample, upload a file or **capture from the webcam**; undo / redo (Ctrl+Z / Ctrl+Y), zoom, grayscale, image information, histogram |
-| Pixels & Sampling | N4 / ND / N8 / m-adjacency, De / D4 / D8 distances, sampling, quantisation |
-| Histogram | Histogram, equalisation (toolbox + manual), CLAHE, stretching, gamma, log, negative, statistics |
-| Spatial Filters | Mean, weighted mean, Gaussian, Laplacian, Sobel, Prewitt, median, min, max, midpoint, rank, alpha-trimmed, adaptive median, adaptive local (Wiener) — **toolbox vs manual, side by side** |
+| Pixels & Sampling | N4 / ND / N8 / m-adjacency, De / D4 / D8 distances, sampling, quantisation; **visual perception** (Mach bands, simultaneous contrast, Weber ratio) and the **electromagnetic spectrum** |
+| Histogram | Histogram, equalisation (toolbox + manual), histogram matching, stretching, piecewise-linear, gray-level slicing, bit-plane slicing, gamma, log, negative, statistics |
+| Spatial Filters | Mean, weighted mean, Gaussian, Laplacian, Sobel, Prewitt, median, min, max, midpoint, rank, alpha-trimmed, geometric, harmonic, contraharmonic, adaptive median, adaptive local (Wiener) — **toolbox vs manual, side by side** |
 | Correlation & Convolution | Step-by-step kernel movement, products and sums, kernel flipping, checked against `filter2` / `conv2` |
 | Kernel Playground | Editable 3×3 / 5×5 / 7×7 kernels, presets, live update, a saved kernel library |
 | Sharpening | Laplacian, Sobel, Prewitt, unsharp masking, high-boost |
-| Noise | Gaussian, salt & pepper, speckle, Poisson; MSE / PSNR / SSIM; restore with adaptive median, adaptive local, median and mean |
-| Filter Comparison | Several filters on the same noisy image; metrics table and MATLAB `bar` charts |
-| Edge Detection | Roberts, Prewitt, Sobel, LoG, Canny; manual gradient images; edge count, density and time |
+| Noise | Gaussian, salt & pepper, Rayleigh, Erlang, exponential, uniform; the noise PDF of each model; MSE / PSNR; restore with adaptive median, adaptive local, median, mean, geometric, harmonic and contraharmonic filters |
+| Restoration | Linear, position-invariant degradations: motion, turbulence, out-of-focus and box PSFs plus noise; inverse, Wiener, constrained least squares and Richardson–Lucy restoration, solved in the spatial domain; PSNR per iteration |
+| Edge Detection | Roberts, Prewitt, Sobel, LoG, Canny; manual gradient images; edge count, density and time; **edge linking** with the Hough transform and by local processing |
 | Segmentation | Global (live slider), iterative, Otsu, adaptive, point & line detection, region growing, split & merge, region properties |
-| Morphology | Erosion, dilation, opening, closing, boundary extraction, hole filling; clickable structuring-element editor; binary and grayscale; fast vs manual loops; change map |
-| Region Analysis | Connected components (4 / 8-connectivity), Freeman chain codes, first difference, shape number, area, perimeter, centroid, circularity |
-| Colour | RGB, HSV, YCbCr, L\*a\*b\* channels; per-channel enhancement |
+| Region Analysis | Freeman chain codes, first difference, shape number, area, perimeter, centroid, circularity; signature, polygonal approximation, skeleton, Fourier descriptors, Hu moments, texture |
+| Colour | RGB, CMY(K), HSV, HSI channels; per-channel enhancement; pseudocolour (intensity slicing, grey-to-colour transformation) |
 
 Every lab shows input and result **side by side, with a before/after slider or as an error heat map**
-(|result − input| with PSNR / SSIM), and a pixel inspector (value + 3×3 neighbourhood) on every image.
+(|result − input| with MSE / PSNR), and a pixel inspector (value + 3×3 neighbourhood) on every image.
 
 ### Learning
 
 | Area | What you can do |
 |---|---|
-| Learn | 22 theory topics following the syllabus, each linked to a lab |
-| Animations | Step-by-step playback of the median filter, histogram equalisation, erosion & dilation and region growing — every step computed by MATLAB |
+| Learn | 24 theory topics following the syllabus, each linked to a lab |
+| Animations | Step-by-step playback of the median filter, histogram equalisation and region growing — every step computed by MATLAB |
 | Experiments | 13 experiments with aim, theory, algorithm, MATLAB code (toolbox and manual), run, observation, conclusion and quiz |
-| Code Lab | A **MATLAB editor in the browser** (syntax highlighting, Ctrl+Enter to run): MATLAB runs the code and returns the Command Window, figures and the workspace. 11 graded tasks (negative, gamma, contrast stretch, histogram, equalisation, mean / median filters with loops, Laplacian, Sobel, Otsu, erosion) with hints, a "write it yourself" function blacklist, automatic checking against MATLAB's reference result and a model solution after solving |
+| Code Lab | A **MATLAB editor in the browser** (syntax highlighting, Ctrl+Enter to run): MATLAB runs the code and returns the Command Window, figures and the workspace. 10 graded tasks (negative, gamma, contrast stretch, histogram, equalisation, mean / median filters with loops, Laplacian, Sobel, Otsu) with hints, a "write it yourself" function blacklist, automatic checking against MATLAB's reference result and a model solution after solving |
 | Reports | A4 PDF (base MATLAB), HTML, and DOCX when MATLAB Report Generator is installed |
 
 ### Quizzes and games
@@ -156,10 +155,10 @@ session token, never from what the browser claims) and whether they may do it. T
 
 | Part | Folder | Responsibility |
 |---|---|---|
-| Algorithms | `algorithms/ noise/ histogram/ metrics/ segmentation/ color/ fundamentals/ morphology/ steps/` | Pure MATLAB functions: image in, image out. Usable from the command line, the tests and the Live Script |
+| Algorithms | `algorithms/ noise/ histogram/ metrics/ restoration/ segmentation/ color/ fundamentals/ steps/` | Pure MATLAB functions: image in, image out. Usable from the command line, the tests and the Live Script |
 | Core helpers | `core/` | Type conversion, padding, neighbourhood stacks, fast / loop filtering, toolbox detection (`hasIPT`) |
 | MATLAB content | `experiments/ codelab/ games/ reports/` | Experiment catalogue and runner, Code Lab tasks with their graders, image degradations for the games, report generator |
-| MATLAB API | `api/` | `ilab_dispatch.m` and one handler per area (`imageOps`, `filterOps`, `analysisOps`, `gameOps`, `codeLabOps`, `experimentOps`); the image store `ilab_store.m` |
+| MATLAB API | `api/` | `ilab_dispatch.m` and one handler per area (`imageOps`, `filterOps`, `analysisOps`, `restorationOps`, `gameOps`, `codeLabOps`, `experimentOps`); the image store `ilab_store.m` |
 | Backend | `backend/imagelab/` | `web/` HTTP routes · `rpc/` operation registry, access rules, result cache, XP rules · `services/` application logic · `storage/` SQLite repositories · `matlab.py` the only module that talks to MATLAB · `container.py` wires everything together |
 | User interface | `frontend/` | React 18 + Vite, one page per lab |
 
@@ -169,7 +168,7 @@ session token, never from what the browser claims) and whether they may do it. T
 `medianFilter`, `histogramEqualization`, `edgeDetect` and `filter2D` call the toolbox when it is
 available and fall back to equivalent base-MATLAB code otherwise, so **every lab works on a plain MATLAB
 installation**. The `*Manual` functions (`meanFilterManual`, `medianFilterManual`, `manualCorrelation`,
-`sobelManual`, `claheManual`, `cannyManual` …) always use explicit loops for teaching.
+`sobelManual`, `cannyManual` …) always use explicit loops for teaching.
 
 ### Life of an uploaded image
 
@@ -348,8 +347,9 @@ POST /api/run
 
 **Operations answered by MATLAB:** `ping`, `samples`, `loadSample`, `imageInfo`, `grayscale`,
 `histogramOf`, `errorMap`, `noise`, `filter`, `gaussianKernel`, `kernelPreset`, `applyKernel`,
-`correlation`, `histogram`, `sharpen`, `edges`, `segment`, `structuringElement`, `morphology`, `regions`,
-`color`, `colorEnhance`, `neighborhood`, `sampling`, `quantize`, `steps`, `compare`, `guessFilter`,
+`correlation`, `histogram`, `bitPlanes`, `sharpen`, `edges`, `edgeLink`, `segment`, `regions`, `describeRegion`,
+`color`, `colorEnhance`, `pseudocolor`, `lpiDegrade`, `deconvolve`, `perception`, `spectrum`, `neighborhood`,
+`sampling`, `quantize`, `steps`, `guessFilter`,
 `codeWarmup`, `codeTaskStart`, `report`.
 
 **Operations answered by the backend** (some call MATLAB for the image part): `auth`, `profiles`,
@@ -457,14 +457,16 @@ ImageLab/
 │
 ├── algorithms/    filters (mean … alpha-trimmed, adaptive), correlation, convolution, Laplacian, Sobel,
 │                  Prewitt, Roberts, LoG, Canny, unsharp mask, high-boost …
-├── noise/         Gaussian, salt & pepper, speckle, Poisson
-├── histogram/     imhist, equalisation, CLAHE, stretching, gamma, log, negative, statistics
-├── metrics/       MSE, PSNR, SSIM, error heat map
-├── segmentation/  thresholds (global, iterative, Otsu, adaptive), point & line detection, region growing,
-│                  split & merge, labelling, boundaries, region properties, chain codes
-├── morphology/    structuring elements, erosion, dilation, opening, closing, boundary, hole filling
-├── color/         channels, RGB↔YCbCr, RGB↔Lab, enhancement
-├── fundamentals/  sampling, quantisation, neighbourhoods, distances
+├── noise/         Gaussian, salt & pepper, Rayleigh, Erlang, exponential, uniform
+├── histogram/     imhist, equalisation, matching, stretching, piecewise-linear, slicing, bit planes,
+│                  gamma, log, negative, statistics (clahe.m is used only by the Pipeline game)
+├── metrics/       MSE, PSNR, error heat map (calculateSSIM.m is used only for game scores)
+├── restoration/   blur PSFs, LPI degradation, inverse / Wiener / CLS / Richardson–Lucy restoration
+├── segmentation/  thresholds (global, iterative, Otsu, adaptive), point & line detection, Hough
+│                  transform, local edge linking, region growing, split & merge, boundaries, chain codes,
+│                  signatures, polygons, skeleton, Fourier descriptors, moments, texture
+├── color/         channels, RGB↔HSI, CMY(K), enhancement, pseudocolour
+├── fundamentals/  sampling, quantisation, neighbourhoods, distances, perception demos, spectrum
 ├── steps/         step-by-step data for the animations
 ├── core/          toDouble, toGray, padImage, filter2D, neighborhoodStack, resizeImage, hasIPT …
 ├── games/         degradeImage, applyBlock (image work of the games)

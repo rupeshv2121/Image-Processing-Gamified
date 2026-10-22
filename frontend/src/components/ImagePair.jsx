@@ -79,7 +79,6 @@ export function ErrorMapView({ id, refId, height = 420, title = '|Result − Inp
           <>
             <Metrics items={[
               { label: 'PSNR', value: fmtPsnr(res.psnr) },
-              { label: 'SSIM', value: res.ssim },
               { label: 'MSE', value: res.mse },
               { label: 'Mean |error|', value: `${fmt(res.meanAbs, 2)} lv` },
               { label: 'Max |error|', value: `${fmt(res.maxError, 1)} lv` },

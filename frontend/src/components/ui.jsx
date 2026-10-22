@@ -326,10 +326,12 @@ export function KernelGrid({ matrix, editable, onChange, highlight, small, title
   )
 }
 
-export function Histogram({ counts, color = '#1f5aa6', height = 140, title, mapping }) {
+export function Histogram({ counts, color = '#1f5aa6', height = 140, title, mapping, target }) {
   const data = asArray(counts)
   if (!data.length) return null
   const max = Math.max(...data, 1)
+  const goal = asArray(target)
+  const goalMax = Math.max(...goal, 1e-9)
   return (
     <div className="histogram">
       {title && <div className="chart-title">{title}</div>}
@@ -345,8 +347,55 @@ export function Histogram({ counts, color = '#1f5aa6', height = 140, title, mapp
             points={asArray(mapping).map((m, i) => `${i},${height - (m / 255) * (height - 4)}`).join(' ')}
           />
         )}
+        {goal.length > 0 && (
+          <polyline
+            fill="none" stroke="#22a565" strokeWidth="2" strokeDasharray="4 3" vectorEffect="non-scaling-stroke"
+            points={goal.map((g, i) => `${i},${height - (g / goalMax) * (height - 4)}`).join(' ')}
+          />
+        )}
       </svg>
       <div className="axis"><span>0</span><span>128</span><span>255</span></div>
+    </div>
+  )
+}
+
+// Line plot of one or more series over the same x values
+//   series: [{ values, color, label, dashed }]   x: [first, last] axis labels
+export function LineChart({ series, x = ['', ''], title, height = 160, yMin, yMax, markers }) {
+  const all = series.flatMap((s) => asArray(s.values)).filter((v) => v != null && isFinite(v))
+  if (!all.length) return null
+  const lo = yMin ?? Math.min(...all)
+  const hi = yMax ?? Math.max(...all)
+  const span = hi - lo || 1
+  const W = 400
+  const px = (i, n) => (n > 1 ? (i / (n - 1)) * W : W / 2)
+  const py = (v) => height - 4 - ((v - lo) / span) * (height - 8)
+  return (
+    <div className="histogram">
+      {title && <div className="chart-title">{title}</div>}
+      <svg viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" style={{ height }}>
+        <rect x="0" y="0" width={W} height={height} fill="var(--chart-bg)" />
+        {asArray(markers).map((m, i) => (
+          <line key={i} x1={px(m, asArray(series[0].values).length)} x2={px(m, asArray(series[0].values).length)} y1="0" y2={height}
+            stroke="var(--line, #888)" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+        ))}
+        {series.map((s, k) => {
+          const vals = asArray(s.values)
+          return (
+            <polyline key={k} fill="none" stroke={s.color || '#1f5aa6'} strokeWidth="2" vectorEffect="non-scaling-stroke"
+              strokeDasharray={s.dashed ? '5 4' : undefined}
+              points={vals.map((v, i) => `${px(i, vals.length)},${py(v ?? lo)}`).join(' ')} />
+          )
+        })}
+      </svg>
+      <div className="axis"><span>{x[0]}</span><span>{fmt(lo, 2)} … {fmt(hi, 2)}</span><span>{x[1]}</span></div>
+      {series.some((s) => s.label) && (
+        <div className="row small muted" style={{ gap: 14, marginTop: 4, flexWrap: 'wrap' }}>
+          {series.filter((s) => s.label).map((s) => (
+            <span key={s.label}><span className="swatch" style={{ background: s.color || '#1f5aa6' }} />{s.label}</span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

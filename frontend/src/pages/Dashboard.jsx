@@ -39,7 +39,6 @@ export default function Dashboard() {
     <div className="page">
       <section className="welcome">
         <div>
-          <div className="eyebrow" style={{ color: 'var(--green-400)' }}>Mission control</div>
           <h1>{doneCount ? `Welcome back, ${profile?.name?.split(' ')[0] || 'to the lab'}` : `Welcome to ImageLab${profile ? `, ${profile.name.split(' ')[0]}` : ''}`}</h1>
           <p>
             {doneCount === all.length
@@ -124,8 +123,8 @@ export default function Dashboard() {
               ['image', 'Load an image', '#workspace'],
               ['zap', 'Rapid Fire Quiz', '#quiz'],
               ['target', 'Practise weak topics', '#quiz?game=weak'],
-              ['morph', 'Morphology Lab', '#morphology'],
-              ['compare', 'Compare filters', '#compare'],
+              ['sparkles', 'Restoration Lab', '#restoration'],
+              ['edges', 'Link edges (Hough)', '#edges'],
               ['file', 'Run an experiment', '#experiments'],
             ].map(([ic, t, href]) => (
               <a key={t} className="tile" href={href} style={{ padding: 18 }}>

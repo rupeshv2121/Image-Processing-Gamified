@@ -2,7 +2,7 @@ function J = colorEnhance(I, space, channel, operation, amount)
 %COLORENHANCE Enhance a single channel of a colour model and convert back.
 %   J = colorEnhance(I, space, channel, operation, amount)
 %
-%   space     : 'rgb' | 'hsv' | 'ycbcr' | 'lab'
+%   space     : 'rgb' | 'hsv' | 'hsi' | 'cmy'
 %   channel   : 1, 2 or 3
 %   operation : 'gain'     multiply the channel by amount (e.g. S x 1.5 = more vivid)
 %               'equalize' histogram-equalise the channel
@@ -24,10 +24,8 @@ end
 switch lower(space)
     case 'rgb',   C = I;
     case 'hsv',   C = rgb2hsv(I);
-    case 'ycbcr', C = rgbToYCbCr(I);
-    case 'lab'
-        Lab = rgbToLab(I);
-        C = cat(3, Lab(:,:,1) / 100, (Lab(:,:,2) + 128) / 255, (Lab(:,:,3) + 128) / 255);
+    case 'hsi',   C = rgbToHsi(I);
+    case 'cmy',   C = 1 - I;
     otherwise
         error('ImageLab:invalidParameter', 'Unknown colour space "%s".', space);
 end
@@ -35,11 +33,7 @@ end
 X = C(:,:,channel);
 switch lower(operation)
     case 'gain'
-        if any(strcmpi(space, {'ycbcr', 'lab'})) && channel > 1
-            X = 0.5 + (X - 0.5) * amount;   % chroma channels are centred at 0.5
-        else
-            X = X * amount;
-        end
+        X = X * amount;
     case 'equalize'
         X = histogramEqualizationManual(X);
     case 'gamma'
@@ -47,7 +41,7 @@ switch lower(operation)
     otherwise
         error('ImageLab:invalidParameter', 'Unknown operation "%s".', operation);
 end
-if strcmpi(space, 'hsv') && channel == 1
+if any(strcmpi(space, {'hsv', 'hsi'})) && channel == 1
     X = mod(X, 1);                           % hue is circular
 end
 C(:,:,channel) = min(max(X, 0), 1);
@@ -56,9 +50,8 @@ C(:,:,channel) = min(max(X, 0), 1);
 switch lower(space)
     case 'rgb',   J = C;
     case 'hsv',   J = hsv2rgb(C);
-    case 'ycbcr', J = yCbCrToRgb(C);
-    case 'lab'
-        J = labToRgb(cat(3, C(:,:,1) * 100, C(:,:,2) * 255 - 128, C(:,:,3) * 255 - 128));
+    case 'hsi',   J = hsiToRgb(C);
+    case 'cmy',   J = 1 - C;
 end
 J = min(max(J, 0), 1);
 end

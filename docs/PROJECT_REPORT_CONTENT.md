@@ -10,13 +10,14 @@ project presents **ImageLab**, an interactive laboratory in which the most impor
 enhancement techniques are implemented in MATLAB and can be explored visually. ImageLab includes
 linear smoothing filters (mean, weighted mean, Gaussian), non-linear order-statistic filters (median,
 minimum, maximum, midpoint, rank and alpha-trimmed mean), sharpening filters (Laplacian, Sobel,
-Prewitt, unsharp masking, high-boost) and histogram processing (equalisation, CLAHE, contrast
-stretching, gamma and log transforms). Supporting modules cover noise models, correlation and
-convolution, edge detection, segmentation and colour processing.
+Prewitt, unsharp masking, high-boost) and histogram processing (equalisation, matching, contrast
+stretching, gamma and log transforms). Supporting modules cover noise models and restoration of
+blurred images, correlation and convolution, edge detection and linking, segmentation, region
+description and colour processing.
 
 Every major algorithm is implemented twice: with the MATLAB Image Processing Toolbox, and manually with
 loops and matrix operations. Unit tests verify that both versions produce identical results. Filters are
-compared quantitatively with MSE, PSNR, SSIM and processing time. For example, on salt-and-pepper
+compared quantitatively with MSE, PSNR and processing time. For example, on salt-and-pepper
 noise the 3×3 median filter clearly outperforms the mean filter, while averaging filters perform best
 on Gaussian noise. An experiment module, quizzes and report generation make the tool suitable for
 teaching.
@@ -53,10 +54,10 @@ for *which* degradation. The project therefore aims to build an interactive MATL
 ## 3. Objectives
 
 1. Implement linear and non-linear spatial filters in MATLAB, each in a toolbox and a manual version.
-2. Model common noise types (Gaussian, salt & pepper, speckle, Poisson) and measure the restoration
-   quality with MSE, PSNR and SSIM.
+2. Model common noise types (Gaussian, salt & pepper, Rayleigh, Erlang, exponential, uniform) and
+   measure the restoration quality with MSE and PSNR.
 3. Demonstrate correlation, convolution and the role of kernel flipping step by step.
-4. Implement histogram processing: histogram, equalisation, CLAHE, contrast stretching, gamma and log.
+4. Implement histogram processing: histogram, equalisation, matching, contrast stretching, gamma and log.
 5. Implement sharpening, edge detection, thresholding/segmentation and colour enhancement.
 6. Provide an interactive interface, 13 experiments, a quiz system and automatic report generation.
 7. Verify the implementations with automated unit tests.
@@ -66,7 +67,7 @@ for *which* degradation. The project therefore aims to build an interactive MATL
 1. **Image acquisition** — images are read with `imread` and converted to double in [0, 1].
 2. **Degradation** — noise is added with `imnoise` or the equivalent manual models.
 3. **Enhancement / restoration** — the selected spatial filter or intensity transformation is applied.
-4. **Evaluation** — the result is compared with the clean original using MSE, PSNR and SSIM, and the
+4. **Evaluation** — the result is compared with the clean original using MSE and PSNR, and the
    processing time is measured.
 5. **Comparison** — several filters are run on the same degraded image and ranked (tables and bar charts).
 6. **Verification** — manual implementations are checked against MATLAB built-ins (`conv2`, `filter2`,
@@ -94,8 +95,8 @@ or alpha-trimmed mean is taken. The median removes impulse noise because the ext
 placed at the ends of the sorted window and are never selected.
 
 ### 5.4 Histogram processing
-Equalisation: s_k = (L−1) Σ_{j≤k} p(r_j). CLAHE equalises tiles, clips each tile histogram at a limit and
-interpolates bilinearly between tiles. Contrast stretching, gamma (s = c·r^γ) and log (s = c·log(1+r))
+Equalisation: s_k = (L−1) Σ_{j≤k} p(r_j). Histogram matching maps the image to a desired histogram,
+z = G⁻¹(T(r)). Contrast stretching, gamma (s = c·r^γ) and log (s = c·log(1+r))
 transformations are also implemented.
 
 ### 5.5 Sharpening
@@ -106,11 +107,12 @@ Prewitt magnitude.
 ### 5.6 Edge detection and segmentation
 Edges are found with Roberts, Prewitt and Sobel gradients, the LoG (zero crossings) and Canny (smoothing,
 gradient, non-maximum suppression, hysteresis). Segmentation is done with global, iterative, Otsu and
-adaptive thresholding, point and line detection, region growing, split-and-merge, connected-component
-labelling and region properties.
+adaptive thresholding, point and line detection, region growing, split-and-merge and region
+properties. Edges are linked with the Hough transform, and regions are described by chain codes,
+signatures, polygons, skeletons, Fourier descriptors, moments and texture.
 
 ### 5.7 Quality metrics
-MSE = (1/MN) Σ (f − g)²; PSNR = 10 log₁₀(MAX²/MSE); SSIM compares local luminance, contrast and structure.
+MSE = (1/MN) Σ (f − g)²; PSNR = 10 log₁₀(MAX²/MSE).
 
 ## 6. Implementation
 
@@ -118,8 +120,8 @@ MSE = (1/MN) Σ (f − g)²; PSNR = 10 log₁₀(MAX²/MSE); SSIM compares local
   implementations are used automatically.
 * **Manual implementations:** `meanFilterManual`, `medianFilterManual`, `orderStatisticFilterManual`,
   `gaussianKernel`, `manualCorrelation`, `manualConvolution`, `laplacianKernel`, `sobelManual`,
-  `prewittManual`, `robertsManual`, `cannyManual`, `histogramEqualizationManual`, `claheManual`,
-  `otsuThreshold`, `regionGrowing`, `labelComponents`, `splitAndMerge`, `rgbToYCbCr`, `rgbToLab` and others.
+  `prewittManual`, `robertsManual`, `cannyManual`, `histogramEqualizationManual`, `histogramMatching`,
+  `otsuThreshold`, `regionGrowing`, `splitAndMerge`, `houghTransform`, `deconvolveImage`, `rgbToHsi` and others.
 * **Example (median filter, manual):**
 ```matlab
 for i = 1:rows
@@ -140,30 +142,30 @@ end
 ## 7. Results
 
 Measured in MATLAB R2026a on peppers.png (512×384, RGB), random seed 7, 3×3 filters (Gaussian 5×5,
-σ = 1). The Filter Comparison lab and Experiments 3–6 and 10 reproduce these tables.
+σ = 1). Experiments 3–6 and 10 reproduce these tables.
 
 **Table 1 – Salt & pepper noise (density 0.05)**
 
-| Filter | Type | PSNR (dB) | SSIM | Observation |
-|---|---|---|---|---|
-| Noisy image | — | 17.77 | 0.310 | many black/white dots |
-| Mean | linear | 26.33 | 0.593 | dots smeared into grey blobs |
-| Gaussian | linear | 27.22 | 0.651 | softer blur, dots still visible |
-| **Median** | non-linear | **37.81** | **0.961** | dots removed, edges sharp |
-| Min | non-linear | 14.67 | 0.319 | removes salt, enlarges pepper |
-| Max | non-linear | 9.75 | 0.189 | removes pepper, enlarges salt |
-| Midpoint | non-linear | 15.28 | 0.183 | the extremes *are* the noise → fails |
+| Filter | Type | PSNR (dB) | Observation |
+|---|---|---|---|
+| Noisy image | — | 17.77 | many black/white dots |
+| Mean | linear | 26.33 | dots smeared into grey blobs |
+| Gaussian | linear | 27.22 | softer blur, dots still visible |
+| **Median** | non-linear | **37.81** | dots removed, edges sharp |
+| Min | non-linear | 14.67 | removes salt, enlarges pepper |
+| Max | non-linear | 9.75 | removes pepper, enlarges salt |
+| Midpoint | non-linear | 15.28 | the extremes *are* the noise → fails |
 
 **Table 2 – Gaussian noise (variance 0.01)**
 
-| Filter | PSNR (dB) | SSIM |
-|---|---|---|
-| Noisy image | 20.48 | 0.228 |
-| Mean | 28.65 | 0.643 |
-| **Gaussian** | **29.39** | **0.705** |
-| Median | 27.37 | 0.558 |
-| Midpoint | 25.85 | 0.537 |
-| Min / Max | 16.40 / 15.71 | 0.292 / 0.368 |
+| Filter | PSNR (dB) |
+|---|---|
+| Noisy image | 20.48 |
+| Mean | 28.65 |
+| **Gaussian** | **29.39** |
+| Median | 27.37 |
+| Midpoint | 25.85 |
+| Min / Max | 16.40 / 15.71 |
 
 **Other results**
 * Manual and toolbox implementations differ by 0 (identical results). On a 512×384 grayscale image
@@ -176,8 +178,8 @@ Measured in MATLAB R2026a on peppers.png (512×384, RGB), random seed 7, 3×3 fi
 
 ## 8. Applications
 
-* Medical imaging: denoising X-ray, CT and ultrasound (speckle) images; contrast enhancement.
-* Photography and smartphones: noise reduction, sharpening, local contrast (CLAHE-like) enhancement.
+* Medical imaging: denoising X-ray, CT and ultrasound images; contrast enhancement.
+* Photography and smartphones: noise reduction, sharpening, deblurring of camera shake.
 * Remote sensing: contrast stretching of satellite images; edge-based feature extraction.
 * Industrial inspection: thresholding and edge detection to find defects.
 * Document processing: binarisation with adaptive thresholds.
@@ -186,9 +188,9 @@ Measured in MATLAB R2026a on peppers.png (512×384, RGB), random seed 7, 3×3 fi
 ## 9. Future Scope
 
 * Frequency-domain filtering (deliberately excluded here) for comparison with spatial methods.
-* Adaptive and edge-preserving filters: adaptive median, bilateral, non-local means.
-* Restoration of blur: Wiener and constrained least-squares filtering.
-* Morphological processing and advanced segmentation (watershed, active contours).
+* Edge-preserving filters: bilateral, non-local means.
+* Blind deconvolution (restoring a blur whose PSF is unknown).
+* Advanced segmentation (watershed, active contours).
 * Real-time camera input and multi-user (networked) classroom quizzes.
 * Deep-learning denoisers compared with classical filters.
 

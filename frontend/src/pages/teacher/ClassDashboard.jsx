@@ -10,7 +10,7 @@ const DEMO_FLOW = [
   ['workspace', 'Load peppers.png and show the image information'],
   ['noise', 'Add salt & pepper noise and send it to the workspace'],
   ['filters', 'Apply the mean, median and Gaussian filters'],
-  ['compare', 'Compare the filters (PSNR / SSIM / time)'],
+  ['restoration', 'Restoration Lab: undo a motion blur'],
   ['learn', 'Explain linear vs non-linear filters'],
   ['histogram', 'Show the histogram and equalise it'],
   ['correlation', 'Correlation: the kernel moving step by step'],

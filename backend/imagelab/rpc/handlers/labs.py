@@ -9,11 +9,13 @@ from ...utils import param
 from ..registry import Call, Registry
 
 # Deterministic: cached by (op, parameters) - see rpc/cache.py
-CACHEABLE = ("filter", "histogram", "sharpen", "edges", "segment", "morphology", "regions", "errorMap",
-             "applyKernel", "color", "colorEnhance", "histogramOf")
+CACHEABLE = ("filter", "histogram", "sharpen", "edges", "segment", "regions", "errorMap",
+             "applyKernel", "color", "colorEnhance", "histogramOf", "bitPlanes", "edgeLink", "describeRegion",
+             "pseudocolor", "deconvolve", "perception", "spectrum")
 # Random (noise, sampling of options) or cheap - always computed
 COMPUTED = ("samples", "loadSample", "imageInfo", "grayscale", "noise", "gaussianKernel", "correlation", "steps",
-            "kernelPreset", "structuringElement", "neighborhood", "sampling", "quantize", "compare", "guessFilter")
+            "kernelPreset", "neighborhood", "sampling", "quantize", "guessFilter",
+            "lpiDegrade")
 
 FUNCTION_NAME = re.compile(r"^[A-Za-z]\w*$")
 

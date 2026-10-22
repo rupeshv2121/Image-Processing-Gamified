@@ -184,14 +184,6 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyEqual(var(J(:)), 0.01, 'RelTol', 0.1);
         end
 
-        function speckleAndPoissonRanges(tc)
-            J = addSpeckleNoise(tc.Img, 0.04);
-            P = addPoissonNoise(tc.Img);
-            tc.verifyTrue(all(J(:) >= 0 & J(:) <= 1));
-            tc.verifyTrue(all(P(:) >= 0 & P(:) <= 1));
-            tc.verifyEqual(mean(P(:)), mean(tc.Img(:)), 'AbsTol', 0.02);
-        end
-
         % -------------------------------------------------- metrics
         function mseKnownValue(tc)
             tc.verifyEqual(calculateMSE(zeros(4), 0.5 * ones(4)), 0.25, 'AbsTol', 1e-12);
@@ -288,10 +280,11 @@ classdef ImageLabTests < matlab.unittest.TestCase
         % -------------------------------------------------- colour
         function colourRoundTrips(tc)
             I = tc.ImgRGB;
-            tc.verifyEqual(yCbCrToRgb(rgbToYCbCr(I)), I, 'AbsTol', 1e-9);
-            tc.verifyEqual(labToRgb(rgbToLab(I)), I, 'AbsTol', 1e-6);
-            Lab = rgbToLab(ones(1, 1, 3));
-            tc.verifyEqual(squeeze(Lab)', [100 0 0], 'AbsTol', 1e-3);   % white
+            tc.verifyEqual(hsv2rgb(rgb2hsv(I)), I, 'AbsTol', 1e-9);
+            tc.verifyEqual(1 - (1 - I), I, 'AbsTol', 1e-12);              % CMY
+            [ch, names] = colorChannels(I, 'hsv');
+            tc.verifyNumElements(ch, 3);
+            tc.verifyError(@() colorChannels(I, 'ycbcr'), 'ImageLab:invalidParameter');
         end
 
         % -------------------------------------------------- fundamentals
@@ -310,66 +303,6 @@ classdef ImageLabTests < matlab.unittest.TestCase
             info = pixelNeighborhood(V, 2, 2, 1);
             tc.verifyEqual(size(info.adjacent8, 1), 3);    % (1,2) (1,3) (3,3)
             tc.verifyEqual(size(info.adjacentM, 1), 2);    % (1,3) dropped, (3,3) kept
-        end
-
-        % -------------------------------------------------- morphology
-        function structuringElementShapes(tc)
-            tc.verifyEqual(structuringElement('square', 3), true(3));
-            tc.verifyEqual(structuringElement('cross', 3), logical([0 1 0; 1 1 1; 0 1 0]));
-            tc.verifyEqual(structuringElement('diamond', 5), logical([0 0 1 0 0; 0 1 1 1 0; 1 1 1 1 1; 0 1 1 1 0; 0 0 1 0 0]));
-            tc.verifyEqual(structuringElement('disk', 5), logical([0 1 1 1 0; 1 1 1 1 1; 1 1 1 1 1; 1 1 1 1 1; 0 1 1 1 0]));
-            tc.verifyEqual(structuringElement('hline', 3), logical([0 0 0; 1 1 1; 0 0 0]));
-            tc.verifyError(@() validateSE(zeros(3)), 'ImageLab:invalidSE');
-            tc.verifyError(@() validateSE(ones(2)), 'ImageLab:invalidSE');
-        end
-
-        function erodeDilateMatchManual(tc)
-            SE = logical([0 1 0; 1 1 1; 0 1 1]);           % asymmetric on purpose
-            BW = tc.Img > 0.6;
-            tc.verifyEqual(erodeImage(BW, SE), morphologyManual(BW, SE, 'erode'));
-            tc.verifyEqual(dilateImage(BW, SE), morphologyManual(BW, SE, 'dilate'));
-            tc.verifyEqual(erodeImage(tc.Img, SE), morphologyManual(tc.Img, SE, 'erode'), 'AbsTol', 1e-12);
-            tc.verifyEqual(dilateImage(tc.ImgRGB, SE), morphologyManual(tc.ImgRGB, SE, 'dilate'), 'AbsTol', 1e-12);
-            tc.verifyClass(erodeImage(BW, SE), 'logical');
-        end
-
-        function grayErosionIsMinFilter(tc)
-            E = erodeImage(tc.Img, true(3));
-            M = minFilter(tc.Img, 3);                       % borders are padded differently
-            tc.verifyEqual(E(2:end-1, 2:end-1), M(2:end-1, 2:end-1), 'AbsTol', 1e-12);
-        end
-
-        function erosionDilationDuality(tc)
-            SE = structuringElement('disk', 5);
-            BW = tc.Img > 0.55;
-            tc.verifyEqual(erodeImage(BW, SE), ~dilateImage(~BW, SE));
-        end
-
-        function openingAndClosingAreIdempotent(tc)
-            SE = structuringElement('square', 3);
-            BW = tc.Img > 0.55;
-            O = openImage(BW, SE);
-            C = closeImage(BW, SE);
-            tc.verifyEqual(openImage(O, SE), O);
-            tc.verifyEqual(closeImage(C, SE), C);
-            tc.verifyTrue(all(O(:) <= BW(:)));              % opening is anti-extensive
-            tc.verifyTrue(all(C(:) >= BW(:)));              % closing is extensive
-        end
-
-        function boundaryOfSquare(tc)
-            BW = false(9); BW(3:7, 3:7) = true;
-            B = morphBoundary(BW, true(3));
-            tc.verifyEqual(nnz(B), 16);
-            tc.verifyFalse(B(5, 5));
-        end
-
-        function fillHolesFillsOnlyEnclosedBackground(tc)
-            BW = false(12); BW(2:8, 2:8) = true; BW(4:6, 4:6) = false;   % ring with a 3x3 hole
-            BW(10:12, 10:12) = true; BW(11:12, 12) = false;              % notch open to the border
-            [F, holes] = fillHoles(BW);
-            tc.verifyEqual(nnz(holes), 9);
-            tc.verifyTrue(all(F(4:6, 4:6), 'all'));
-            tc.verifyFalse(F(12, 12));
         end
 
         % -------------------------------------------------- representation
@@ -418,6 +351,236 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyLessThan(calculateMSE(adaptiveLocalFilter(N, 5), tc.Img), calculateMSE(N, tc.Img));
         end
 
+        function noiseModelMoments(tc)
+            % sample mean / variance of each PDF against the formula
+            % (noise added to a mid-grey image far from the clipping limits)
+            rng(3);
+            I = 0.3 * ones(400);
+            z = addRayleighNoise(I, 0, 0.01) - 0.3;
+            tc.verifyEqual(mean(z(:)), sqrt(pi * 0.01 / 4), 'AbsTol', 2e-3);
+            tc.verifyEqual(var(z(:)), 0.01 * (4 - pi) / 4, 'RelTol', 0.05);
+            z = addErlangNoise(I, 20, 2) - 0.3;
+            tc.verifyEqual(mean(z(:)), 2 / 20, 'AbsTol', 2e-3);
+            tc.verifyEqual(var(z(:)), 2 / 400, 'RelTol', 0.05);
+            z = addExponentialNoise(I, 20) - 0.3;
+            tc.verifyEqual(mean(z(:)), 1 / 20, 'AbsTol', 2e-3);
+            z = addUniformNoise(I, -0.1, 0.1) - 0.3;
+            tc.verifyEqual(mean(z(:)), 0, 'AbsTol', 2e-3);
+            tc.verifyEqual(var(z(:)), 0.2^2 / 12, 'RelTol', 0.05);
+            tc.verifyGreaterThanOrEqual(min(z(:)), -0.1 - 1e-12);
+            tc.verifyEqual(size(addNoise(tc.ImgRGB, 'erlang', struct('a', 10, 'b', 3))), size(tc.ImgRGB));
+            tc.verifyError(@() addNoise(I, 'pink'), 'ImageLab:invalidParameter');
+        end
+
+        function meanFiltersMatchDefinitions(tc)
+            I = 0.1 + 0.8 * tc.Img / max(tc.Img(:));
+            W = neighborhoodStack(I, 3, 3, 'replicate');
+            tc.verifyEqual(geometricMeanFilter(I, 3), prod(W, 3) .^ (1/9), 'AbsTol', 1e-10);
+            tc.verifyEqual(harmonicMeanFilter(I, 3), 9 ./ sum(1 ./ W, 3), 'AbsTol', 1e-10);
+            tc.verifyEqual(contraharmonicMeanFilter(I, 3, 1.5), sum(W .^ 2.5, 3) ./ sum(W .^ 1.5, 3), 'AbsTol', 1e-10);
+            tc.verifyEqual(contraharmonicMeanFilter(I, 3, 0), meanFilter(I, 3), 'AbsTol', 1e-10);
+            tc.verifyEqual(contraharmonicMeanFilter(I, 3, -1), harmonicMeanFilter(I, 3), 'AbsTol', 1e-10);
+            % Q > 0 removes pepper, Q < 0 removes salt
+            P = 0.5 * ones(30); P(15, 15) = 0;
+            J = contraharmonicMeanFilter(P, 3, 2);
+            tc.verifyEqual(J(15, 15), 0.5, 'AbsTol', 1e-6);
+            S = 0.5 * ones(30); S(15, 15) = 1;
+            J = contraharmonicMeanFilter(S, 3, -3);
+            tc.verifyLessThan(abs(J(15, 15) - 0.5), 0.01);
+        end
+
+        function blurPSFsAreNormalised(tc)
+            for h = {blurPSF('motion', 9, 0), blurPSF('motion', 15, 37), blurPSF('gaussian', 2), blurPSF('disk', 4), blurPSF('box', 5)}
+                tc.verifyEqual(sum(h{1}(:)), 1, 'AbsTol', 1e-12);
+                tc.verifyGreaterThanOrEqual(min(h{1}(:)), 0);
+                tc.verifyEqual(h{1}, rot90(h{1}, 2), 'AbsTol', 1e-12);   % point-symmetric
+            end
+            h = blurPSF('motion', 9, 0);
+            tc.verifyEqual(find(any(h, 2))', 5);                        % one horizontal row
+            h = blurPSF('motion', 9, 90);
+            tc.verifyEqual(find(any(h, 1)), 5);                         % one vertical column
+            tc.verifyError(@() blurPSF('swirl'), 'ImageLab:invalidParameter');
+        end
+
+        function lpiDegradationIsLinear(tc)
+            h = blurPSF('motion', 7, 30);
+            a = blurImage(tc.Img, h); b = blurImage(tc.Img .^ 2, h);
+            tc.verifyEqual(blurImage(2 * tc.Img + 3 * tc.Img .^ 2, h), 2 * a + 3 * b, 'AbsTol', 1e-12);
+            tc.verifyEqual(degradeLPI(tc.Img, h, 0), min(max(a, 0), 1), 'AbsTol', 1e-12);
+        end
+
+        function deconvolutionImprovesBlurredImage(tc)
+            rng(5);
+            f = tc.Img;
+            h = blurPSF('motion', 7, 0);
+            g = degradeLPI(f, h, 1e-5);
+            for m = {'inverse', 'wiener', 'cls', 'lucy'}
+                [J, hist] = deconvolveImage(g, h, m{1}, 0.002, 8, f);
+                tc.verifyGreaterThan(calculatePSNR(J, f), calculatePSNR(g, f), m{1});
+                tc.verifyNumElements(hist, 8);
+            end
+            % a huge K makes the energy term dominate: the solution shrinks to 0
+            J = deconvolveImage(g, h, 'wiener', 1e6, 5);
+            tc.verifyLessThan(max(J(:)), 1e-3);
+        end
+
+        % -------------------------------------------------- intensity transformations
+        function histogramMatchingFollowsTarget(tc)
+            G = tc.Img;
+            J = histogramMatching(G, targetHistogram('gaussian', 0.25, 0.05));
+            tc.verifyEqual(mean(J(:)), 0.25, 'AbsTol', 0.03);
+            % matching to a flat histogram = equalisation (same CDF mapping)
+            [~, map] = histogramMatching(G, ones(256, 1));
+            [~, mapEq] = histogramEqualizationManual(G);
+            tc.verifyLessThanOrEqual(max(abs(map(:) - mapEq(:))), 1);
+            % matching to its own histogram changes (almost) nothing
+            tc.verifyLessThan(max(abs(histogramMatching(G, G) - toDouble(toUint8(G))), [], 'all'), 1.5 / 255);
+            tc.verifyEqual(size(histogramMatching(tc.ImgRGB, targetHistogram('bimodal'))), size(tc.ImgRGB));
+        end
+
+        function piecewiseAndSlicing(tc)
+            r = (0:0.1:1)';
+            tc.verifyEqual(piecewiseLinear(r, 0.3, 0.3, 0.7, 0.7), r, 'AbsTol', 1e-12);       % identity
+            tc.verifyEqual(piecewiseLinear(r, 0.5, 0, 0.5, 1), double(r >= 0.5), 'AbsTol', 1e-12);   % threshold
+            tc.verifyEqual(piecewiseLinear(0.5, 0.3, 0, 0.7, 1), 0.5, 'AbsTol', 1e-12);
+            J = grayLevelSlicing(r, 0.35, 0.65, 'binary');
+            tc.verifyEqual(J, 0.1 + 0.9 * (r > 0.35 & r < 0.65), 'AbsTol', 1e-12);
+            J = grayLevelSlicing(r, 0.35, 0.65, 'preserve');
+            tc.verifyEqual(J, max(r, r > 0.35 & r < 0.65), 'AbsTol', 1e-12);
+        end
+
+        function bitPlanesRebuildImage(tc)
+            [planes, R] = bitPlaneSlicing(tc.Img, 1:8);
+            tc.verifyEqual(R, double(toUint8(tc.Img)) / 255, 'AbsTol', 1e-12);
+            tc.verifyNumElements(planes, 8);
+            tc.verifyClass(planes{8}, 'logical');
+            tc.verifyEqual(planes{8}, toUint8(tc.Img) >= 128);
+            [~, R2] = bitPlaneSlicing(tc.Img, [7 8]);
+            tc.verifyLessThan(max(abs(R2(:) - R(:))), 64 / 255);
+        end
+
+        % -------------------------------------------------- colour models
+        function hsiAndCmykModels(tc)
+            X = tc.ImgRGB;
+            tc.verifyEqual(hsiToRgb(rgbToHsi(X)), X, 'AbsTol', 1e-9);
+            H = rgbToHsi(X);
+            tc.verifyEqual(H(:,:,3), mean(X, 3), 'AbsTol', 1e-12);
+            H = rgbToHsi(cat(3, 1, 0, 0));
+            tc.verifyEqual(squeeze(H)', [0 1 1/3], 'AbsTol', 1e-9);              % pure red
+            H = rgbToHsi(cat(3, 0, 0, 1));
+            tc.verifyEqual(H(1), 240 / 360, 'AbsTol', 1e-9);                    % pure blue
+            [K, C] = rgbToCmyk(X);
+            tc.verifyEqual(C, 1 - X, 'AbsTol', 1e-12);
+            tc.verifyEqual((1 - K(:,:,1:3)) .* (1 - K(:,:,4)), X, 'AbsTol', 1e-9);   % back to RGB
+            [ch, names] = colorChannels(X, 'cmyk');
+            tc.verifyNumElements(ch, 4);
+            tc.verifyEqual(names{4}, 'Black (K)');
+            tc.verifyEqual(colorEnhance(X, 'hsi', 3, 'gain', 1), X, 'AbsTol', 1e-9);
+            tc.verifyEqual(colorEnhance(X, 'cmy', 1, 'gain', 1), X, 'AbsTol', 1e-12);
+        end
+
+        function pseudocolourMaps(tc)
+            [J, colors, edges] = intensitySlicing(tc.Img, 4, 'hot');
+            tc.verifyEqual(size(J), [size(tc.Img) 3]);
+            tc.verifyEqual(size(colors), [4 3]);
+            tc.verifyEqual(edges, [0 0.25 0.5 0.75 1]);
+            tc.verifyLessThanOrEqual(size(unique(reshape(J, [], 3), 'rows'), 1), 4);
+            [J, curves] = grayToColor(tc.Img, 1, [0 0 0]);
+            tc.verifyEqual(J(:,:,1), J(:,:,3), 'AbsTol', 1e-12);                % equal phases -> grey
+            tc.verifyEqual(size(curves), [256 3]);
+            tc.verifyError(@() intensitySlicing(tc.Img, 4, 'rainbow'), 'ImageLab:invalidParameter');
+        end
+
+        % -------------------------------------------------- edge linking
+        function houghFindsSyntheticLines(tc)
+            B = false(100, 120);
+            B(30, 10:110) = true;                       % horizontal: theta = -90
+            B(5:95, 60) = true;                         % vertical: theta = 0
+            [H, theta, rho] = houghTransform(B);
+            tc.verifyEqual(sum(H(:, 1)), nnz(B));       % every pixel votes once per angle
+            P = houghPeaks(H, 2);
+            found = sort(theta(P(:, 2)));
+            tc.verifyEqual(found, [-90 0]);
+            L = houghLines(B, theta, rho, P, 5, 20);
+            tc.verifyNumElements(L, 2);
+            tc.verifyEqual(sort([L.length]), [90 100], 'AbsTol', 1e-9);
+            % a gap longer than fillGap splits a line
+            B(30, 50:54) = false;
+            [H, theta, rho] = houghTransform(B);
+            L = houghLines(B, theta, rho, houghPeaks(H, 1), 3, 10);
+            tc.verifyNumElements(L, 2);
+        end
+
+        function localEdgeLinkingFillsGaps(tc)
+            I = zeros(40, 60); I(21:end, :) = 1;        % one horizontal step edge
+            [linked, cand] = localEdgeLinking(I, 0.3, 20, 5);
+            tc.verifyTrue(all(any(linked(19:22, 3:end-2), 1)));
+            I(:, 28:31) = 0.5 * I(:, 28:31) + 0.25;     % weaken the edge over 4 columns
+            [linked, cand] = localEdgeLinking(I, 0.6, 20, 5);
+            tc.verifyFalse(all(any(cand(19:22, 3:end-2), 1)));          % broken before linking
+            tc.verifyTrue(all(any(linked(19:22, 3:end-2), 1)));         % bridged after
+        end
+
+        % -------------------------------------------------- description
+        function boundaryDescriptorsOfASquare(tc)
+            S = false(60); S(11:50, 11:50) = true;
+            [~, bnd] = chainCode(S);
+            r = boundarySignature(bnd);
+            tc.verifyNumElements(r, 360);
+            tc.verifyEqual(max(r) / min(r), sqrt(2), 'RelTol', 0.02);
+            v = polygonApprox(bnd, 1.5);
+            tc.verifyNumElements(v, 4);
+            [~, rebuilt] = fourierDescriptors(bnd);
+            tc.verifyEqual(rebuilt, bnd, 'AbsTol', 1e-9);
+            [~, ~, inv] = fourierDescriptors(bnd);
+            [~, b2] = chainCode(rot90(S));
+            [~, ~, inv2] = fourierDescriptors(b2);
+            tc.verifyEqual(inv2, inv, 'AbsTol', 1e-6);  % rotation / start point invariant
+        end
+
+        function momentsAreInvariant(tc)
+            [X, Y] = meshgrid(1:90);
+            E = hypot((X - 45) / 30, (Y - 45) / 12) <= 1;
+            m = regionMoments(E);
+            tc.verifyEqual(m.eccentricity, sqrt(1 - (12 / 30)^2), 'AbsTol', 0.01);
+            tc.verifyEqual(m.orientation, 0, 'AbsTol', 0.5);
+            m90 = regionMoments(rot90(E));
+            tc.verifyEqual(abs(m90.orientation), 90, 'AbsTol', 0.5);
+            tc.verifyEqual(m90.hu, m.hu, 'AbsTol', 1e-12);
+            D = hypot(X - 45, Y - 45) <= 30;
+            tc.verifyEqual(regionMoments(D).hu(1), 1 / (2 * pi), 'RelTol', 0.01);
+        end
+
+        function skeletonAndTexture(tc)
+            S = false(30); S(6:25, 11:18) = true;       % 20 x 8 bar
+            [K, n] = morphSkeleton(S, ones(3));
+            tc.verifyTrue(all(K(S == 0) == 0));           % inside the region
+            tc.verifyGreaterThan(nnz(K), 0);
+            tc.verifyEqual(n, 3);                         % 8 px wide: 3 erosions survive
+            tc.verifyTrue(any(morphSkeleton(true(9)), 'all'));   % touching the border still ends
+            t = textureDescriptors(0.5 * ones(10));
+            tc.verifyEqual([t.smoothness t.uniformity t.entropy], [0 1 0], 'AbsTol', 1e-12);
+            t2 = textureDescriptors(tc.Img);
+            tc.verifyGreaterThan(t2.entropy, 3);
+        end
+
+        function perceptionAndSpectrum(tc)
+            d = perceptionDemo('machbands', 6);
+            tc.verifyNumElements(unique(d.image), 6);
+            k = 48;                                       % last pixel of the first band
+            tc.verifyLessThan(d.perceived(k), d.actual(k));          % dark side of the step dips
+            tc.verifyGreaterThan(d.perceived(k + 1), d.actual(k + 1));   % bright side overshoots
+            tc.verifyEqual(d.perceived(24), d.actual(24), 'AbsTol', 0.01);   % flat inside a band
+            d = perceptionDemo('simultaneous', 0.4);
+            tc.verifyEqual(d.image(70, 70), d.image(70, 70 + 3 * 140));
+            d = perceptionDemo('weber', 0.5, 0.05);
+            tc.verifyEqual(d.weber, 0.1, 'AbsTol', 1e-12);
+            rgb = wavelengthToRGB([450 530 650 900]);
+            [~, dominant] = max(rgb(1:3, :), [], 2);
+            tc.verifyEqual(dominant', [3 2 1]);                       % blue, green, red
+            tc.verifyEqual(rgb(4, :), [0 0 0]);
+        end
+
         % -------------------------------------------------- metrics
         function errorMapStatistics(tc)
             [H, E, s] = errorMap(tc.ImgRGB, tc.ImgRGB);
@@ -448,14 +611,6 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyEqual(S.cdf, [0.25 0.5 0.875 1], 'AbsTol', 1e-12);
             tc.verifyEqual(S.mapping, [1 2 3 3]);
             tc.verifyError(@() histeqSteps([0 9], 8), 'ImageLab:invalidMatrix');
-        end
-
-        function morphologyStepsErodeAndDilate(tc)
-            A = zeros(5); A(2:4, 2:4) = 1;
-            E = morphologySteps(A, ones(3), 'erode');
-            tc.verifyEqual(cell2mat(E.output.data), [zeros(1, 12) 1 zeros(1, 12)]);
-            D = morphologySteps(A, ones(3), 'dilate');
-            tc.verifyEqual(sum(cell2mat(D.output.data)), 25);
         end
 
         function regionGrowingStepsRecordQueue(tc)

@@ -206,22 +206,6 @@
     "kernel": []
   },
   {
-    "id": "HIS3",
-    "category": "Histogram",
-    "difficulty": "medium",
-    "type": "mcq",
-    "question": "What does CLAHE add to adaptive histogram equalisation?",
-    "options": [
-      "Colour conversion",
-      "A clip limit that limits contrast amplification",
-      "Frequency filtering",
-      "Edge detection"
-    ],
-    "answer": 2,
-    "explanation": "CLAHE clips each tile histogram so noise in flat regions is not over-amplified, then interpolates between tiles.",
-    "kernel": []
-  },
-  {
     "id": "HIS4",
     "category": "Histogram",
     "difficulty": "easy",
@@ -261,10 +245,10 @@
       "imhist",
       "histeq",
       "imadjust",
-      "adapthisteq"
+      "imcomplement"
     ],
     "answer": 2,
-    "explanation": "histeq = global equalisation; adapthisteq = CLAHE; imadjust = contrast stretching; imhist = compute histogram.",
+    "explanation": "histeq = equalisation (and matching); imadjust = contrast stretching; imhist = compute histogram; imcomplement = negative.",
     "kernel": []
   },
   {
@@ -668,43 +652,11 @@
     "options": [
       "Gaussian",
       "Salt & pepper",
-      "Speckle",
-      "Poisson"
+      "Rayleigh",
+      "Uniform"
     ],
     "answer": 2,
     "explanation": "Impulse (salt & pepper) noise replaces pixels with the extreme values.",
-    "kernel": []
-  },
-  {
-    "id": "NOI2",
-    "category": "Noise",
-    "difficulty": "medium",
-    "type": "mcq",
-    "question": "Speckle noise is:",
-    "options": [
-      "Additive",
-      "Multiplicative",
-      "Impulse",
-      "Periodic"
-    ],
-    "answer": 2,
-    "explanation": "Speckle: g = f + n*f - its strength depends on the signal (ultrasound, radar).",
-    "kernel": []
-  },
-  {
-    "id": "NOI3",
-    "category": "Noise",
-    "difficulty": "medium",
-    "type": "mcq",
-    "question": "Poisson (shot) noise has the property that:",
-    "options": [
-      "Variance equals the mean",
-      "It is always zero-mean",
-      "It affects only edges",
-      "It is periodic"
-    ],
-    "answer": 1,
-    "explanation": "Photon counting follows a Poisson distribution, whose variance equals its mean - brighter pixels are noisier in absolute terms.",
     "kernel": []
   },
   {
@@ -753,22 +705,6 @@
     ],
     "answer": 2,
     "explanation": "h is the linear, position-invariant degradation (e.g. blur) and eta is additive noise.",
-    "kernel": []
-  },
-  {
-    "id": "NOI7",
-    "category": "Noise",
-    "difficulty": "medium",
-    "type": "mcq",
-    "question": "Which metric compares luminance, contrast and structure?",
-    "options": [
-      "MSE",
-      "PSNR",
-      "SSIM",
-      "Entropy"
-    ],
-    "answer": 3,
-    "explanation": "SSIM (structural similarity) is closer to human perception than MSE/PSNR.",
     "kernel": []
   },
   {
@@ -833,22 +769,6 @@
     ],
     "answer": 2,
     "explanation": "Correlation with an impulse produces the kernel rotated by 180 degrees; convolution reproduces the kernel itself.",
-    "kernel": []
-  },
-  {
-    "id": "COR4",
-    "category": "Correlation",
-    "difficulty": "hard",
-    "type": "mcq",
-    "question": "Correlation is commonly used for:",
-    "options": [
-      "Template matching",
-      "Histogram equalisation",
-      "Colour conversion",
-      "Quantisation"
-    ],
-    "answer": 1,
-    "explanation": "The correlation output is largest where the image looks most like the kernel (template).",
     "kernel": []
   },
   {
@@ -1362,22 +1282,6 @@
     "kernel": []
   },
   {
-    "id": "SEG7",
-    "category": "Segmentation",
-    "difficulty": "easy",
-    "type": "mcq",
-    "question": "Which MATLAB function labels connected components?",
-    "options": [
-      "bwlabel",
-      "imhist",
-      "edge",
-      "fspecial"
-    ],
-    "answer": 1,
-    "explanation": "bwlabel assigns a number to each connected region; regionprops then measures area, centroid, etc.",
-    "kernel": []
-  },
-  {
     "id": "SEG8",
     "category": "Segmentation",
     "difficulty": "medium",
@@ -1426,38 +1330,6 @@
     "kernel": []
   },
   {
-    "id": "COL3",
-    "category": "Color Processing",
-    "difficulty": "medium",
-    "type": "mcq",
-    "question": "In YCbCr, the Y channel carries:",
-    "options": [
-      "Blue difference",
-      "Luminance (brightness)",
-      "Red difference",
-      "Hue"
-    ],
-    "answer": 2,
-    "explanation": "Y = luma; Cb, Cr = colour differences. Used in JPEG/video.",
-    "kernel": []
-  },
-  {
-    "id": "COL4",
-    "category": "Color Processing",
-    "difficulty": "hard",
-    "type": "mcq",
-    "question": "Which colour space is designed to be approximately perceptually uniform?",
-    "options": [
-      "RGB",
-      "CMY",
-      "CIE L*a*b*",
-      "HSV"
-    ],
-    "answer": 3,
-    "explanation": "In Lab, equal distances correspond to roughly equal perceived colour differences.",
-    "kernel": []
-  },
-  {
     "id": "COL5",
     "category": "Color Processing",
     "difficulty": "easy",
@@ -1485,116 +1357,6 @@
     ],
     "answer": 1,
     "explanation": "Higher saturation = purer, more vivid colours.",
-    "kernel": []
-  },
-  {
-    "id": "MOR1",
-    "category": "Morphology",
-    "difficulty": "easy",
-    "type": "mcq",
-    "question": "Binary erosion of an object by a 3x3 square structuring element will:",
-    "options": [
-      "Make the object grow",
-      "Shrink the object and remove specks smaller than 3x3",
-      "Fill the holes in the object",
-      "Leave the object unchanged"
-    ],
-    "answer": 2,
-    "explanation": "Erosion keeps a pixel only if the whole structuring element fits inside the object, so objects shrink and small specks vanish.",
-    "kernel": []
-  },
-  {
-    "id": "MOR2",
-    "category": "Morphology",
-    "difficulty": "easy",
-    "type": "mcq",
-    "question": "Opening is defined as:",
-    "options": [
-      "Dilation followed by erosion",
-      "Erosion followed by dilation",
-      "Erosion minus dilation",
-      "Two erosions"
-    ],
-    "answer": 2,
-    "explanation": "Opening = erosion then dilation, (A ⊖ B) ⊕ B. Closing is the reverse order: dilation then erosion.",
-    "kernel": []
-  },
-  {
-    "id": "MOR3",
-    "category": "Morphology",
-    "difficulty": "medium",
-    "type": "mcq",
-    "question": "A scanned page has small black gaps inside the letters. Which operation joins them without making the letters much thicker?",
-    "options": [
-      "Opening",
-      "Closing",
-      "Erosion",
-      "Boundary extraction"
-    ],
-    "answer": 2,
-    "explanation": "Closing (dilate, then erode) fills gaps and holes smaller than the structuring element and restores the original thickness.",
-    "kernel": []
-  },
-  {
-    "id": "MOR4",
-    "category": "Morphology",
-    "difficulty": "medium",
-    "type": "mcq",
-    "question": "The boundary of a region A can be extracted with:",
-    "options": [
-      "A − (A ⊖ B)",
-      "A ⊕ B",
-      "(A ⊕ B) ⊖ B",
-      "A ∪ (A ⊖ B)"
-    ],
-    "answer": 1,
-    "explanation": "Erosion removes exactly the outer layer of pixels, so A minus its erosion is the boundary.",
-    "kernel": []
-  },
-  {
-    "id": "MOR5",
-    "category": "Morphology",
-    "difficulty": "medium",
-    "type": "truefalse",
-    "question": "Opening an image twice with the same structuring element gives the same result as opening it once.",
-    "options": [
-      "True",
-      "False"
-    ],
-    "answer": 1,
-    "explanation": "Opening and closing are idempotent.",
-    "kernel": []
-  },
-  {
-    "id": "MOR6",
-    "category": "Morphology",
-    "difficulty": "hard",
-    "type": "mcq",
-    "question": "In hole filling, which pixels are holes?",
-    "options": [
-      "Background pixels inside the bounding box",
-      "Background pixels that cannot be reached from the image border",
-      "All pixels removed by erosion",
-      "Pixels with grey level 0"
-    ],
-    "answer": 2,
-    "explanation": "Grow the background from the border by conditional dilation, Xk = (Xk-1 ⊕ B) ∩ Ac; background that is never reached is a hole.",
-    "kernel": []
-  },
-  {
-    "id": "MOR7",
-    "category": "Morphology",
-    "difficulty": "hard",
-    "type": "conceptual",
-    "question": "Grayscale erosion with a flat structuring element is equivalent to:",
-    "options": [
-      "A mean filter",
-      "A min filter over the structuring element",
-      "A max filter",
-      "A median filter"
-    ],
-    "answer": 2,
-    "explanation": "Flat grayscale erosion takes the minimum under the SE (dilation takes the maximum) - the min/max order-statistic filters.",
     "kernel": []
   },
   {

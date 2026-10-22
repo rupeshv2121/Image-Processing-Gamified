@@ -33,14 +33,14 @@ subplot(2,3,6), imshow(quantizeImage(G, 1)), title('1 bit (2 levels)')
 rng(1);
 Ngauss = addGaussianNoise(I, 0, 0.01);
 Nsp    = addSaltPepperNoise(I, 0.05);
-Nspk   = addSpeckleNoise(I, 0.04);
-Npois  = addPoissonNoise(I);
+Nray   = addRayleighNoise(I, 0, 0.01);
+Nuni   = addUniformNoise(I, -0.1, 0.1);
 
 figure('Name', 'Noise models');
 subplot(2,2,1), imshow(Ngauss), title(sprintf('Gaussian  PSNR %.1f dB', calculatePSNR(Ngauss, I)))
 subplot(2,2,2), imshow(Nsp),    title(sprintf('Salt & pepper  PSNR %.1f dB', calculatePSNR(Nsp, I)))
-subplot(2,2,3), imshow(Nspk),   title(sprintf('Speckle  PSNR %.1f dB', calculatePSNR(Nspk, I)))
-subplot(2,2,4), imshow(Npois),  title(sprintf('Poisson  PSNR %.1f dB', calculatePSNR(Npois, I)))
+subplot(2,2,3), imshow(Nray),   title(sprintf('Rayleigh  PSNR %.1f dB', calculatePSNR(Nray, I)))
+subplot(2,2,4), imshow(Nuni),   title(sprintf('Uniform  PSNR %.1f dB', calculatePSNR(Nuni, I)))
 %% 3. Mean filter — toolbox vs manual implementation
 % The mean filter replaces each pixel by the average of its k x k
 % neighbourhood. |meanFilter| uses fspecial + imfilter (or conv2 without the
@@ -77,8 +77,7 @@ subplot(1,3,3), imshow(orderStatisticFilter(G, 3, 9)), title('Rank 9 (max)')
 K = gaussianKernel(5, 1)
 figure('Name', 'Gaussian kernel'); surf(K), title('5x5 Gaussian kernel, \sigma = 1')
 %% 7. Comparing filters on the same noisy image
-% The PSNR of each filter is compared with a bar chart, as in the Filter
-% Comparison lab.
+% The PSNR of each filter is compared with a bar chart.
 
 names = {'mean', 'median', 'gaussian', 'min', 'max'};
 psnrValues = zeros(1, numel(names));
@@ -109,7 +108,7 @@ low = 0.35 + 0.25 * G;                    % a low-contrast image
 figure('Name', 'Histogram equalisation');
 subplot(2,3,1), imshow(low), title('Low contrast')
 subplot(2,3,2), imshow(E), title('Equalised (manual)')
-subplot(2,3,3), imshow(claheManual(low, [8 8], 0.01)), title('CLAHE (manual)')
+subplot(2,3,3), imshow(histogramMatching(low, targetHistogram('gaussian', 0.5, 0.15))), title('Matched to a Gaussian')
 subplot(2,3,4), bar(imhistManual(low), 1), xlim([0 255]), title('Histogram before')
 subplot(2,3,5), bar(imhistManual(E), 1), xlim([0 255]), title('Histogram after')
 subplot(2,3,6), plot(0:255, mapping, 'LineWidth', 2), axis([0 255 0 255]), title('Transfer function (CDF)')

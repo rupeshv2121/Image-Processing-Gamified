@@ -147,7 +147,7 @@ function LiveDemo() {
           <div><div className="faint tiny">NOISY PSNR</div><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red-500)' }}>{base ? `${fmt(base.psnr, 1)} dB` : '—'}</div></div>
           <Icon name="arrow" className="faint" />
           <div><div className="faint tiny">{f.label.toUpperCase()} PSNR</div><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green-500)' }}>{res ? `${fmt(res.psnr, 1)} dB` : '…'}</div></div>
-          <div><div className="faint tiny">SSIM</div><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy-800)' }}>{res ? fmt(res.ssim, 2) : '…'}</div></div>
+          <div><div className="faint tiny">MSE</div><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy-800)' }}>{res ? fmt(res.mse, 4) : '…'}</div></div>
         </div>
         <p className="small faint" style={{ marginTop: 14 }}>{f.label} is a {f.kind} filter{res ? ` · ${fmt(res.timeMs, 0)} ms in MATLAB` : ''}.</p>
       </div>
@@ -356,7 +356,7 @@ export default function Landing() {
               ['code', 'var(--navy-100)', 'var(--navy-600)', 'Toolbox vs manual', 'Every key algorithm twice: medfilt2 next to an explicit sort-and-pick loop — with identical results.'],
               ['conv', 'var(--green-100)', 'var(--green-600)', 'Step-by-step convolution', 'Watch the kernel flip and slide, with every product and sum shown.'],
               ['kernel', 'var(--amber-100)', '#b47a0b', 'Kernel playground', 'Type any 3×3 – 7×7 kernel and see MATLAB apply it as you edit.'],
-              ['chart', 'var(--violet-100)', 'var(--violet-500)', 'Objective comparison', 'Rank filters by MSE, PSNR, SSIM and time, with MATLAB bar charts.'],
+              ['chart', 'var(--violet-100)', 'var(--violet-500)', 'Objective restoration', 'Measure every filter and deblurring method by MSE and PSNR against the original.'],
               ['file', 'var(--navy-100)', 'var(--navy-600)', 'Experiments & reports', '13 university-style experiments and one-click lab reports.'],
               ['user', 'var(--green-100)', 'var(--green-600)', 'Classroom mode', 'Projector-ready quiz with a big timer for the whole class.'],
             ].map(([ic, bg, fg, t, d]) => (

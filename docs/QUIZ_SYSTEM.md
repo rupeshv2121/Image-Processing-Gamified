@@ -105,7 +105,7 @@ Level = ⌊√(XP/100)⌋ + 1.
 | Badge | Condition |
 |---|---|
 | Filter Master | 6 different spatial filters |
-| Noise Fighter | 3 noise models + a filter comparison |
+| Noise Fighter | 3 noise models + undo a blur in the Restoration Lab |
 | Histogram Hero | 4 histogram methods |
 | Convolution Expert | correlation, convolution and the kernel playground |
 | Edge Detective | 4 edge detectors |
@@ -116,6 +116,11 @@ Level = ⌊√(XP/100)⌋ + 1.
 | Experimenter | 5 experiments |
 | Scholar | 8 Learn topics |
 | Quiz Regular | 5 quizzes |
+| Morphologist | describe a region (signature, skeleton, moments) |
+| Shape Analyst | read a chain code and link edges with the Hough transform |
+| Restorer | both adaptive filters |
+| Daily Devotee | daily challenge 3 days in a row |
+| MATLAB Coder | 5 Code Lab tasks |
 
 Topics are classed as weak (< 60 % accuracy) or strong (≥ 80 %) per category once at least
 2 questions have been answered.

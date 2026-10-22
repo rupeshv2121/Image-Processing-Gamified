@@ -1,7 +1,7 @@
 function [channels, names, converted] = colorChannels(I, space)
 %COLORCHANNELS Split an image into the channels of a colour model.
 %   [channels, names, converted] = colorChannels(I, space)
-%   space: 'rgb' | 'hsv' | 'ycbcr' | 'lab' | 'gray'
+%   space: 'rgb' | 'hsv' | 'hsi' | 'cmy' | 'cmyk' | 'gray'
 %   channels{k} is scaled to [0,1] for display; converted is the raw image
 %   in the chosen colour space.
 
@@ -19,16 +19,18 @@ switch lower(space)
         converted = rgb2hsv(I);              % base MATLAB
         names = {'Hue (H)', 'Saturation (S)', 'Value (V)'};
         channels = {converted(:,:,1), converted(:,:,2), converted(:,:,3)};
-    case 'ycbcr'
-        if hasIPT(), converted = rgb2ycbcr(I); else, converted = rgbToYCbCr(I); end
-        names = {'Luma (Y)', 'Blue diff (Cb)', 'Red diff (Cr)'};
+    case 'hsi'
+        converted = rgbToHsi(I);
+        names = {'Hue (H)', 'Saturation (S)', 'Intensity (I)'};
         channels = {converted(:,:,1), converted(:,:,2), converted(:,:,3)};
-    case 'lab'
-        if hasIPT(), converted = rgb2lab(I); else, converted = rgbToLab(I); end
-        names = {'Lightness (L*)', 'Green-Red (a*)', 'Blue-Yellow (b*)'};
-        channels = {converted(:,:,1) / 100, ...
-                    (converted(:,:,2) + 128) / 255, ...
-                    (converted(:,:,3) + 128) / 255};
+    case 'cmy'
+        converted = 1 - I;
+        names = {'Cyan (C)', 'Magenta (M)', 'Yellow (Y)'};
+        channels = {converted(:,:,1), converted(:,:,2), converted(:,:,3)};
+    case 'cmyk'
+        converted = rgbToCmyk(I);
+        names = {'Cyan (C)', 'Magenta (M)', 'Yellow (Y)', 'Black (K)'};
+        channels = {converted(:,:,1), converted(:,:,2), converted(:,:,3), converted(:,:,4)};
     case 'gray'
         converted = toGray(I);
         names = {'Gray (Y)'};

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from ..utils import as_list, as_text_list, param
+from ..utils import as_text_list, param
 
 Rule = Callable[[dict, Any], list[tuple[str, str]]]
 
@@ -34,15 +34,20 @@ RULES: dict[str, Rule] = {
     "sharpen": _one("sharpening", "method", "laplacian"),
     "edges": lambda p, data: [("edges", m) for m in as_text_list(param(p, "methods", ["sobel"]))],
     "segment": _one("segmentation", "method", "otsu"),
-    "morphology": _one("morphology", "operation", "erode"),
-    "regions": lambda p, data: [("regions", f"conn{int(data['conn'])}")],
+    "regions": _fixed("regions", "chaincode"),
     "color": _one("color", "space", "rgb"),
     "colorEnhance": _fixed("color", "enhance"),
     "neighborhood": _fixed("tools", "neighborhood"),
     "sampling": _fixed("tools", "sampling"),
     "quantize": _fixed("tools", "quantization"),
-    "compare": lambda p, data: [("filters", str(r["name"])) for r in as_list(data.get("results"))]
-    + [("tools", "compare")],
+    "perception": _one("perception", "kind", "machbands"),
+    "spectrum": _fixed("tools", "spectrum"),
+    "bitPlanes": _fixed("histogram", "bitplane"),
+    "edgeLink": _one("edgelink", "method", "hough"),
+    "describeRegion": _fixed("descriptors", "region"),
+    "pseudocolor": _one("pseudocolor", "method", "slicing"),
+    "lpiDegrade": _one("restoration", "psf", "motion"),
+    "deconvolve": _one("deblur", "method", "wiener"),
 }
 
 

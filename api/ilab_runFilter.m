@@ -4,9 +4,9 @@ function [J, info] = ilab_runFilter(I, name, k, params, impl)
 %
 %   name   : mean | weighted | gaussian | median | min | max | midpoint |
 %            order | alphatrimmed | adaptivemedian | adaptivelocal |
-%            laplacian | sobel | prewitt
+%            geometric | harmonic | contraharmonic | laplacian | sobel | prewitt
 %   k      : neighbourhood size (odd); the MAXIMUM window for adaptivemedian
-%   params : struct (sigma, rank, d, noiseVar)
+%   params : struct (sigma, rank, d, noiseVar, Q)
 %   impl   : 'toolbox' (fast / Image Processing Toolbox) or 'manual' (loops)
 %
 %   info.kernel         kernel matrix for linear filters ([] otherwise)
@@ -72,6 +72,18 @@ switch lower(name)
         info.linear = false;                 % the weights change with the local variance
         J = adaptiveLocalFilter(I, k, param(params, 'noiseVar', []));
         info.functionName = 'adaptiveLocalFilter';
+    case 'geometric'
+        info.linear = false;                 % a product, not a weighted sum
+        J = geometricMeanFilter(I, k);
+        info.functionName = 'geometricMeanFilter';
+    case 'harmonic'
+        info.linear = false;
+        J = harmonicMeanFilter(I, k);
+        info.functionName = 'harmonicMeanFilter';
+    case 'contraharmonic'
+        info.linear = false;
+        J = contraharmonicMeanFilter(I, k, param(params, 'Q', 1.5));
+        info.functionName = 'contraharmonicMeanFilter';
     case 'laplacian'
         info.kernel = [0 1 0; 1 -4 1; 0 1 0];
         info.signed = true;
@@ -93,6 +105,8 @@ end
 
 if any(strcmpi(name, {'adaptivemedian', 'adaptivelocal'}))
     info.implementation = 'Hand-written base MATLAB (vectorised over all pixels)';
+elseif any(strcmpi(name, {'geometric', 'harmonic', 'contraharmonic'}))
+    info.implementation = 'Hand-written base MATLAB (box sums with filter2D)';
 elseif manual
     info.implementation = 'Manual implementation (explicit loops)';
 elseif hasIPT()

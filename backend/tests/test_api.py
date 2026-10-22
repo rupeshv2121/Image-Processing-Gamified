@@ -61,11 +61,22 @@ def test_result_cache_and_activity(api, matlab, teacher):
     assert api.raw("filter", token=tok, id=img, name="median", k=3)["cached"] is False
 
 
-def test_compare_counts_every_filter(api, teacher):
+def test_syllabus_activities_earn_badges(api, teacher):
     pw = api.ok("profiles", action="add", name="Stu", roll="S1")["password"]
     tok = api.ok("auth", token="", action="login", identifier="S1", password=pw)["token"]
-    api.ok("compare", token=tok, id="x")
-    assert api.ok("progress", token=tok)["activities"] == {"filters": ["mean", "median"], "tools": ["compare"]}
+    for t in ("gaussian", "rayleigh", "uniform"):
+        api.ok("noise", token=tok, id="x", type=t)
+    api.ok("deconvolve", token=tok, id="x", method="wiener")
+    api.ok("regions", token=tok, id="x")
+    api.ok("edgeLink", token=tok, id="x", method="hough")
+    api.ok("describeRegion", token=tok, id="x", region=1)
+    p = api.ok("progress", token=tok)
+    assert p["activities"]["deblur"] == ["wiener"]
+    assert p["activities"]["edgelink"] == ["hough"]
+    earned = {b["id"] for b in p["badges"] if b["earned"]}
+    assert {"noise_fighter", "morphologist", "shape_analyst"} <= earned
+    for gone in ("compare", "morphology", "structuringElement"):
+        assert api.error(gone, token=tok)["errorId"] == "ImageLab:unknownOperation"
 
 
 def test_quiz_submit_with_leaderboard(api, teacher):

@@ -55,7 +55,7 @@ anybody can sign in as the teacher — set one under **Class settings**.
 | Sample | Use it for |
 |---|---|
 | peppers.png | Main demo image (colour) |
-| lowcontrast.png | Histogram equalisation, CLAHE |
+| lowcontrast.png | Histogram equalisation and matching |
 | shapes.png | Edge detection, segmentation |
 | gradient.png | Quantisation / false contouring |
 | lines.png | Point and line detection |
@@ -75,9 +75,12 @@ Images larger than 640 px are resized so the manual loop implementations stay fa
 ## 4. The labs
 
 * **Pixels & Sampling** — click the grid to set p, q or toggle pixels; view N4, ND, N8, 4-, 8- and
-  m-adjacency, and the De / D4 / D8 distance maps. The second tab shows sampling and quantisation.
-* **Histogram Lab** — choose a method, then press Apply. Both histograms are shown, with the
-  transfer function in orange and mean / variance / std / entropy in a table.
+  m-adjacency, and the De / D4 / D8 distance maps. Further tabs show sampling and quantisation, the
+  visual-perception demos (Mach bands, simultaneous contrast, Weber ratio) and the EM spectrum.
+* **Histogram Lab** — choose a method (equalisation, matching, stretching, piecewise-linear, slicing,
+  bit planes, gamma, log, negative), then press Apply. Both histograms are shown, with the transfer
+  function in orange, the desired histogram (matching) dashed green, and mean / variance / std /
+  entropy in a table.
 * **Spatial Filters** — linear and non-linear tabs. Choose *MATLAB Toolbox*, *Manual loops* or
   *Compare both*, which shows both outputs, both run times and the maximum difference.
 * **Correlation & Convolution** — enter a matrix and a kernel (fractions like 1/9 are allowed), then
@@ -85,15 +88,21 @@ Images larger than 640 px are resized so the manual loop implementations stay fa
 * **Kernel Playground** — edit any cell; with *Apply automatically* the result updates as you type.
   You can load presets, normalise the kernel and save kernels to your kernel library.
 * **Sharpening Lab** — Laplacian (α, strength, 8-neighbour), Sobel/Prewitt, unsharp, high-boost.
-* **Noise Lab** — adds noise to the current image and shows the original, noisy and difference images
-  with MSE / PSNR / SSIM.
-* **Filter Comparison** — adds noise to the *original* (fixed seed), runs the selected filters and
-  ranks them. The bar charts are drawn by MATLAB (`bar`).
+* **Noise Lab** — adds one of six noise models to the current image and shows the original, noisy and
+  difference images with MSE / PSNR and the noise PDF. Restore it with the adaptive, median, mean,
+  geometric, harmonic or contraharmonic filters and compare their PSNR.
+* **Restoration Lab** — choose a blur (motion, turbulence, out of focus, box) and a noise level, press
+  *Degrade image*, then restore with the inverse, Wiener, constrained least squares or Richardson–Lucy
+  method. The chart shows the PSNR after every iteration.
 * **Edge Detection** — tick the detectors; automatic or manual threshold; optional manual Sobel /
-  Prewitt gx, gy and |∇f| images.
+  Prewitt gx, gy and |∇f| images. *Link edges* runs the Hough transform (accumulator, peaks, line
+  segments) or local edge linking.
 * **Segmentation** — the global threshold slider re-segments live; for region growing, click the
   image to place the seed. A region table lists area, centroid, bounding box and perimeter.
-* **Color Processing** — split into RGB / HSV / YCbCr / L\*a\*b\* channels; enhance one channel.
+* **Color Processing** — split into RGB / CMY / CMYK / HSV / HSI channels; enhance one channel; turn a
+  grey image into pseudocolour by intensity slicing or a grey-to-colour transformation.
+* **Region Analysis** — threshold the image, pick a region and read its chain code; *Signature,
+  polygon, skeleton, moments…* shows its boundary and regional descriptors.
 
 Every lab has a **</> View MATLAB Code** button that shows the real `.m` files from the project.
 
@@ -142,8 +151,8 @@ Open **Code Lab** in the sidebar to write real MATLAB code in the browser.
   run the server only on a computer you trust. Code Lab only works on the ImageLab computer itself — in
   classroom network mode other devices can only sign in and play the live quiz.
 * Without the Image Processing Toolbox, `imfilter`, `fspecial`, `medfilt2`, `imnoise`, `imhist`,
-  `histeq`, `padarray`, `mat2gray`, `graythresh`, `imbinarize`, `strel`, `imerode` and `imdilate`
-  are ImageLab stand-ins with the same calling syntax.
+  `histeq`, `padarray`, `mat2gray`, `graythresh` and `imbinarize` are ImageLab stand-ins with the
+  same calling syntax.
 
 ## 7. Troubleshooting
 

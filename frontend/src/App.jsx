@@ -19,6 +19,7 @@ const PAGES = {
   learn: lazy(() => import('./pages/Learn')),
   workspace: lazy(() => import('./pages/Workspace')),
   noise: lazy(() => import('./pages/NoiseLab')),
+  restoration: lazy(() => import('./pages/RestorationLab')),
   filters: lazy(() => import('./pages/SpatialFilters')),
   histogram: lazy(() => import('./pages/HistogramLab')),
   sharpening: lazy(() => import('./pages/SharpeningLab')),
@@ -26,11 +27,9 @@ const PAGES = {
   kernel: lazy(() => import('./pages/KernelPlayground')),
   edges: lazy(() => import('./pages/EdgeLab')),
   segmentation: lazy(() => import('./pages/SegmentationLab')),
-  morphology: lazy(() => import('./pages/MorphologyLab')),
   regions: lazy(() => import('./pages/RegionLab')),
   color: lazy(() => import('./pages/ColorLab')),
   fundamentals: lazy(() => import('./pages/Fundamentals')),
-  compare: lazy(() => import('./pages/FilterComparison')),
   experiments: lazy(() => import('./pages/Experiments')),
   quiz: lazy(() => import('./pages/QuizHub')),
   live: lazy(() => import('./pages/LiveQuiz')),
@@ -89,9 +88,9 @@ function LabsNav({ route }) {
   useEffect(() => { if (inLab) setLabsOpen(true) }, [inLab])
   const unitLabs = [
     ['Unit I', ['fundamentals']],
-    ['Unit II', ['histogram', 'filters', 'correlation', 'kernel', 'sharpening', 'compare']],
-    ['Unit III', ['noise', 'color']],
-    ['Unit IV', ['edges', 'segmentation', 'morphology', 'regions']],
+    ['Unit II', ['histogram', 'filters', 'correlation', 'kernel', 'sharpening']],
+    ['Unit III', ['noise', 'restoration', 'color']],
+    ['Unit IV', ['edges', 'segmentation', 'regions']],
   ]
   return (
     <>
@@ -195,7 +194,7 @@ function Sidebar({ route, role, remote }) {
   )
 }
 
-function TopBar({ onMenu, navOpen }) {
+function TopBar({ onMenu, navOpen, navCollapsed }) {
   const { matlab, meta, current, progress, role } = useApp()
   const xp = progress?.xp || 0
   const level = progress?.level || 1
@@ -203,7 +202,7 @@ function TopBar({ onMenu, navOpen }) {
   const hi = level ** 2 * 100
   return (
     <header className="topbar">
-      <button className="icon-btn menu-btn" onClick={onMenu} aria-label={navOpen ? 'Close menu' : 'Open menu'} aria-expanded={navOpen} aria-controls="sidebar"><Icon name="menu" /></button>
+      <button className="icon-btn menu-btn" onClick={onMenu} aria-label={navOpen || !navCollapsed ? 'Close menu' : 'Open menu'} aria-expanded={navOpen || !navCollapsed} aria-controls="sidebar"><Icon name="menu" /></button>
       <span className="pill" role="status" title={matlab.ok ? (matlab.ipt ? 'Image Processing Toolbox functions are used' : 'Toolbox not installed — ImageLab uses its manual MATLAB implementations') : ''}>
         <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} aria-hidden="true" />
         {matlab.ok ? <>MATLAB <b>{matlab.release}</b>{!matlab.ipt && <span className="faint">· manual mode</span>}</> : matlab.ready ? <span style={{ color: 'var(--red-500)' }}>MATLAB unavailable</span> : 'Starting MATLAB…'}
@@ -261,6 +260,15 @@ export default function App() {
           : null
   useEffect(() => { if (redirect) window.location.replace(`#${redirect}`) }, [redirect])
   const [navOpen, setNavOpen] = useState(false)
+  // Wide screens: the menu button hides / shows the sidebar (remembered); small screens: off-canvas menu
+  const [navCollapsed, setNavCollapsed] = useState(() => { try { return localStorage.getItem('ilab-nav-collapsed') === '1' } catch { return false } })
+  const toggleNav = () => {
+    if (window.matchMedia('(max-width: 820px)').matches) { setNavOpen((o) => !o); return }
+    setNavCollapsed((c) => {
+      try { localStorage.setItem('ilab-nav-collapsed', c ? '0' : '1') } catch { /* private mode */ }
+      return !c
+    })
+  }
   const [help, setHelp] = useState(false)
   const [canCancel, setCanCancel] = useState(false)
   const main = useRef(null)
@@ -328,12 +336,12 @@ export default function App() {
   if (redirect) return null
   const PageComponent = PAGES[route]
   const shell = (
-    <div className={`app ${navOpen ? 'nav-open' : ''} ${role === 'teacher' ? 'app-teacher' : ''}`}>
+    <div className={`app ${navOpen ? 'nav-open' : ''} ${navCollapsed ? 'nav-collapsed' : ''} ${role === 'teacher' ? 'app-teacher' : ''}`}>
       <a className="skip-link" href="#main-content" onClick={(e) => { e.preventDefault(); main.current?.focus() }}>Skip to content</a>
       <Sidebar route={route} role={role} remote={remote} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="main-col">
-        <TopBar onMenu={() => setNavOpen((o) => !o)} navOpen={navOpen} />
+        <TopBar onMenu={toggleNav} navOpen={navOpen} navCollapsed={navCollapsed} />
         <main className="main" id="main-content" ref={main} tabIndex={-1}>
           <Suspense fallback={<PageFallback />}>
             <PageComponent key={route} />

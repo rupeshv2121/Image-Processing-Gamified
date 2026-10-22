@@ -75,8 +75,6 @@ class FakeMatlab:
         if op == "runExperiment":
             return {"number": params["number"], "images": [], "metrics": [], "observations": []}
         if op == "regions":
-            return {"id": self._image("labels"), "conn": params.get("conn", 8)}
-        if op == "compare":
-            return {"results": [{"name": "mean"}, {"name": "median"}]}
+            return {"id": self._image("labels")}
         # any other image operation: one result image
         return {"id": self._image(op)}

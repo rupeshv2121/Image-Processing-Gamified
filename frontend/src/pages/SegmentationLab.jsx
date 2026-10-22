@@ -116,7 +116,7 @@ export default function SegmentationLab() {
   return (
     <LabPage animation="regiongrow" unit="Unit IV · Segmentation" title="Segmentation" subtitle="Separate objects from the background with thresholds and region-based methods."
       theory={theory} controls={controls} panelTitle="Method"
-      code={{ functions: [...m.fn, 'labelComponents', 'regionProperties'], snippets: [{ title: 'MATLAB', code: m.code + "\n[L, n] = bwlabel(BW);\nstats = regionprops(L, 'Area', 'Centroid');" }] }}>
+      code={{ functions: [...m.fn, 'regionProperties'], snippets: [{ title: 'MATLAB', code: m.code + "\nstats = regionprops(BW, 'Area', 'Centroid');" }] }}>
       {res && (
         <Metrics items={[
           res.threshold != null ? { label: 'Threshold T', value: `${fmt(res.threshold, 3)} (${Math.round(res.threshold * 255)})` } : null,
@@ -163,7 +163,7 @@ export default function SegmentationLab() {
                 </tbody>
               </table>
             ) : <p className="muted">No regions yet.</p>}
-            <p className="small faint mt-sm">Largest 15 regions · bwlabel + regionprops equivalent · 8-connectivity. For chain codes and 4- vs 8-connectivity open <a href="#regions">Region Analysis</a>.</p>
+            <p className="small faint mt-sm">Largest 15 regions · regionprops equivalent. For chain codes and shape descriptors open <a href="#regions">Region Analysis</a>.</p>
           </Card>
         )}
       </div>
