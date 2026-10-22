@@ -76,7 +76,7 @@ export const MEDALS = {
   filter_master: '🧪', noise_fighter: '🛡️', histogram_hero: '📊', convolution_expert: '🔄',
   edge_detective: '🔍', segmentation_pro: '🧩', colour_artist: '🎨', perfect_quiz: '💯',
   streak_master: '🔥', experimenter: '⚗️', scholar: '🎓', quiz_regular: '⚡',
-  morphologist: '🫧', shape_analyst: '📐', restorer: '🩹', daily_devotee: '📅',
+  region_describer: '🔷', shape_analyst: '📐', restorer: '🩹', daily_devotee: '📅',
   matlab_coder: '💻',
 }
 

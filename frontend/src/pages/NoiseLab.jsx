@@ -147,7 +147,7 @@ export default function NoiseLab() {
   return (
     <LabPage unit="Unit III · Restoration" title="Noise Lab" subtitle="Degrade the workspace image with a noise model and measure how much quality is lost."
       theory={theory} controls={controls} panelTitle="Noise model"
-      code={{ functions: ['addGaussianNoise', 'addSaltPepperNoise', 'addRayleighNoise', 'addErlangNoise', 'addExponentialNoise', 'addUniformNoise', 'calculatePSNR'], snippets: [{ title: 'Toolbox call', code: `I = im2double(imread('peppers.png'));\n${INFO[type].code}\nmse = immse(J, I)\np   = psnr(J, I)\ns   = ssim(J, I)` }] }}>
+      code={{ functions: ['addGaussianNoise', 'addSaltPepperNoise', 'addRayleighNoise', 'addErlangNoise', 'addExponentialNoise', 'addUniformNoise', 'calculatePSNR'], snippets: [{ title: 'Toolbox call', code: `I = im2double(imread('peppers.png'));\n${INFO[type].code}\nmse = immse(J, I)\np   = psnr(J, I)` }] }}>
       <div className="stack">
         {res && (
           <Metrics items={[
@@ -186,7 +186,7 @@ export default function NoiseLab() {
                 {done.length > 1 && (
                   <BarChart title="PSNR against the clean original (dB)" values={done.map((f) => restored[f.name].psnr)} labels={done.map((f) => f.label)} height={170} />
                 )}
-                {best && done.length > 1 && <Note kind="ok"><b>{best.label}</b> restores this {res.type} noise best (PSNR {fmtPsnr(restored[best.name].psnr)}, SSIM {fmt(restored[best.name].ssim, 3)}).</Note>}
+                {best && done.length > 1 && <Note kind="ok"><b>{best.label}</b> restores this {res.type} noise best (PSNR {fmtPsnr(restored[best.name].psnr)}).</Note>}
                 {!done.length && <p className="muted small">Pick a filter: MATLAB filters the noisy image and scores it against the clean original.</p>}
               </div>
             </div>

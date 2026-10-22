@@ -31,11 +31,22 @@ def default_progress() -> dict:
     }
 
 
+# Badges that were renamed: old id -> (new id, old name, new name)
+RENAMED_BADGES = {"morphologist": ("region_describer", "Morphologist", "Region Describer")}
+
+
 def normalise(doc: dict | None) -> dict:
-    """Stored progress with defaults for fields added later."""
+    """Stored progress with defaults for fields added later, and renamed badges updated."""
     p = default_progress()
     if isinstance(doc, dict):
         p.update(doc)
+    for b in p["badges"]:
+        if isinstance(b, dict) and b.get("id") in RENAMED_BADGES:
+            new_id, old_name, new_name = RENAMED_BADGES[b["id"]]
+            b["id"] = new_id
+            for e in p["events"]:
+                if isinstance(e, dict) and isinstance(e.get("text"), str):
+                    e["text"] = e["text"].replace(f'"{old_name}"', f'"{new_name}"')
     return p
 
 
@@ -71,7 +82,7 @@ BADGES: tuple[Badge, ...] = (
     Badge("experimenter", "Experimenter", "Complete 5 experiments", lambda p: len(p["experimentsCompleted"]) >= 5),
     Badge("scholar", "Scholar", "Complete 8 Learn topics", lambda p: len(p["topicsCompleted"]) >= 8),
     Badge("quiz_regular", "Quiz Regular", "Finish 5 quizzes", lambda p: p["quizzesTaken"] >= 5),
-    Badge("morphologist", "Morphologist", "Describe a region's shape: signature, skeleton and moments",
+    Badge("region_describer", "Region Describer", "Describe a region's shape: signature, skeleton and moments",
           lambda p: _has(p, "descriptors", "region")),
     Badge("shape_analyst", "Shape Analyst", "Read a chain code and link edges with the Hough transform",
           lambda p: _count(p, "regions") >= 1 and _has(p, "edgelink", "hough")),

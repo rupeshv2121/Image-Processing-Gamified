@@ -56,11 +56,20 @@ end
 strong = thin > highT;
 weak   = thin > lowT;
 
-% 5. Hysteresis: keep weak components that touch a strong pixel
-[L, n] = labelComponents(weak, 8);
-keepLabel = false(n + 1, 1);
-keepLabel(unique(L(strong)) + 1) = true;
-keepLabel(1) = false;                 % background
-BW = keepLabel(L + 1);
+% 5. Hysteresis (edge tracking): start from the strong pixels and keep
+%    adding weak pixels that are 8-neighbours of an accepted edge pixel
+[h, w] = size(weak);
+H = h + 2;
+isWeak = false(H, w + 2);  isWeak(2:end-1, 2:end-1) = weak;     % padded: no border checks
+edge = false(H, w + 2);    edge(2:end-1, 2:end-1) = strong;
+offsets = [-H-1, -H, -H+1, -1, 1, H-1, H, H+1];                 % the 8 neighbours
+front = find(edge);
+while ~isempty(front)
+    nb = unique(reshape(front + offsets, [], 1));
+    nb = nb(isWeak(nb) & ~edge(nb));
+    edge(nb) = true;
+    front = nb;
+end
+BW = edge(2:end-1, 2:end-1);
 thresholds = [lowT highT];
 end

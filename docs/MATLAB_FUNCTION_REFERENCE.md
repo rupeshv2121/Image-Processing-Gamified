@@ -61,10 +61,9 @@ path. `help <function>` shows the full description.
 `[J,map] = histogramMatching(I,target)`, `targetHistogram(shape,m,s)`, `[J,limits] = contrastStretch(I,low,high)`,
 `piecewiseLinear(I,r1,s1,r2,s2)`, `grayLevelSlicing(I,a,b,mode,level)`, `[planes,R] = bitPlaneSlicing(I,keep)`,
 `gammaCorrection(I,gamma,c)`, `logTransform(I,k)`, `negativeTransform(I)`, `imageStatistics(I)`.
-`clahe` / `claheManual` remain only for the Pipeline game.
 
 ## metrics/
-`calculateMSE(A,ref)`, `calculatePSNR(A,ref)`, `imageQuality(A,ref)` (`calculateSSIM` is used only for game scores),
+`calculateMSE(A,ref)`, `calculatePSNR(A,ref)`, `imageQuality(A,ref)` (MSE and PSNR),
 `[H,E,stats] = errorMap(A,ref)` (|A − ref| as a turbo heat map with statistics).
 
 ## segmentation/

@@ -123,9 +123,9 @@ it in Word. A DOCX is also produced when MATLAB Report Generator is installed.
 * **Kernel Quiz** — identify kernels generated from `kernelPresets.m`.
 * **Guess the Filter** — MATLAB applies a random filter; guess which one.
 * **Build the Pipeline** — pick a problem, add blocks in order and run them; the result is judged
-  against the expected pipeline and measured with PSNR / SSIM.
-* **Challenge Mode** — restore a degraded image before the timer ends. The score is based on PSNR gain,
-  SSIM gain and time.
+  against the expected pipeline and measured with PSNR.
+* **Challenge Mode** — restore a degraded image before the timer ends. The score is based on PSNR gain
+  and time.
 * **Classroom Mode** — large type for a projector; the class answers together and the teacher can
   reveal the answer early.
 

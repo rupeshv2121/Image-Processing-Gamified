@@ -128,7 +128,7 @@ def test_every_operation_end_to_end(live_app):
     # games
     d = api.ok("pipelineStart", id=pid, problemId="spcontrast")
     assert api.ok("pipelineRun", problemId="spcontrast", cleanId=d["cleanId"], degradedId=d["degradedId"],
-                  steps=["median", "clahe"])["verdict"] == "correct"
+                  steps=["median", "histeq"])["verdict"] == "correct"
     daily = api.ok("dailyStart", date="2026-01-01")
     api.ok("pipelineRun", problemId=daily["problemId"], cleanId=daily["cleanId"], degradedId=daily["degradedId"],
            steps=["median"], daily="2026-01-01")

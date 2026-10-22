@@ -148,13 +148,6 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifySize(J, size(tc.ImgRGB));
         end
 
-        function claheOutputRange(tc)
-            J = claheManual(tc.Img, [4 4], 0.02);
-            tc.verifySize(J, size(tc.Img));
-            tc.verifyGreaterThanOrEqual(min(J(:)), 0);
-            tc.verifyLessThanOrEqual(max(J(:)), 1);
-        end
-
         function pointTransforms(tc)
             tc.verifyEqual(gammaCorrection(0.25, 0.5), 0.5, 'AbsTol', 1e-12);
             tc.verifyEqual(logTransform([0 1], 10), [0 1], 'AbsTol', 1e-12);
@@ -194,12 +187,33 @@ classdef ImageLabTests < matlab.unittest.TestCase
             tc.verifyEqual(calculatePSNR(tc.Img, tc.Img), Inf);
         end
 
-        function ssimProperties(tc)
-            tc.verifyEqual(calculateSSIM(tc.Img, tc.Img), 1, 'AbsTol', 1e-9);
-            rng(3);
-            noisy = addGaussianNoise(tc.Img, 0, 0.02);
-            tc.verifyLessThan(calculateSSIM(noisy, tc.Img), 0.9);
-            tc.verifyError(@() calculateSSIM(tc.Img, tc.ImgRGB), 'ImageLab:sizeMismatch');
+        function imageQualityHasMseAndPsnr(tc)
+            q = imageQuality(tc.Img, tc.Img);
+            tc.verifyEqual(fieldnames(q), {'mse'; 'psnr'});
+            tc.verifyEqual(q.mse, 0);
+        end
+
+        function regionOutline(tc)
+            BW = false(7); BW(2:6, 2:6) = true;
+            B = extractBoundary(BW);
+            ring = BW; ring(3:5, 3:5) = false;           % foreground with a background neighbour
+            tc.verifyEqual(B, ring);
+            tc.verifyEqual(extractBoundary(true(3)), logical([1 1 1; 1 0 1; 1 1 1]));   % image border = background
+        end
+
+        function cannyHysteresisKeepsOnlyConnectedWeakEdges(tc)
+            % a strong step edge plus an isolated weak square
+            I = zeros(40, 60);
+            I(21:end, 5:30) = 1;                          % strong step
+            I(5:10, 50:55) = 0.3;                         % weak and isolated
+            strongOnly = cannyManual(I, 1, 0.4999, 0.5);  % low ≈ high: (almost) no hysteresis
+            BW = cannyManual(I, 1, 0.1, 0.5);
+            tc.verifyTrue(all(BW(strongOnly)));           % hysteresis only ADDS pixels
+            tc.verifyTrue(any(BW(19:23, 15)));            % the strong edge is found
+            tc.verifyFalse(any(BW(3:12, 48:57), 'all'));  % weak but not connected to a strong edge: dropped
+            % on a real image the kept weak pixels all touch the strong set's growth
+            [E, thr] = cannyManual(tc.Img, 1);
+            tc.verifyEqual(cannyManual(tc.Img, 1, thr(1), thr(2)), E);
         end
 
         % -------------------------------------------------- edges

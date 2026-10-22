@@ -74,7 +74,7 @@ def test_syllabus_activities_earn_badges(api, teacher):
     assert p["activities"]["deblur"] == ["wiener"]
     assert p["activities"]["edgelink"] == ["hough"]
     earned = {b["id"] for b in p["badges"] if b["earned"]}
-    assert {"noise_fighter", "morphologist", "shape_analyst"} <= earned
+    assert {"noise_fighter", "region_describer", "shape_analyst"} <= earned
     for gone in ("compare", "morphology", "structuringElement"):
         assert api.error(gone, token=tok)["errorId"] == "ImageLab:unknownOperation"
 
@@ -124,7 +124,7 @@ def test_classroom_views(api, teacher):
 def test_games(api):
     d = api.ok("pipelineStart", id="x", problemId="spcontrast")
     r = api.ok("pipelineRun", problemId="spcontrast", cleanId=d["cleanId"], degradedId=d["degradedId"],
-               steps=["median", "clahe"])
+               steps=["median", "histeq"])
     assert r["verdict"] == "correct" and r["points"] == 100 and len(r["steps"]) == 2
     assert api.ok("pipelineRun", problemId="spcontrast", cleanId=d["cleanId"], degradedId=d["degradedId"],
                   steps=["mean"])["verdict"] == "wrong"
@@ -135,7 +135,7 @@ def test_games(api):
     c = api.ok("challengeStart", id="x", level="hard")
     s = api.ok("challengeScore", cleanId=c["cleanId"], degradedId=c["degradedId"], timeUsed=30, timeLimit=60,
                steps=[{"block": "median", "k": 3}])
-    assert s["score"] == round(40 * 10 + 600 * 0.3) + 100
+    assert s["score"] == 60 * 10 + 100                    # 60 x PSNR gain + time bonus
 
 
 def test_kernels(api):

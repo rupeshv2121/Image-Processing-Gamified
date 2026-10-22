@@ -58,7 +58,7 @@ class GameService:
     def pipeline_start(self, p: dict) -> dict:
         problem = self.content.problem(str(param(p, "problemId", "sp")))
         d = self._degrade({"id": p.get("id")}, problem["degrade"], param(p, "seed"))
-        return {"degradedId": d["degradedId"], "cleanId": d["cleanId"], "psnr": d["psnr"], "ssim": d["ssim"]}
+        return {"degradedId": d["degradedId"], "cleanId": d["cleanId"], "psnr": d["psnr"]}
 
     def pipeline_run(self, caller: Caller, p: dict) -> dict:
         problem = self.content.problem(str(param(p, "problemId", "sp")))
@@ -98,7 +98,7 @@ class GameService:
         today = next((h for h in history if h["date"] == day), {"solved": False, "points": 0, "attempts": 0})
         return {"date": day, "problemId": problem["id"], "title": problem["title"],
                 "description": problem["description"], "sample": sample, "cleanId": d["cleanId"],
-                "degradedId": d["degradedId"], "psnr": d["psnr"], "ssim": d["ssim"], "solved": today["solved"],
+                "degradedId": d["degradedId"], "psnr": d["psnr"], "solved": today["solved"],
                 "bestPoints": today["points"], "attempts": today["attempts"], "streak": prog["dailyStreak"],
                 "history": history}
 
@@ -107,20 +107,19 @@ class GameService:
         steps, text, limit = CHALLENGE_LEVELS.get(str(param(p, "level", "medium")), CHALLENGE_LEVELS["medium"])
         d = self._degrade({"id": p.get("id")}, steps, param(p, "seed"))
         return {"cleanId": d["cleanId"], "degradedId": d["degradedId"], "description": text, "timeLimit": limit,
-                "psnr": d["psnr"], "ssim": d["ssim"]}
+                "psnr": d["psnr"]}
 
     def challenge_score(self, p: dict) -> dict:
-        """Score: PSNR gain (dB) x 40 + SSIM gain x 600 + time bonus (only with a PSNR gain), minimum 0."""
+        """Score: PSNR gain (dB) x 60 + time bonus (only with a PSNR gain), minimum 0."""
         steps = param(p, "steps", [])
         steps = [steps] if isinstance(steps, dict) else [s for s in steps if isinstance(s, dict)]
         r = self.matlab.call("applyPipeline", {"cleanId": p.get("cleanId"), "degradedId": p.get("degradedId"),
                                                "steps": steps, "intermediate": False})
         gain_psnr = psnr(r["after"]) - psnr(r["before"])
-        gain_ssim = float(r["after"]["ssim"]) - float(r["before"]["ssim"])
         time_limit = to_float(param(p, "timeLimit", 60), 60) or 60
         time_bonus = matlab_round(200 * max(0.0, 1 - to_float(param(p, "timeUsed", 0)) / time_limit))
-        raw = 40 * gain_psnr + 600 * gain_ssim
+        raw = 60 * gain_psnr
         points = math.inf if raw == math.inf else matlab_round(raw)
         return {"id": r["id"], "before": r["before"], "after": r["after"], "psnrGain": gain_psnr,
-                "ssimGain": gain_ssim, "timeBonus": time_bonus, "processingMs": r["processingMs"],
+                "timeBonus": time_bonus, "processingMs": r["processingMs"],
                 "score": max(0, points + time_bonus * (gain_psnr > 0))}

@@ -39,8 +39,8 @@ To add a question, add one object to `question_bank.json` (restart the server):
 | Rapid Fire | 5/10/15 questions, 10 s timer, score, streak, accuracy, progress bars |
 | Kernel Quiz | A kernel is displayed: Mean, Sobel X/Y, Prewitt X/Y, Laplacian, Sharpening … |
 | Guess the Filter | MATLAB applies a random filter (mean, median, Gaussian, Laplacian, Sobel, Prewitt) |
-| Build the Pipeline | `content/pipeline_problems.json`: e.g. "Remove noise and improve contrast" → Median → CLAHE |
-| Challenge Mode | Timed restoration; score = 40·ΔPSNR + 600·ΔSSIM + time bonus |
+| Build the Pipeline | `content/pipeline_problems.json`: e.g. "Remove noise and improve contrast" → Median → Histogram equalisation |
+| Challenge Mode | Timed restoration; score = 60·ΔPSNR + time bonus |
 | Classroom Mode | Projector layout, big timer, reveal and explanation, class score |
 | Live Quiz | Mentimeter/Kahoot style: the teacher hosts, students join on their own devices with a code (below) |
 
@@ -116,7 +116,7 @@ Level = ⌊√(XP/100)⌋ + 1.
 | Experimenter | 5 experiments |
 | Scholar | 8 Learn topics |
 | Quiz Regular | 5 quizzes |
-| Morphologist | describe a region (signature, skeleton, moments) |
+| Region Describer | describe a region (signature, skeleton, moments) |
 | Shape Analyst | read a chain code and link edges with the Hough transform |
 | Restorer | both adaptive filters |
 | Daily Devotee | daily challenge 3 days in a row |

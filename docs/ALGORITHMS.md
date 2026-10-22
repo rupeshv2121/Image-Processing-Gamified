@@ -129,7 +129,7 @@ gradients using only convolutions — no Fourier transform:
 | Sobel | [−1 0 1; −2 0 2; −1 0 1] | `sobelManual.m` |
 | Thresholding | automatic threshold √(4·mean(|∇f|²)) and thinning, as in `edge` | `edgeDetect.m` |
 | LoG | LoG kernel, zero crossings with \|jump\| > 0.75·mean\|R\| | `logKernel.m`, `logEdgeManual.m` |
-| Canny | Gaussian → Sobel gradient → non-maximum suppression → double threshold (70th percentile, 0.4×) → hysteresis via connected components | `cannyManual.m` |
+| Canny | Gaussian → Sobel gradient → non-maximum suppression → double threshold (70th percentile, 0.4×) → hysteresis (edge tracking from the strong pixels into 8-neighbouring weak pixels) | `cannyManual.m` |
 | Hough transform | every edge pixel votes for ρ = x cos θ + y sin θ, θ ∈ [−90°, 90°); peaks with neighbourhood suppression; segments along each peak line, gaps ≤ fillGap bridged | `houghTransform.m`, `houghPeaks.m`, `houghLines.m` |
 | Local edge linking | Sobel magnitude > T_M and angle within ±T_A of 90° (rows) or 0° (columns); gaps ≤ K filled | `localEdgeLinking.m` |
 
@@ -146,7 +146,7 @@ gradients using only convolutions — no Fourier transform:
 | Region growing | BFS from the seed, \|f − f(seed)\| ≤ tol | `regionGrowing.m` |
 | Split & merge | quadtree split while std > limit, union-find merge of similar neighbours | `splitAndMerge.m` |
 | Region description | area, centroid, bounding box, perimeter, equivalent diameter | `regionProperties.m` |
-| Boundary | A − erode(A) | `extractBoundary.m` |
+| Region outline | foreground pixels that have a background 8-neighbour | `extractBoundary.m` |
 
 ## 10b. Representation and description
 

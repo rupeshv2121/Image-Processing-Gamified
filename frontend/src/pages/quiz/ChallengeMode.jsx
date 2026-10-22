@@ -59,7 +59,7 @@ export default function ChallengeMode() {
     if (d) {
       setResult({ ...d, used })
       if (name.trim()) {
-        await call('leaderboard', { action: 'add', entry: { name, roll, score: d.score, accuracy: Math.max(0, Math.min(100, d.after.ssim * 100)), bestStreak: 0, mode: `Challenge (${level})` } }, { label: 'Saving score' })
+        await call('leaderboard', { action: 'add', entry: { name, roll, score: d.score, accuracy: Math.max(0, Math.min(100, 100 * (1 - d.after.mse / d.before.mse))), bestStreak: 0, mode: `Challenge (${level})` } }, { label: 'Saving score' })
         notify('Score saved to the leaderboard')
       }
     }
@@ -74,13 +74,13 @@ export default function ChallengeMode() {
             <Segmented value={level} onChange={setLevel} options={[{ value: 'easy', label: 'Easy (90 s)' }, { value: 'medium', label: 'Medium (60 s)' }, { value: 'hard', label: 'Hard (60 s)' }]} />
             <button className="btn btn-primary" onClick={begin}>{result ? 'Play again' : 'Start challenge'}</button>
           </div>
-          <p className="small muted" style={{ marginTop: 10 }}>Score = 40 × PSNR gain (dB) + 600 × SSIM gain + time bonus (up to 200, only if the image improved).</p>
+          <p className="small muted" style={{ marginTop: 10 }}>Score = 60 × PSNR gain (dB) + time bonus (up to 200, only if the image improved).</p>
           {result && (
             <div style={{ marginTop: 14 }}>
               <div className="big-score">{result.score}</div>
               <Metrics items={[
                 { label: 'PSNR before → after', value: `${fmt(result.before.psnr, 2)} → ${fmt(result.after.psnr, 2)}` },
-                { label: 'SSIM before → after', value: `${fmt(result.before.ssim, 3)} → ${fmt(result.after.ssim, 3)}` },
+                { label: 'MSE before → after', value: `${fmt(result.before.mse, 4)} → ${fmt(result.after.mse, 4)}` },
                 { label: 'Time used', value: `${fmt(result.used, 1)} s` },
                 { label: 'Time bonus', value: result.timeBonus },
                 { label: 'MATLAB processing', value: `${fmt(result.processingMs, 0)} ms` },
@@ -124,7 +124,7 @@ export default function ChallengeMode() {
               <ImageView id={ch.degradedId} title={`Degraded — PSNR ${fmtPsnr(ch.psnr)}`} height={360} />
               <ImageView id={preview} title="Preview of your pipeline" height={360} />
             </div>
-            <Note>Hint: impulses → median; grainy noise → Gaussian; dull → CLAHE / stretch; blur → unsharp mask (but only after denoising!).</Note>
+            <Note>Hint: impulses → median; grainy noise → Gaussian; dull → equalise / stretch; blur → unsharp mask (but only after denoising!).</Note>
           </div>
         </div>
       )}

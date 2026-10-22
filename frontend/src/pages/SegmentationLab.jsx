@@ -14,7 +14,6 @@ const METHODS = {
   line: { label: 'Line detection', fn: ['lineDetection'], text: 'Directional masks respond to 1-pixel-thick lines in one direction.', code: 'K = [-1 -1 -1; 2 2 2; -1 -1 -1];   % horizontal\nR = imfilter(G, K);' },
   regiongrow: { label: 'Region growing', fn: ['regionGrowing'], text: 'Click a seed. Neighbours within the tolerance of the seed value join the region (BFS).', code: "% queue-based flood fill from the seed\nif abs(G(r,c) - seedValue) <= tol\n    BW(r,c) = true;\nend" },
   splitmerge: { label: 'Split & merge', fn: ['splitAndMerge'], text: 'Quadtree split while a block is not homogeneous, then merge similar neighbours.', code: 'S = qtdecomp(G, 0.2);' },
-  boundary: { label: 'Boundary', fn: ['extractBoundary', 'otsuThreshold'], text: 'Boundary = A − (A eroded by 3×3): the outline of each region.', code: 'B = bwperim(BW);' },
 }
 const EXTRA = { adaptive: 'Local mean (threshold surface)', point: '|R| response', line: 'Line response R', splitmerge: 'Regions (mean intensity)' }
 

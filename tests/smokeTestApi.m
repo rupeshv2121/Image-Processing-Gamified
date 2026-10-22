@@ -48,7 +48,7 @@ for s = {'laplacian', 'sobel', 'prewitt', 'unsharp', 'highboost'}
     call('sharpen', struct('id', id, 'method', s{1}));
 end
 call('edges', struct('id', gid, 'methods', {{'roberts', 'prewitt', 'sobel', 'canny', 'log'}}, 'manualGradients', true));
-for s = {'global', 'iterative', 'otsu', 'adaptive', 'point', 'line', 'regiongrow', 'splitmerge', 'boundary'}
+for s = {'global', 'iterative', 'otsu', 'adaptive', 'point', 'line', 'regiongrow', 'splitmerge'}
     call('segment', struct('id', gid, 'method', s{1}));
 end
 call('regions', struct('id', gid));
@@ -107,7 +107,7 @@ call('guessFilter', struct('id', id));
 d = call('degrade', struct('id', id, 'steps', struct('op', {'contrast', 'saltpepper'}, 'value', {0.35, 0.05}), 'seed', 4));
 call('degrade', struct('sample', 'peppers.png', 'maxSide', 400, 'steps', struct('op', 'blur', 'value', 1.5), 'seed', 20260101));
 call('applyPipeline', struct('cleanId', d.data.cleanId, 'degradedId', d.data.degradedId, ...
-    'steps', struct('block', {'median', 'clahe'}), 'intermediate', true));
+    'steps', struct('block', {'median', 'histeq'}), 'intermediate', true));
 call('applyPipeline', struct('cleanId', d.data.cleanId, 'degradedId', d.data.degradedId, ...
     'steps', {{struct('block', 'median', 'k', 3), struct('block', 'gaussian')}}));
 
@@ -133,6 +133,9 @@ end
 expectError('noise', struct('id', id, 'type', 'speckle'));
 expectError('color', struct('id', id, 'space', 'lab'));
 expectError('histogram', struct('id', id, 'method', 'clahe'));
+expectError('segment', struct('id', gid, 'method', 'boundary'));
+expectError('applyPipeline', struct('cleanId', d.data.cleanId, 'degradedId', d.data.degradedId, ...
+    'steps', struct('block', 'clahe')));
 expectError('steps', struct('algorithm', 'morphology', 'matrix', eye(5)));
 expectError('filter', struct('id', id, 'name', 'mean', 'k', 4));
 expectError('imageInfo', struct('id', '../../etc'));

@@ -36,12 +36,12 @@
     ],
     "expected": [
       "median",
-      "clahe"
+      "histeq"
     ],
     "accepted": [
       [
         "median",
-        "histeq"
+        "stretch"
       ]
     ],
     "explanation": "Remove the impulses FIRST (median), then enhance contrast. Equalising first would also stretch the noise."
@@ -101,13 +101,10 @@
     ],
     "accepted": [
       [
-        "clahe"
-      ],
-      [
         "gamma"
       ]
     ],
-    "explanation": "Histogram equalisation (or CLAHE / gamma < 1) spreads the dark grey levels over the full range."
+    "explanation": "Histogram equalisation (or gamma < 1) spreads the dark grey levels over the full range."
   },
   {
     "id": "noisysharp",

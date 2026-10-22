@@ -14,7 +14,7 @@ CODE_TASKS = [
     {"id": "gamma", "title": "Gamma correction", "level": "Easy", "unit": "Unit II", "topic": "Intensity",
      "forbidden": []},
 ]
-QUALITY = {"mse": 0.01, "psnr": 20.0, "ssim": 0.5}
+QUALITY = {"mse": 0.01, "psnr": 20.0}
 
 
 class FakeMatlab:
@@ -59,11 +59,11 @@ class FakeMatlab:
         if op in ("loadSample", "importImage"):
             return {"id": self._image("orig"), "name": params.get("name", "x")}
         if op == "degrade":
-            return {"cleanId": self._image("clean"), "degradedId": self._image("degraded"), "psnr": 15.0, "ssim": 0.4}
+            return {"cleanId": self._image("clean"), "degradedId": self._image("degraded"), "psnr": 15.0}
         if op == "applyPipeline":
             steps = [{"block": s["block"], "id": self._image("step"), **QUALITY} for s in params["steps"]] \
                 if params.get("intermediate") else []
-            return {"id": self._image("result"), "steps": steps, "before": {"mse": 0.1, "psnr": 10.0, "ssim": 0.2},
+            return {"id": self._image("result"), "steps": steps, "before": {"mse": 0.1, "psnr": 10.0},
                     "after": QUALITY, "processingMs": 5.0}
         if op == "runCode":
             data = {"output": "", "figures": [], "variables": [], "error": [], "grade": [], "newBadges": []}

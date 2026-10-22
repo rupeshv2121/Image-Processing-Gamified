@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../../AppContext'
-import { asArray, fmt, fmtPsnr } from '../../api'
+import { asArray, fmtPsnr } from '../../api'
 import { Card, ImageView, NeedImage, Note } from '../../components/ui'
 
 export const BLOCKS = [
   { key: 'mean', label: 'Mean' }, { key: 'median', label: 'Median' }, { key: 'gaussian', label: 'Gaussian' },
   { key: 'min', label: 'Min' }, { key: 'max', label: 'Max' }, { key: 'laplacian', label: 'Laplacian sharpen' },
-  { key: 'unsharp', label: 'Unsharp mask' }, { key: 'histeq', label: 'Histogram eq.' }, { key: 'clahe', label: 'CLAHE' },
+  { key: 'unsharp', label: 'Unsharp mask' }, { key: 'histeq', label: 'Histogram eq.' },
   { key: 'gamma', label: 'Gamma 0.6' }, { key: 'stretch', label: 'Contrast stretch' },
 ]
 const label = (k) => BLOCKS.find((b) => b.key === k)?.label || k
@@ -79,15 +79,15 @@ export default function PipelineGame() {
               </div>
             </Card>
             <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))' }}>
-              <ImageView id={start.degradedId} title="Degraded input" height={200} caption={`PSNR ${fmtPsnr(start.psnr)} · SSIM ${fmt(start.ssim, 3)}`} />
+              <ImageView id={start.degradedId} title="Degraded input" height={200} caption={`PSNR ${fmtPsnr(start.psnr)}`} />
               {resSteps.map((s, i) => (
-                <ImageView key={s.id} id={s.id} title={`${i + 1}. ${label(s.block)}`} height={200} caption={`PSNR ${fmtPsnr(s.psnr)} · SSIM ${fmt(s.ssim, 3)}`} />
+                <ImageView key={s.id} id={s.id} title={`${i + 1}. ${label(s.block)}`} height={200} caption={`PSNR ${fmtPsnr(s.psnr)}`} />
               ))}
               {res && <ImageView id={start.cleanId} title="Target (clean original)" height={200} />}
             </div>
             {res && (
               <Note kind={res.verdict === 'correct' ? 'ok' : res.verdict === 'partial' ? 'warn' : 'error'}>
-                <b>{res.feedback}</b> (+{res.points} points) — PSNR {fmtPsnr(res.before.psnr)} → {fmtPsnr(res.after.psnr)}, SSIM {fmt(res.before.ssim, 3)} → {fmt(res.after.ssim, 3)}.
+                <b>{res.feedback}</b> (+{res.points} points) — PSNR {fmtPsnr(res.before.psnr)} → {fmtPsnr(res.after.psnr)}.
                 <div style={{ marginTop: 6 }}>Expected: <b>{asArray(res.expected).map(label).join(' → ')}</b>. {res.explanation}</div>
               </Note>
             )}

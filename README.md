@@ -107,7 +107,7 @@ Every lab shows input and result **side by side, with a before/after slider or a
 | Guess the Filter | MATLAB applies a random filter — which one was it? |
 | Build the Pipeline | Repair a degraded image with the right sequence of blocks (6 problems) |
 | Daily Challenge | The same puzzle for everybody each day, with streaks |
-| Challenge Mode | Timed restoration; score = 40·ΔPSNR + 600·ΔSSIM + time bonus |
+| Challenge Mode | Timed restoration; score = 60·ΔPSNR + time bonus |
 | Live Quiz | Kahoot-style: the teacher hosts on the projector, students join with a 6-digit code on their own phones or laptops; speed scoring, live leaderboard, Excel export |
 
 Students earn **XP, levels and 17 badges**; scores go to the leaderboard.
@@ -459,8 +459,8 @@ ImageLab/
 │                  Prewitt, Roberts, LoG, Canny, unsharp mask, high-boost …
 ├── noise/         Gaussian, salt & pepper, Rayleigh, Erlang, exponential, uniform
 ├── histogram/     imhist, equalisation, matching, stretching, piecewise-linear, slicing, bit planes,
-│                  gamma, log, negative, statistics (clahe.m is used only by the Pipeline game)
-├── metrics/       MSE, PSNR, error heat map (calculateSSIM.m is used only for game scores)
+│                  gamma, log, negative, statistics
+├── metrics/       MSE, PSNR, error heat map
 ├── restoration/   blur PSFs, LPI degradation, inverse / Wiener / CLS / Richardson–Lucy restoration
 ├── segmentation/  thresholds (global, iterative, Otsu, adaptive), point & line detection, Hough
 │                  transform, local edge linking, region growing, split & merge, boundaries, chain codes,

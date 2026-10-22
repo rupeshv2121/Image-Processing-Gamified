@@ -1,7 +1,7 @@
 function J = applyBlock(I, block, params)
 %APPLYBLOCK Apply one processing block (used by the pipeline and challenge games).
 %   block: mean | median | gaussian | min | max | midpoint | weighted |
-%          alphatrimmed | laplacian | unsharp | highboost | histeq | clahe |
+%          alphatrimmed | laplacian | unsharp | highboost | histeq |
 %          gamma | stretch | none
 %   params: optional struct with k, sigma, gamma, amount
 
@@ -20,7 +20,6 @@ switch lower(block)
     case 'unsharp',      J = unsharpMask(I, p(params, 'sigma', 1.5), p(params, 'amount', 1));
     case 'highboost',    J = highBoostFilter(I, p(params, 'amount', 2), k);
     case 'histeq',       J = histogramEqualization(I);
-    case 'clahe',        J = clahe(I, [8 8], 0.01);
     case 'gamma',        J = gammaCorrection(I, p(params, 'gamma', 0.6));
     case 'stretch',      J = contrastStretch(I);
     case 'none',         J = toDouble(I);

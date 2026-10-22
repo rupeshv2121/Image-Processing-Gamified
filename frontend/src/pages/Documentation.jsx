@@ -37,7 +37,7 @@ const FOLDERS = {
     ['globalThreshold', 'Global threshold'], ['iterativeThreshold', 'Basic global thresholding'], ['otsuThreshold', "Otsu's method"],
     ['adaptiveThreshold', 'Local-mean threshold'], ['pointDetection', 'Point detection'], ['lineDetection', 'Line detection'],
     ['regionGrowing', 'Region growing (BFS)'], ['splitAndMerge', 'Quadtree split & merge'], 
-    ['regionProperties', 'regionprops equivalent'], ['extractBoundary', 'Boundary extraction'],
+    ['regionProperties', 'regionprops equivalent'], ['extractBoundary', 'Region outline (pixels with a background neighbour)'],
     ['houghTransform', 'Hough accumulator'], ['houghPeaks', 'Hough peaks'], ['houghLines', 'Line segments + gap filling'], ['localEdgeLinking', 'Local edge linking'],
     ['chainCode', 'Freeman chain code'], ['chainCodeDescriptors', 'First difference, shape number'], ['boundarySignature', 'Distance-vs-angle signature'],
     ['polygonApprox', 'Polygonal approximation (splitting)'], ['fourierDescriptors', 'Fourier descriptors'], ['regionMoments', 'Hu invariants, orientation, eccentricity'],

@@ -222,8 +222,6 @@ switch method
         B(1:end-1, :) = B(1:end-1, :) | L(1:end-1, :) ~= L(2:end, :);
         extraId = ilab_put(meanImage, 'regions');
         BW = B;
-    case 'boundary'
-        BW = extractBoundary(otsuThreshold(G));
     otherwise
         error('ImageLab:invalidParameter', 'Unknown segmentation method "%s".', method);
 end
