@@ -19,6 +19,9 @@ export const FILTERS = {
   order: { group: 'nonlinear', label: 'Rank', fn: ['orderStatisticFilter', 'orderStatisticFilterManual'], text: 'General rank filter: sort the window and pick any position. Rank 1 = min, ⌈N/2⌉ = median, N = max.', code: 'J = ordfilt2(I, rank, true(k));' },
   adaptivemedian: { group: 'nonlinear', label: 'Adaptive median', fn: ['adaptiveMedianFilter', 'neighborhoodStack'], text: 'Grows the window from 3×3 up to the chosen maximum and only replaces pixels that look like impulses (zxy = zmin or zmax). Removes dense salt & pepper noise while keeping fine detail that the plain median destroys.', code: '% no single toolbox call - see adaptiveMedianFilter.m\nJ = adaptiveMedianFilter(I, Smax);' },
   adaptivelocal: { group: 'nonlinear', label: 'Adaptive local (Wiener)', fn: ['adaptiveLocalFilter', 'filter2D'], text: 'f̂ = g − (σ²η/σ²L)(g − mL). Smooths where the local variance is close to the noise variance (flat areas) and keeps the pixel where it is much larger (edges). σ²η is estimated from the image.', code: 'J = wiener2(I, [k k]);' },
+  geometric: { group: 'nonlinear', label: 'Geometric mean', fn: ['geometricMeanFilter', 'filter2D'], text: 'f̂ = [Π g(s,t)]^(1/k²): the product of the window to the power 1/k² (a mean in the log domain). Smooths like the arithmetic mean but keeps more detail; one pepper (0) pixel makes the product 0.', code: "J = exp(imfilter(log(I + eps), ones(k)/k^2, 'replicate'));" },
+  harmonic: { group: 'nonlinear', label: 'Harmonic mean', fn: ['harmonicMeanFilter', 'filter2D'], text: 'f̂ = k² / Σ 1/g(s,t). Works for salt and Gaussian noise, fails for pepper noise.', code: "J = k^2 ./ imfilter(1 ./ (I + eps), ones(k), 'replicate');" },
+  contraharmonic: { group: 'nonlinear', label: 'Contraharmonic', fn: ['contraharmonicMeanFilter', 'filter2D'], text: 'f̂ = Σ g^(Q+1) / Σ g^Q. Q > 0 removes pepper noise, Q < 0 removes salt noise (never both). Q = 0 is the arithmetic mean, Q = −1 the harmonic mean.', code: "J = imfilter(I.^(Q+1), ones(k), 'replicate') ./ imfilter(I.^Q, ones(k), 'replicate');" },
   alphatrimmed: { group: 'nonlinear', label: 'Alpha-trimmed', fn: ['alphaTrimmedMeanFilter'], text: 'Drops the d/2 lowest and highest values, averages the rest. Between mean (d = 0) and median (d = N−1): good for mixed noise.', code: "S = sort(window(:));\nJ(i,j) = mean(S(d/2+1 : end-d/2));" },
 }
 
@@ -30,6 +33,7 @@ export default function SpatialFilters() {
   const [sigma, setSigma] = useState(1)
   const [rank, setRank] = useState(5)
   const [d, setD] = useState(2)
+  const [q, setQ] = useState(1.5)
   const [impl, setImpl] = useState('toolbox')
   const [res, setRes] = useState(null)
   const [tab, setTab] = useState('result')
@@ -43,7 +47,7 @@ export default function SpatialFilters() {
     setName(g === 'linear' ? 'mean' : 'median')
   }
   const apply = async () => {
-    const params = { id: current, name, k: kk, sigma, rank: Math.min(rank, kk * kk), d, impl, refId: original !== current ? original : '' }
+    const params = { id: current, name, k: kk, sigma, rank: Math.min(rank, kk * kk), d, Q: q, impl, refId: original !== current ? original : '' }
     const r = await call('filter', params, { label: `${f.label} filter (${impl})` })
     if (r) {
       setRes({ ...r, name, k: kk, input: current, inputLabel: currentLabel })
@@ -87,6 +91,7 @@ export default function SpatialFilters() {
           </div>
         </>
       )}
+      {name === 'contraharmonic' && <Slider label="Order Q" value={q} min={-3} max={3} step={0.5} onChange={setQ} format={(v) => (v > 0 ? `+${v} removes pepper` : v < 0 ? `${v} removes salt` : '0 = mean')} />}
       {name === 'alphatrimmed' && <Slider label="Trim d" value={d} min={0} max={N - 1 - ((N - 1) % 2)} step={2} onChange={setD} />}
       <div className="divider" />
       <span className="field-label">Implementation</span>
@@ -139,7 +144,6 @@ export default function SpatialFilters() {
                 <Metrics items={[
                   { label: 'Time', value: `${fmt(runs[0].timeMs, 1)} ms` },
                   runs[0].mse != null ? { label: 'PSNR vs original', value: fmtPsnr(runs[0].psnr) } : null,
-                  runs[0].ssim != null ? { label: 'SSIM vs original', value: runs[0].ssim } : null,
                 ]} />
                 <p className="small muted mt-sm">{runs[0].implementation}</p>
                 {runs[0].mse == null && <p className="small faint mt-sm">Add noise first (Noise Lab → Workspace) to measure PSNR against the clean original.</p>}

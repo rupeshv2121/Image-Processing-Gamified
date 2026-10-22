@@ -31,11 +31,22 @@ def default_progress() -> dict:
     }
 
 
+# Badges that were renamed: old id -> (new id, old name, new name)
+RENAMED_BADGES = {"morphologist": ("region_describer", "Morphologist", "Region Describer")}
+
+
 def normalise(doc: dict | None) -> dict:
-    """Stored progress with defaults for fields added later."""
+    """Stored progress with defaults for fields added later, and renamed badges updated."""
     p = default_progress()
     if isinstance(doc, dict):
         p.update(doc)
+    for b in p["badges"]:
+        if isinstance(b, dict) and b.get("id") in RENAMED_BADGES:
+            new_id, old_name, new_name = RENAMED_BADGES[b["id"]]
+            b["id"] = new_id
+            for e in p["events"]:
+                if isinstance(e, dict) and isinstance(e.get("text"), str):
+                    e["text"] = e["text"].replace(f'"{old_name}"', f'"{new_name}"')
     return p
 
 
@@ -57,8 +68,8 @@ def _has(p: dict, area: str, item: str) -> bool:
 
 BADGES: tuple[Badge, ...] = (
     Badge("filter_master", "Filter Master", "Test 6 different spatial filters", lambda p: _count(p, "filters") >= 6),
-    Badge("noise_fighter", "Noise Fighter", "Try 3 noise models and run a filter comparison",
-          lambda p: _count(p, "noise") >= 3 and _has(p, "tools", "compare")),
+    Badge("noise_fighter", "Noise Fighter", "Try 3 noise models and undo a blur in the Restoration Lab",
+          lambda p: _count(p, "noise") >= 3 and _count(p, "deblur") >= 1),
     Badge("histogram_hero", "Histogram Hero", "Use 4 histogram processing methods", lambda p: _count(p, "histogram") >= 4),
     Badge("convolution_expert", "Convolution Expert",
           "Step through correlation AND convolution and use the kernel playground",
@@ -71,9 +82,10 @@ BADGES: tuple[Badge, ...] = (
     Badge("experimenter", "Experimenter", "Complete 5 experiments", lambda p: len(p["experimentsCompleted"]) >= 5),
     Badge("scholar", "Scholar", "Complete 8 Learn topics", lambda p: len(p["topicsCompleted"]) >= 8),
     Badge("quiz_regular", "Quiz Regular", "Finish 5 quizzes", lambda p: p["quizzesTaken"] >= 5),
-    Badge("morphologist", "Morphologist", "Use 4 morphological operations", lambda p: _count(p, "morphology") >= 4),
-    Badge("shape_analyst", "Shape Analyst", "Analyse regions with both 4- and 8-connectivity",
-          lambda p: _count(p, "regions") >= 2),
+    Badge("region_describer", "Region Describer", "Describe a region's shape: signature, skeleton and moments",
+          lambda p: _has(p, "descriptors", "region")),
+    Badge("shape_analyst", "Shape Analyst", "Read a chain code and link edges with the Hough transform",
+          lambda p: _count(p, "regions") >= 1 and _has(p, "edgelink", "hough")),
     Badge("restorer", "Restorer", "Restore noise with both adaptive filters",
           lambda p: _has(p, "filters", "adaptivemedian") and _has(p, "filters", "adaptivelocal")),
     Badge("daily_devotee", "Daily Devotee", "Solve the daily challenge 3 days in a row", lambda p: daily_streak(p) >= 3),

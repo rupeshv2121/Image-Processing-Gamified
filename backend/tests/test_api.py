@@ -61,11 +61,22 @@ def test_result_cache_and_activity(api, matlab, teacher):
     assert api.raw("filter", token=tok, id=img, name="median", k=3)["cached"] is False
 
 
-def test_compare_counts_every_filter(api, teacher):
+def test_syllabus_activities_earn_badges(api, teacher):
     pw = api.ok("profiles", action="add", name="Stu", roll="S1")["password"]
     tok = api.ok("auth", token="", action="login", identifier="S1", password=pw)["token"]
-    api.ok("compare", token=tok, id="x")
-    assert api.ok("progress", token=tok)["activities"] == {"filters": ["mean", "median"], "tools": ["compare"]}
+    for t in ("gaussian", "rayleigh", "uniform"):
+        api.ok("noise", token=tok, id="x", type=t)
+    api.ok("deconvolve", token=tok, id="x", method="wiener")
+    api.ok("regions", token=tok, id="x")
+    api.ok("edgeLink", token=tok, id="x", method="hough")
+    api.ok("describeRegion", token=tok, id="x", region=1)
+    p = api.ok("progress", token=tok)
+    assert p["activities"]["deblur"] == ["wiener"]
+    assert p["activities"]["edgelink"] == ["hough"]
+    earned = {b["id"] for b in p["badges"] if b["earned"]}
+    assert {"noise_fighter", "region_describer", "shape_analyst"} <= earned
+    for gone in ("compare", "morphology", "structuringElement"):
+        assert api.error(gone, token=tok)["errorId"] == "ImageLab:unknownOperation"
 
 
 def test_quiz_submit_with_leaderboard(api, teacher):
@@ -113,7 +124,7 @@ def test_classroom_views(api, teacher):
 def test_games(api):
     d = api.ok("pipelineStart", id="x", problemId="spcontrast")
     r = api.ok("pipelineRun", problemId="spcontrast", cleanId=d["cleanId"], degradedId=d["degradedId"],
-               steps=["median", "clahe"])
+               steps=["median", "histeq"])
     assert r["verdict"] == "correct" and r["points"] == 100 and len(r["steps"]) == 2
     assert api.ok("pipelineRun", problemId="spcontrast", cleanId=d["cleanId"], degradedId=d["degradedId"],
                   steps=["mean"])["verdict"] == "wrong"
@@ -124,7 +135,7 @@ def test_games(api):
     c = api.ok("challengeStart", id="x", level="hard")
     s = api.ok("challengeScore", cleanId=c["cleanId"], degradedId=c["degradedId"], timeUsed=30, timeLimit=60,
                steps=[{"block": "median", "k": 3}])
-    assert s["score"] == round(40 * 10 + 600 * 0.3) + 100
+    assert s["score"] == 60 * 10 + 100                    # 60 x PSNR gain + time bonus
 
 
 def test_kernels(api):

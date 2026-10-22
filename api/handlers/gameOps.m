@@ -4,7 +4,7 @@ function data = gameOps(op, p)
 %
 %   guessFilter     a random filter applied to the image, with shuffled options
 %   degrade         p.id (or p.sample + p.maxSide), p.steps = [{op, value}], p.seed
-%                   -> cleanId, degradedId, psnr, ssim       (games/degradeImage.m)
+%                   -> cleanId, degradedId, psnr             (games/degradeImage.m)
 %   applyPipeline   p.cleanId, p.degradedId, p.steps = [{block, k, sigma, ...}],
 %                   p.intermediate (true: every step's image and quality)
 %                   -> id, steps, before, after, processingMs (games/applyBlock.m)
@@ -23,7 +23,7 @@ switch op
         rng('shuffle');
         q = imageQuality(D, I);
         data = struct('cleanId', ilab_put(I, 'clean'), 'degradedId', ilab_put(D, 'degraded'), ...
-            'psnr', q.psnr, 'ssim', q.ssim);
+            'psnr', q.psnr);
 
     case 'applyPipeline'
         data = applyPipeline(p);
@@ -61,7 +61,7 @@ for k = 1:numel(steps)
     J = applyBlock(J, char(s.block), s);
     if intermediate
         q = imageQuality(J, clean);
-        out{k} = struct('block', char(s.block), 'id', ilab_put(J, 'step'), 'psnr', q.psnr, 'ssim', q.ssim);
+        out{k} = struct('block', char(s.block), 'id', ilab_put(J, 'step'), 'psnr', q.psnr);
     end
 end
 data = struct('id', ilab_put(J, 'result'), 'steps', {out}, 'before', imageQuality(D, clean), ...

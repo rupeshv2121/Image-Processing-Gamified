@@ -48,7 +48,7 @@ cache without calling MATLAB.
 `medianFilter`, `histogramEqualization`, `edgeDetect`, `calculatePSNR` …) calls the toolbox when it is
 present and falls back to the equivalent base-MATLAB implementation otherwise. The `*Manual`
 functions (`meanFilterManual`, `medianFilterManual`, `manualCorrelation`, `sobelManual`,
-`claheManual`, `cannyManual` …) always use explicit loops / matrix operations for teaching.
+`cannyManual` …) always use explicit loops / matrix operations for teaching.
 `run_tests` runs the test suite for both code paths (`ILAB_FORCE_MANUAL=1` simulates a missing toolbox).
 
 ### Image store
@@ -65,7 +65,7 @@ POST /api/run
 {"op": "filter", "params": {"id": "orig_1f75cc35a755", "name": "median", "k": 3, "impl": "both", "refId": "orig_1f75cc35a755"}}
 ```
 → backend (access rules, result cache) → `ilab_dispatch` → `filterOps` → `ilab_runFilter` →
-`medianFilter` / `medianFilterManual` → two PNGs, times, PSNR/SSIM and the maximum difference; the
+`medianFilter` / `medianFilterManual` → two PNGs, times, MSE/PSNR and the maximum difference; the
 backend then records the "median filter tried" XP for a signed-in student.
 
 ### Error handling

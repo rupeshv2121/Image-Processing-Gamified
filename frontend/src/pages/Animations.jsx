@@ -160,46 +160,6 @@ function HisteqView({ d }) {
   )
 }
 
-// ----------------------------------------------------------------- morphology
-function MorphView({ d }) {
-  const steps = asArray(d.steps)
-  const p = usePlayer(steps.length)
-  const s = steps[p.i]
-  const P = toMatrix(d.padded)
-  const out = toMatrix(d.output)
-  const used = toMatrix(d.used)
-  const dec = toMatrix(s.decisive)
-  const kh = used.length
-  const kw = used[0].length
-  const erode = d.op === 'erode'
-  const r0 = s.row - 1
-  const c0 = s.col - 1
-  const done = p.i + 1
-  return (
-    <div className="stack">
-      <Player p={p} label="pixel" />
-      <div className="anim-grids">
-        <KernelGrid matrix={P} title={`Input (border padded with ${erode ? 1 : 0}s) — element placed at (${s.row},${s.col})`} small={P[0].length > 9}
-          highlight={(r, c) => {
-            const i = r - r0
-            const j = c - c0
-            if (i < 0 || j < 0 || i >= kh || j >= kw || !used[i][j]) return null
-            if (dec[i][j]) return erode ? 'nd' : 'n4'
-            return i === d.padRows && j === d.padCols ? 'center' : 'window'
-          }} />
-        <KernelGrid matrix={toMatrix(d.se)} title={erode ? 'Structuring element B' : 'B (reflected B̂ is used)'} small />
-        <KernelGrid matrix={partial(out.length, out[0].length, done, (r, c) => out[r][c])} title={`${erode ? 'Eroded' : 'Dilated'} output`} small={out[0].length > 9}
-          highlight={(r, c) => (r === r0 && c === c0 ? 'current' : r * out[0].length + c < done && out[r][c] ? 'done' : null)} />
-      </div>
-      <Note kind={s.result ? 'ok' : 'info'}>
-        {erode
-          ? (s.result ? <>Every pixel under the element is 1 — the element <b>fits</b>, so the output is <b>1</b>.</> : <>The red cells are 0 under the element — it does <b>not fit</b>, so the output is <b>0</b>.</>)
-          : (s.result ? <>The green cells are 1 under the reflected element — it <b>hits</b> the object, so the output is <b>1</b>.</> : <>No 1 under the element — it misses the object, so the output stays <b>0</b>.</>)}
-      </Note>
-    </div>
-  )
-}
-
 // ----------------------------------------------------------------- region growing
 function RegionView({ d }) {
   const events = asArray(d.events)
@@ -250,27 +210,16 @@ const toText = (m) => m.map((r) => r.join(' ')).join('\n')
 const EXAMPLES = {
   median: () => toText(Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => (Math.random() < 0.15 ? (Math.random() < 0.5 ? 0 : 255) : 100 + rnd(30))))),
   histeq: () => toText(Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => 2 + rnd(3)))),
-  morphology: () => {
-    const m = Array.from({ length: 8 }, () => Array(8).fill(0))
-    for (let k = 0; k < 3; k++) {
-      const r = 1 + rnd(4); const c = 1 + rnd(4); const h = 2 + rnd(3); const w = 2 + rnd(3)
-      for (let i = r; i < Math.min(8, r + h); i++) for (let j = c; j < Math.min(8, c + w); j++) m[i][j] = 1
-    }
-    m[rnd(8)][rnd(8)] = 1
-    return toText(m)
-  },
   regiongrow: () => toText(Array.from({ length: 7 }, (_, r) => Array.from({ length: 7 }, (_, c) => (Math.hypot(r - 3, c - 3) < 2.6 ? 40 + rnd(12) : 120 + rnd(60))))),
 }
 const DEFAULTS = {
   median: '10 12 11 255 13 12\n11 0 12 13 12 11\n12 13 11 12 255 13\n13 12 12 11 12 12\n0 11 13 12 13 11\n12 12 255 11 12 13',
   histeq: '2 3 3 2 4 3\n3 2 2 3 3 4\n2 3 4 4 3 2\n3 3 2 2 3 3\n4 3 3 2 2 3\n3 2 3 3 4 2',
-  morphology: '0 0 0 0 0 0 0 0\n0 1 1 1 0 0 0 0\n0 1 1 1 0 0 1 0\n0 1 1 1 1 1 0 0\n0 0 0 1 1 1 0 0\n0 0 0 1 1 1 0 0\n0 1 0 0 0 0 0 0\n0 0 0 0 0 0 0 0',
   regiongrow: '200 190 185 180 170 160 150\n195 45 48 50 160 155 150\n190 42 40 47 52 150 145\n185 44 41 43 49 140 140\n180 175 46 45 130 135 130\n170 165 160 48 125 120 125\n160 155 150 145 120 115 110',
 }
 const ALGOS = [
   { key: 'median', label: 'Median filter', lab: 'filters', text: 'Sort each 3×3 window and take the middle value — watch impulses (0 and 255) lose.' },
   { key: 'histeq', label: 'Histogram equalisation', lab: 'histogram', text: 'Count → normalise → cumulative sum → map. Watch crowded grey levels spread out.' },
-  { key: 'morphology', label: 'Erosion & dilation', lab: 'morphology', text: 'Slide the structuring element: does it fit (erosion) or hit (dilation) the object?' },
   { key: 'regiongrow', label: 'Region growing', lab: 'segmentation', text: 'Pixels join the region in queue order when they are close enough to the seed value.' },
 ]
 
@@ -283,8 +232,6 @@ export default function Animations() {
   const [text, setText] = useState(DEFAULTS)
   const [k, setK] = useState(3)
   const [levels, setLevels] = useState(8)
-  const [op, setOp] = useState('erode')
-  const [seShape, setSeShape] = useState('square')
   const [seed, setSeed] = useState({ row: 4, col: 4 })
   const [tol, setTol] = useState(15)
   const [conn, setConn] = useState(4)
@@ -292,7 +239,6 @@ export default function Animations() {
   const [error, setError] = useState(null)
   const a = ALGOS.find((x) => x.key === algo)
 
-  const SE = { square: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], cross: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], hline: [[0, 0, 0], [1, 1, 1], [0, 0, 0]], vline: [[0, 1, 0], [0, 1, 0], [0, 1, 0]] }
   const animate = async (which = algo, src = text[which]) => {
     setError(null)
     let matrix
@@ -300,7 +246,6 @@ export default function Animations() {
     const params = { algorithm: which, matrix }
     if (which === 'median') params.k = k
     if (which === 'histeq') params.levels = levels
-    if (which === 'morphology') Object.assign(params, { se: SE[seShape], operation: op })
     if (which === 'regiongrow') Object.assign(params, { seedRow: seed.row, seedCol: seed.col, tolerance: tol, conn })
     const d = await call('steps', params, { label: `${ALGOS.find((x) => x.key === which).label}: computing every step` })
     if (d) setData((x) => ({ ...x, [which]: d }))
@@ -326,12 +271,6 @@ export default function Animations() {
               <button className="btn btn-small" onClick={() => { const t = EXAMPLES[algo](); setText({ ...text, [algo]: t }); animate(algo, t) }}>🎲 Random example</button>
               {algo === 'median' && <Segmented value={k} onChange={setK} options={[{ value: 3, label: '3×3' }, { value: 5, label: '5×5' }]} />}
               {algo === 'histeq' && <Slider label="Grey levels L" value={levels} min={4} max={16} onChange={setLevels} format={(v) => `${v} (0…${v - 1})`} />}
-              {algo === 'morphology' && (
-                <>
-                  <Segmented value={op} onChange={setOp} options={[{ value: 'erode', label: 'Erosion' }, { value: 'dilate', label: 'Dilation' }]} />
-                  <Segmented value={seShape} onChange={setSeShape} options={[{ value: 'square', label: 'Square' }, { value: 'cross', label: 'Cross' }, { value: 'hline', label: 'H-line' }, { value: 'vline', label: 'V-line' }]} />
-                </>
-              )}
               {algo === 'regiongrow' && (
                 <>
                   <div className="grid-2" style={{ gap: 10 }}>
@@ -353,7 +292,6 @@ export default function Animations() {
             <>
               {algo === 'median' && <MedianView key={JSON.stringify(d.output)} d={d} />}
               {algo === 'histeq' && <HisteqView key={JSON.stringify(d.output) + d.L} d={d} />}
-              {algo === 'morphology' && <MorphView key={JSON.stringify(d.output) + d.op + JSON.stringify(d.se)} d={d} />}
               {algo === 'regiongrow' && <RegionView key={JSON.stringify(d.order) + d.tolerance + d.conn} d={d} />}
             </>
           )}

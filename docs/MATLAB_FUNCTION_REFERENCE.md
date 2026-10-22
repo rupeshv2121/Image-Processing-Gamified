@@ -46,44 +46,51 @@ path. `help <function>` shows the full description.
 | `[BW,thr,mag,impl] = edgeDetect(I,method,thresh,sigma)` | edge() with fallback |
 | `[J,windowUsed] = adaptiveMedianFilter(I,Smax)` | adaptive median (stages A/B, window grows to Smax) |
 | `[J,noiseVar] = adaptiveLocalFilter(I,k,noiseVar)` | adaptive local noise reduction, like wiener2 |
+| `geometricMeanFilter(I,k)`, `harmonicMeanFilter(I,k)`, `contraharmonicMeanFilter(I,k,Q)` | mean filters for restoration |
 
 ## noise/
-`addGaussianNoise(I,mean,var)`, `addSaltPepperNoise(I,density)`, `addSpeckleNoise(I,var)`,
-`addPoissonNoise(I)`, `addNoise(I,type,params)`.
+`addGaussianNoise(I,mean,var)`, `addSaltPepperNoise(I,density)`, `addRayleighNoise(I,a,b)`,
+`addErlangNoise(I,a,b)`, `addExponentialNoise(I,a)`, `addUniformNoise(I,a,b)`, `addNoise(I,type,params)`.
+
+## restoration/
+`h = blurPSF(type,…)` (motion, gaussian, disk, box), `blurImage(f,h)`, `[g,blurred] = degradeLPI(f,h,noiseVar)`,
+`[f,history] = deconvolveImage(g,h,method,lambda,iterations,ref)` (inverse, wiener, cls, lucy — spatial domain).
 
 ## histogram/
 `imhistManual(I)`, `[J,map] = histogramEqualizationManual(G)`, `histogramEqualization(I)`,
-`claheManual(G,tiles,clip)`, `clahe(I,tiles,clip)`, `[J,limits] = contrastStretch(I,low,high)`,
+`[J,map] = histogramMatching(I,target)`, `targetHistogram(shape,m,s)`, `[J,limits] = contrastStretch(I,low,high)`,
+`piecewiseLinear(I,r1,s1,r2,s2)`, `grayLevelSlicing(I,a,b,mode,level)`, `[planes,R] = bitPlaneSlicing(I,keep)`,
 `gammaCorrection(I,gamma,c)`, `logTransform(I,k)`, `negativeTransform(I)`, `imageStatistics(I)`.
 
 ## metrics/
-`calculateMSE(A,ref)`, `calculatePSNR(A,ref)`, `calculateSSIM(A,ref)`, `imageQuality(A,ref)`,
+`calculateMSE(A,ref)`, `calculatePSNR(A,ref)`, `imageQuality(A,ref)` (MSE and PSNR),
 `[H,E,stats] = errorMap(A,ref)` (|A − ref| as a turbo heat map with statistics).
 
 ## segmentation/
 `globalThreshold(I,T)`, `[BW,T,it] = iterativeThreshold(I)`, `[BW,level,eff] = otsuThreshold(I)`,
 `[BW,localMean] = adaptiveThreshold(I,win,offset)`, `[BW,R] = pointDetection(I,T)`,
 `[BW,R,K] = lineDetection(I,direction,T)`, `[BW,mean] = regionGrowing(I,r,c,tol,conn)`,
-`[L,meanImage,n] = splitAndMerge(I,stdT,minBlock,mergeT)`, `[L,n] = labelComponents(BW,conn)`,
-`regionProperties(L)`, `extractBoundary(BW)`, `[code,boundary,start] = chainCode(BW)` (Freeman 8-direction,
-Moore tracing), `chainCodeDescriptors(code)` (first difference, shape number, perimeter).
+`[L,meanImage,n] = splitAndMerge(I,stdT,minBlock,mergeT)`, `regionProperties(L)`, `extractBoundary(BW)`,
+`[H,theta,rho] = houghTransform(BW)`, `houghPeaks(H,n,T)`, `houghLines(BW,theta,rho,peaks,fillGap,minLength)`,
+`[linked,candidates,M] = localEdgeLinking(I,TM,TA,K)`,
+`[code,boundary,start] = chainCode(BW)` (Freeman 8-direction, Moore tracing), `chainCodeDescriptors(code)`
+(first difference, shape number, perimeter), `boundarySignature(boundary,centroid)`, `polygonApprox(boundary,tol)`,
+`[a,rebuilt,invariant] = fourierDescriptors(boundary,P)`, `[S,K] = morphSkeleton(A,B)`, `regionMoments(BW)`,
+`textureDescriptors(G,mask)`. `labelComponents` is an internal helper that finds the separate regions.
 
 ## steps/
-`medianSteps(A,k)`, `histeqSteps(A,L)`, `morphologySteps(A,SE,op)`, `regionGrowingSteps(A,r,c,tol,conn)` —
+`medianSteps(A,k)`, `histeqSteps(A,L)`, `regionGrowingSteps(A,r,c,tol,conn)` —
 every intermediate step on a small matrix (≤ 12×12) for the animations; each checks itself against the real implementation.
 
-## morphology/
-`structuringElement(shape,n)` (square, disk, diamond, cross, hline, vline), `validateSE(SE)`,
-`erodeImage(I,SE)`, `dilateImage(I,SE)` (imerode / imdilate or vectorised), `morphologyManual(I,SE,op)` (loops),
-`openImage(I,SE)`, `closeImage(I,SE)`, `morphBoundary(BW,SE)`, `[F,holes] = fillHoles(BW)`.
-
 ## color/
-`rgbToYCbCr`, `yCbCrToRgb`, `rgbToLab`, `labToRgb`, `[channels,names,converted] = colorChannels(I,space)`,
-`colorEnhance(I,space,channel,operation,amount)`.
+`rgbToHsi`, `hsiToRgb`, `[CMYK,CMY] = rgbToCmyk(I)`, `[channels,names,converted] = colorChannels(I,space)`
+(rgb, hsv, hsi, cmy, cmyk, gray), `colorEnhance(I,space,channel,operation,amount)`,
+`[J,colors,edges] = intensitySlicing(I,n,map)`, `[J,curves] = grayToColor(I,frequency,phases)`.
 
 ## fundamentals/
 `[J,levels] = quantizeImage(I,bits)`, `[display,small] = sampleImage(I,factor)`,
-`pixelDistances(p,q)`, `pixelNeighborhood(V,r,c,valueSet)`.
+`pixelDistances(p,q)`, `pixelNeighborhood(V,r,c,valueSet)`, `perceptionDemo(kind,…)` (machbands,
+simultaneous, weber), `wavelengthToRGB(lambda)`.
 
 ## games/
 `applyBlock(I,block,params)`, `degradeImage(I,steps)` — the image work of the pipeline, daily and

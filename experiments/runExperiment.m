@@ -36,12 +36,13 @@ switch n
         obs{end+1} = sprintf('Quantising to 1 bit gives PSNR %.1f dB, 4 bits gives %.1f dB.', mets(4).value, mets(6).value);
 
     case 2   % Histogram processing
-        E1 = histogramEqualization(G); E2 = clahe(G); E3 = contrastStretch(G);
+        E1 = histogramEqualization(G); E3 = contrastStretch(G);
+        E2 = histogramMatching(G, targetHistogram('gaussian', 0.5, 0.18));
         imgs = addI(imgs, 'Original', G);
         imgs = addI(imgs, 'Histogram equalisation', E1);
-        imgs = addI(imgs, 'CLAHE', E2);
+        imgs = addI(imgs, 'Matched to a Gaussian histogram', E2);
         imgs = addI(imgs, 'Contrast stretching', E3);
-        names = {'Original', 'Equalised', 'CLAHE', 'Stretched'};
+        names = {'Original', 'Equalised', 'Matched', 'Stretched'};
         results = {G, E1, E2, E3};
         for k = 1:4
             s = imageStatistics(results{k});
@@ -50,7 +51,7 @@ switch n
         end
         imgs = addChart(imgs, 'Histogram (original)', G);
         imgs = addChart(imgs, 'Histogram (equalised)', E1);
-        params = 'histeq 256 levels; CLAHE 8x8 tiles, clip 0.01; stretch 1%-99%';
+        params = 'histeq 256 levels; matching to a Gaussian (mean 128, sigma 46); stretch 1%-99%';
         obs{end+1} = sprintf('Standard deviation increased from %.1f to %.1f after equalisation.', mets(1).value, mets(3).value);
 
     case {3, 4, 5, 6}
@@ -91,7 +92,6 @@ switch n
             values(k) = q.psnr;
             imgs = addI(imgs, labels{k}, J);
             mets = addM(mets, [labels{k} ' PSNR (dB)'], q.psnr);
-            mets = addM(mets, [labels{k} ' SSIM'], q.ssim);
             mets = addM(mets, [labels{k} ' time (ms)'], 1000 * t);
             if q.psnr > best, best = q.psnr; bestName = labels{k}; end
         end
@@ -150,7 +150,7 @@ switch n
         obs{end+1} = sprintf('Mean gradient rose from %.4f to %.4f with Laplacian sharpening.', mets(1).value, mets(2).value);
 
     case 10  % noise removal
-        noises = {'gaussian', 'saltpepper', 'speckle', 'poisson'};
+        noises = {'gaussian', 'saltpepper', 'rayleigh', 'uniform'};
         filters = {'mean', 'median', 'gaussian', 'alphatrimmed'};
         imgs = addI(imgs, 'Original', I);
         for a = 1:numel(noises)
@@ -167,7 +167,7 @@ switch n
             mets = addM(mets, sprintf('%s best (%s) PSNR', noises{a}, bestF), best);
             obs{end+1} = sprintf('%s noise: best filter = %s (%.2f dB).', noises{a}, bestF, best); %#ok<AGROW>
         end
-        params = 'Gaussian var 0.01; S&P d 0.05; speckle var 0.04; 3x3 filters';
+        params = 'Gaussian var 0.01; S&P d 0.05; Rayleigh a 0, b 0.01; uniform [-0.1, 0.1]; 3x3 filters';
 
     case 11  % edges
         imgs = addI(imgs, 'Original', G);
@@ -187,20 +187,17 @@ switch n
         [B1, level] = otsuThreshold(G);
         B2 = adaptiveThreshold(G, 31, 0.02);
         B3 = globalThreshold(G, 0.5);
-        [L, nReg] = labelComponents(B2, 8);
         imgs = addI(imgs, 'Original', G);
         imgs = addI(imgs, 'Global T = 0.5', B3);
         imgs = addI(imgs, sprintf('Otsu T = %.3f', level), B1);
         imgs = addI(imgs, 'Adaptive (31x31 local mean)', B2);
         imgs = addChart(imgs, 'Histogram', G);
         mets = addM(mets, 'Otsu threshold', level);
-        mets = addM(mets, 'Regions (adaptive)', nReg);
-        props = regionProperties(L);
-        if ~isempty(props)
-            mets = addM(mets, 'Largest region area (px)', max([props.area]));
-        end
+        mets = addM(mets, 'Foreground global (%)', 100 * mean(B3(:)));
+        mets = addM(mets, 'Foreground Otsu (%)', 100 * mean(B1(:)));
+        mets = addM(mets, 'Foreground adaptive (%)', 100 * mean(B2(:)));
         params = 'Global T = 0.5; Otsu automatic; adaptive 31x31, offset 0.02';
-        obs{end+1} = sprintf('Otsu chose T = %.3f; adaptive thresholding found %d regions.', level, nReg);
+        obs{end+1} = sprintf('Otsu chose T = %.3f; adaptive thresholding follows the uneven lighting.', level);
 
     case 13  % colour
         if size(I, 3) ~= 3

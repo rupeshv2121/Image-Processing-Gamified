@@ -8,7 +8,7 @@ function [H, E, stats] = errorMap(A, ref)
 %            differences are still visible (stats.scaleMax gives the scale).
 %   stats  - meanAbs, maxError, scaleMax (grey levels 0..255),
 %            changedPct (% of pixels that differ by at least 1 grey level),
-%            mse, psnr, ssim and colorStops (hex colours of the scale)
+%            mse, psnr and colorStops (hex colours of the scale)
 
 A = toDouble(A);
 ref = toDouble(ref);
@@ -36,6 +36,6 @@ q = imageQuality(A, ref);
 stops = cmap(round(linspace(1, 256, 9)), :);
 stats = struct('meanAbs', 255 * mean(E(:)), 'maxError', 255 * scale, 'scaleMax', 255 * scale, ...
     'changedPct', 100 * mean(E(:) >= 0.5 / 255), ...
-    'mse', q.mse, 'psnr', q.psnr, 'ssim', q.ssim, ...
+    'mse', q.mse, 'psnr', q.psnr, ...
     'colorStops', {cellstr(reshape(sprintf('#%02x%02x%02x', round(255 * stops')), 7, []).')'});
 end

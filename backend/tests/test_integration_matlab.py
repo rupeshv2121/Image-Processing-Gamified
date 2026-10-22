@@ -83,27 +83,39 @@ def test_every_operation_end_to_end(live_app):
                        ("kernelPreset", {"name": "sobelx", "size": 5}), ("sampling", {"id": pid}),
                        ("quantize", {"id": pid}), ("guessFilter", {"id": pid}), ("experiments", {}),
                        ("codeTasks", {}), ("codeWarmup", {}), ("quizCategories", {}), ("pipelineProblems", {}),
-                       ("structuringElement", {"shape": "disk", "size": 5}), ("listKernels", {})]:
+                       ("listKernels", {})]:
         api.ok(op, **params)
     noisy = api.ok("noise", id=pid, type="saltpepper", density=0.05, seed=1)["id"]
     for f in ("mean", "median", "sobel", "adaptivemedian"):
         api.ok("filter", id=gid, name=f, k=3, refId=gid)
     assert api.raw("filter", id=gid, name="median", k=3, refId=gid)["cached"] is True
     api.ok("errorMap", id=noisy, refId=pid)
-    api.ok("histogram", id=pid, method="clahe")
+    api.ok("histogram", id=pid, method="histeq")
     api.ok("correlation", matrix=[[1, 2, 3], [4, 5, 6], [7, 8, 9]], kernel=[[1, 0, -1]] * 3)
     api.ok("applyKernel", id=pid, kernel=[[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
     api.ok("saveKernel", name="integration test", kernel=[[1, 1, 1]] * 3)
     api.ok("sharpen", id=pid, method="unsharp")
     api.ok("edges", id=gid, methods=["sobel", "canny"])
     api.ok("segment", id=gid, method="otsu")
-    api.ok("morphology", id=gid, operation="open", se=[[1, 1, 1]] * 3)
-    assert api.ok("regions", id=gid, conn=4)["conn"] == 4
+    api.ok("regions", id=gid)
     api.ok("color", id=pid, space="hsv")
     api.ok("colorEnhance", id=pid, space="hsv", channel=2, operation="gain", amount=1.4)
     api.ok("neighborhood", matrix=[[0, 1, 1], [0, 1, 0], [0, 0, 1]], row=2, col=2, valueSet=1)
     api.ok("steps", algorithm="median", matrix=[[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    api.ok("compare", id=pid, noiseType="saltpepper", density=0.05, seed=3)
+    # syllabus additions
+    api.ok("perception", kind="machbands", steps=6)
+    api.ok("spectrum", wavelength=520)
+    assert len(api.ok("noise", id=pid, type="rayleigh", a=0, b=0.01, seed=2)["pdf"]) == 256
+    api.ok("filter", id=noisy, name="contraharmonic", k=3, Q=1.5, refId=pid)
+    assert len(api.ok("histogram", id=pid, method="match", shape="gaussian")["target"]) == 256
+    assert len(api.ok("bitPlanes", id=pid, keep=[7, 8])["planes"]) == 8
+    blurred = api.ok("lpiDegrade", id=pid, psf="motion", length=9, angle=30, noiseVar=0.0001, seed=4)
+    restored = api.ok("deconvolve", id=blurred["id"], refId=blurred["cleanId"], psf="motion", length=9, angle=30,
+                      method="cls", iterations=5)
+    assert restored["psnr"] > blurred["psnr"]
+    api.ok("pseudocolor", id=gid, method="slicing", slices=6, map="hot")
+    assert api.ok("edgeLink", id=gid, method="hough", peaks=4)["method"] == "hough"
+    assert len(api.ok("describeRegion", id=gid, region=1)["hu"]) == 7
     assert len(api.ok("quizQuestions", mode="kernel", n=5)) == 5
     api.ok("runExperiment", number=1)
     report = api.ok("report", title="Integration report", images=[{"label": "Original", "id": pid}],
@@ -116,7 +128,7 @@ def test_every_operation_end_to_end(live_app):
     # games
     d = api.ok("pipelineStart", id=pid, problemId="spcontrast")
     assert api.ok("pipelineRun", problemId="spcontrast", cleanId=d["cleanId"], degradedId=d["degradedId"],
-                  steps=["median", "clahe"])["verdict"] == "correct"
+                  steps=["median", "histeq"])["verdict"] == "correct"
     daily = api.ok("dailyStart", date="2026-01-01")
     api.ok("pipelineRun", problemId=daily["problemId"], cleanId=daily["cleanId"], degradedId=daily["degradedId"],
            steps=["median"], daily="2026-01-01")
@@ -145,7 +157,7 @@ def test_every_operation_end_to_end(live_app):
     assert api.error("progress", token=st)["errorId"] == "ImageLab:auth"
 
     # expected errors
-    assert api.error("morphology", id=gid, se=[[0, 0, 0]] * 3)
+    assert api.error("morphology", id=gid)                        # removed from the site
     assert api.error("filter", id=pid, name="mean", k=4)
     assert api.error("imageInfo", id="../../etc")
     assert api.error("runCode", code="system('dir')")

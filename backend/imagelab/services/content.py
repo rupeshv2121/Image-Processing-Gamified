@@ -20,7 +20,7 @@ CONTENT_DIR = Path(__file__).resolve().parent.parent / "content"
 QUIZ_CATEGORIES = (
     "Fundamentals", "Histogram", "Spatial Filters", "Linear Filters", "Non-Linear Filters", "Noise",
     "Correlation", "Convolution", "Sharpening", "Edge Detection", "Segmentation", "Color Processing",
-    "Morphology", "Representation",
+    "Representation",
 )
 
 

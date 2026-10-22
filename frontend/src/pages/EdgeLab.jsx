@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
 import LabPage from '../components/LabPage'
-import { BarChart, Card, ImageView, Segmented, Slider, Tabs } from '../components/ui'
+import { BarChart, Card, ImageView, Metrics, Note, Segmented, Select, Slider, Tabs, UseButton } from '../components/ui'
 
 const METHODS = [
   { key: 'roberts', label: 'Roberts', text: '2×2 diagonal differences. Fast and sharp, but very noise-sensitive.' },
@@ -12,6 +12,59 @@ const METHODS = [
   { key: 'canny', label: 'Canny', text: 'Gaussian smoothing → gradient → non-maximum suppression → hysteresis (edge linking).' },
 ]
 const label = (k) => METHODS.find((m) => m.key === k)?.label || k
+
+// Edge linking: the Hough transform (global) or similarity of gradient magnitude and angle (local)
+function LinkResults({ link }) {
+  if (link.method === 'local') {
+    return (
+      <div className="stack">
+        <Metrics items={[
+          { label: 'Candidate edge pixels', value: link.candidates.toLocaleString() },
+          { label: 'Added by gap filling', value: link.added.toLocaleString() },
+          { label: 'Linked edge pixels', value: link.linked.toLocaleString() },
+          { label: 'Time', value: `${fmt(link.timeMs, 0)} ms` },
+        ]} />
+        <div className="img-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))' }}>
+          <ImageView id={link.magId} title="Gradient magnitude M(x,y)" height={280} />
+          <ImageView id={link.candidatesId} title="M > T_M and α ≈ A" height={280} />
+          <ImageView id={link.overlayId} title="Linked: white = candidates, green = filled gaps" height={280} actions={<UseButton id={link.id} label="Linked edges" />} />
+        </div>
+      </div>
+    )
+  }
+  const lines = asArray(link.lines)
+  return (
+    <div className="stack">
+      <Metrics items={[
+        { label: 'Edge pixels', value: link.edgePixels.toLocaleString() },
+        { label: 'Peaks', value: asArray(link.peaks).length },
+        { label: 'Line segments', value: lines.length },
+        { label: 'Time', value: `${fmt(link.timeMs, 0)} ms` },
+      ]} />
+      <div className="grid-2">
+        <ImageView id={link.edgeId} title="Edge image (input to Hough)" height={320} />
+        <ImageView id={link.id} title="Linked line segments" caption="red = segment, yellow = end points" height={320} actions={<UseButton id={link.id} label="Hough lines" />} />
+      </div>
+      <div className="grid-2" style={{ alignItems: 'start' }}>
+        <ImageView id={link.accumulatorId} title="Accumulator H(ρ, θ) — log scale" caption={`θ −90° … 89° across, ρ ${link.rhoRange[0]} … ${link.rhoRange[1]} down · red = peaks`} height={320} />
+        <Card title="Strongest lines">
+          {lines.length === 0 ? <p className="small muted">No segment is long enough — lower the minimum length or the peak threshold.</p> : (
+            <div className="table-scroll">
+              <table className="data compact">
+                <thead><tr><th>#</th><th>θ</th><th>ρ</th><th>From (x, y)</th><th>To (x, y)</th><th>Length</th></tr></thead>
+                <tbody>
+                  {lines.map((l, i) => (
+                    <tr key={i}><td>{i + 1}</td><td>{l.theta}°</td><td>{l.rho}</td><td>{l.x1}, {l.y1}</td><td>{l.x2}, {l.y2}</td><td>{fmt(l.length, 1)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  )
+}
 
 export default function EdgeLab() {
   const { current, call } = useApp()
@@ -23,6 +76,25 @@ export default function EdgeLab() {
   const [res, setRes] = useState(null)
   const [tab, setTab] = useState('maps')
   const [gradOp, setGradOp] = useState('sobel')
+  const [mode, setMode] = useState('detect')
+  const [linkMethod, setLinkMethod] = useState('hough')
+  const [detector, setDetector] = useState('canny')
+  const [peaks, setPeaks] = useState(8)
+  const [peakT, setPeakT] = useState(0.3)
+  const [fillGap, setFillGap] = useState(5)
+  const [minLength, setMinLength] = useState(20)
+  const [tm, setTm] = useState(0.25)
+  const [ta, setTa] = useState(30)
+  const [gap, setGap] = useState(6)
+  const [link, setLink] = useState(null)
+
+  const runLink = async () => {
+    const params = linkMethod === 'hough'
+      ? { id: current, method: 'hough', detector, peaks, threshold: peakT, fillGap, minLength, sigma }
+      : { id: current, method: 'local', magnitude: tm, angle: ta, gap }
+    const d = await call('edgeLink', params, { label: linkMethod === 'hough' ? 'Hough transform' : 'Local edge linking' })
+    if (d) setLink(d)
+  }
 
   const toggle = (k) => setSelected((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]))
   const apply = async () => {
@@ -40,10 +112,38 @@ export default function EdgeLab() {
       <p>An <b>edge</b> is a place where intensity changes abruptly. First-derivative operators threshold the gradient magnitude; second-derivative operators look for zero crossings.</p>
       <div className="formula">|∇f| = √(gx² + gy²)      edge where |∇f| &gt; T</div>
       {METHODS.map((m) => <p key={m.key} className="small"><b>{m.label}</b> — {m.text}</p>)}
+      <h4>Edge linking and boundary detection</h4>
+      <p className="small">Edge detectors return broken edges (noise, uneven light). <b>Linking</b> assembles them into meaningful boundaries.</p>
+      <p className="small"><b>Local processing</b>: two neighbouring edge pixels are linked when their gradient magnitudes and directions are similar. The simplified algorithm keeps pixels with M(x,y) &gt; T_M and α(x,y) within ±T_A of a direction A, then fills gaps of at most K pixels along the rows (A = 90°, horizontal edges) and the columns (A = 0°, vertical edges).</p>
+      <p className="small"><b>Global processing — the Hough transform</b>: every line is written as ρ = x·cos θ + y·sin θ. Each edge pixel votes for all (ρ, θ) of the lines through it — one sinusoid in parameter space. Collinear pixels vote for the same cell, so the peaks of the accumulator are the lines. Pixels on a peak line are then linked, bridging gaps up to a set length.</p>
+      <div className="formula">ρ = x cos θ + y sin θ,     −90° ≤ θ &lt; 90°,   −D ≤ ρ ≤ D</div>
     </>
   )
 
-  const controls = (
+  const linkControls = (
+    <>
+      <Segmented value={linkMethod} onChange={setLinkMethod} options={[{ value: 'hough', label: 'Hough transform' }, { value: 'local', label: 'Local linking' }]} />
+      {linkMethod === 'hough' ? (
+        <>
+          <Select label="Edge detector" value={detector} onChange={setDetector} options={METHODS.map((m) => ({ value: m.key, label: m.label }))} />
+          <Slider label="Number of peaks" value={peaks} min={1} max={20} step={1} onChange={setPeaks} />
+          <Slider label="Peak threshold (× max votes)" value={peakT} min={0.05} max={0.9} step={0.05} onChange={setPeakT} />
+          <Slider label="Fill gaps up to" value={fillGap} min={1} max={40} step={1} onChange={setFillGap} format={(v) => `${v} px`} />
+          <Slider label="Minimum segment length" value={minLength} min={5} max={200} step={5} onChange={setMinLength} format={(v) => `${v} px`} />
+        </>
+      ) : (
+        <>
+          <Slider label="Magnitude threshold T_M (× max)" value={tm} min={0.05} max={0.8} step={0.05} onChange={setTm} />
+          <Slider label="Angle tolerance T_A" value={ta} min={5} max={45} step={5} onChange={setTa} format={(v) => `±${v}°`} />
+          <Slider label="Longest gap filled K" value={gap} min={1} max={25} step={1} onChange={setGap} format={(v) => `${v} px`} />
+        </>
+      )}
+      <button className="btn btn-primary btn-block" onClick={runLink}>Link edges</button>
+      <p className="tiny faint">Tip: shapes.png or lines.png have clear straight lines.</p>
+    </>
+  )
+
+  const controls = mode === 'link' ? linkControls : (
     <>
       <div className="choice-list">
         {METHODS.map((m) => (
@@ -61,10 +161,23 @@ export default function EdgeLab() {
   )
 
   return (
-    <LabPage unit="Unit IV · Segmentation" title="Edge Detection" subtitle="Find intensity discontinuities and compare the classic detectors."
-      theory={theory} controls={controls} panelTitle="Detectors"
-      code={{ functions: ['edgeDetect', 'sobelManual', 'prewittManual', 'robertsManual', 'cannyManual', 'logEdgeManual'], snippets: [{ title: 'Toolbox call', code: "G = rgb2gray(I);\nE1 = edge(G, 'sobel');\nE2 = edge(G, 'prewitt');\nE3 = edge(G, 'roberts');\nE4 = edge(G, 'log');\nE5 = edge(G, 'canny');" }] }}>
-      {!res ? (
+    <LabPage unit="Unit IV · Segmentation" title="Edge Detection" subtitle="Find intensity discontinuities, compare the classic detectors and link edges into boundaries."
+      theory={theory} controls={<><Segmented value={mode} onChange={setMode} options={[{ value: 'detect', label: 'Detect' }, { value: 'link', label: 'Link edges' }]} />{controls}</>}
+      panelTitle={mode === 'link' ? 'Edge linking' : 'Detectors'}
+      code={mode === 'link'
+        ? { functions: ['houghTransform', 'houghPeaks', 'houghLines', 'localEdgeLinking'], snippets: [{ title: 'Toolbox call', code: "BW = edge(rgb2gray(I), 'canny');\n[H, theta, rho] = hough(BW);\nP = houghpeaks(H, 8, 'Threshold', 0.3 * max(H(:)));\nlines = houghlines(BW, theta, rho, P, 'FillGap', 5, 'MinLength', 20);" }] }
+        : { functions: ['edgeDetect', 'sobelManual', 'prewittManual', 'robertsManual', 'cannyManual', 'logEdgeManual'], snippets: [{ title: 'Toolbox call', code: "G = rgb2gray(I);\nE1 = edge(G, 'sobel');\nE2 = edge(G, 'prewitt');\nE3 = edge(G, 'roberts');\nE4 = edge(G, 'log');\nE5 = edge(G, 'canny');" }] }}>
+      {mode === 'link' ? (
+        link ? <LinkResults link={link} /> : (
+          <div className="stack">
+            <div className="grid-2">
+              <ImageView id={current} title="Original" height={420} />
+              <ImageView id={null} title="Linked edges" height={420} emptyText="Choose a method and press Link edges" />
+            </div>
+            <Note>The Hough transform finds <b>straight lines</b> even when the edge pixels on them are far apart; local linking only bridges short gaps between pixels with similar gradients.</Note>
+          </div>
+        )
+      ) : !res ? (
         <div className="grid-2">
           <ImageView id={current} title="Original" height={420} />
           <ImageView id={null} title="Edges" height={420} emptyText="Select detectors and press Detect edges" />

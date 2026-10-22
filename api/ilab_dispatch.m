@@ -35,11 +35,12 @@ persistent table
 if isempty(table)
     routes = {
         @imageOps,      {'ping', 'samples', 'loadSample', 'importImage', 'imageInfo', 'grayscale', ...
-                         'histogramOf', 'errorMap', 'noise', 'sampling', 'quantize'}
+                         'histogramOf', 'errorMap', 'noise', 'sampling', 'quantize', 'perception', 'spectrum'}
         @filterOps,     {'filter', 'gaussianKernel', 'kernelPreset', 'kernelPresets', 'applyKernel', ...
-                         'correlation', 'sharpen', 'compare'}
-        @analysisOps,   {'histogram', 'edges', 'segment', 'morphology', 'structuringElement', 'regions', ...
-                         'color', 'colorEnhance', 'neighborhood', 'steps'}
+                         'correlation', 'sharpen'}
+        @analysisOps,   {'histogram', 'bitPlanes', 'edges', 'edgeLink', 'segment', 'regions', ...
+                         'describeRegion', 'color', 'colorEnhance', 'pseudocolor', 'neighborhood', 'steps'}
+        @restorationOps, {'lpiDegrade', 'deconvolve'}
         @gameOps,       {'guessFilter', 'degrade', 'applyPipeline'}
         @codeLabOps,    {'codeTaskList', 'codeTaskStart', 'codeTaskSolution', 'codeWarmup', 'runCode'}
         @experimentOps, {'experimentCatalog', 'runExperiment', 'report'}};

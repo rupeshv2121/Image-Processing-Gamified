@@ -1,8 +1,8 @@
 function data = filterOps(op, p)
-%FILTEROPS Spatial filters, kernels, correlation / convolution, sharpening, comparison.
+%FILTEROPS Spatial filters, kernels, correlation / convolution, sharpening.
 %   data = filterOps(op, p) - called by ilab_dispatch for:
 %   filter, gaussianKernel, kernelPreset, kernelPresets, applyKernel,
-%   correlation, sharpen, compare
+%   correlation, sharpen
 
 switch op
     case 'filter'
@@ -36,9 +36,6 @@ switch op
     case 'sharpen'
         data = sharpen(ilab_img(p), p);
 
-    case 'compare'
-        data = compareFilters(ilab_img(p), p);
-
     otherwise
         error('ImageLab:unknownOperation', 'Unknown operation "%s".', op);
 end
@@ -62,10 +59,10 @@ for n = 1:numel(impls)
     if info.signed, shown = scaleToUnit(J); else, shown = J; end
     r = struct('impl', impls{n}, 'id', ilab_put(shown, name), 'timeMs', t, ...
         'implementation', info.implementation, 'functionName', info.functionName, ...
-        'mse', [], 'psnr', [], 'ssim', []);
+        'mse', [], 'psnr', []);
     if ~isempty(ref) && isequal(size(J), size(ref))
         q = imageQuality(J, ref);
-        r.mse = q.mse; r.psnr = q.psnr; r.ssim = q.ssim;
+        r.mse = q.mse; r.psnr = q.psnr;
     end
     runs{n} = r;
     outputs{n} = J;
@@ -171,38 +168,4 @@ function s = sharpness(I)
 % Mean gradient magnitude (Sobel / 8)
 G = toGray(I);
 s = mean(hypot(filter2D(G, [-1 0 1; -2 0 2; -1 0 1] / 8), filter2D(G, [-1 -2 -1; 0 0 0; 1 2 1] / 8)), 'all');
-end
-
-function data = compareFilters(I, p)
-% Add noise, run several filters, rank them by PSNR / SSIM with MATLAB bar charts
-ilab_seed(p);
-noiseType = char(ilab_param(p, 'noiseType', 'saltpepper'));
-if strcmp(noiseType, 'none'), N = I; else, N = addNoise(I, noiseType, p); end
-qn = imageQuality(N, I);
-filters = ilab_param(p, 'filters', struct('name', {'mean', 'median', 'gaussian', 'min'}, 'k', {3, 3, 5, 3}));
-if iscell(filters), filters = [filters{:}]; end
-if isempty(filters)
-    error('ImageLab:invalidParameter', 'Select at least one filter to compare.');
-end
-results = cell(1, numel(filters));
-labels = cell(1, numel(filters));
-psnrs = zeros(1, numel(filters)); ssims = psnrs; times = psnrs;
-for k = 1:numel(filters)
-    f = filters(k);
-    kk = 3; if isfield(f, 'k') && ~isempty(f.k), kk = f.k; end
-    tic;
-    [J, info] = ilab_runFilter(N, f.name, kk, f, 'toolbox');
-    t = 1000 * toc;
-    q = imageQuality(J, I);
-    labels{k} = sprintf('%s %dx%d', f.name, kk, kk);
-    psnrs(k) = q.psnr; ssims(k) = q.ssim; times(k) = t;
-    results{k} = struct('label', labels{k}, 'name', f.name, 'k', kk, 'linear', info.linear, ...
-        'id', ilab_put(J, f.name), 'mse', q.mse, 'psnr', q.psnr, 'ssim', q.ssim, 'timeMs', t);
-end
-[~, best] = max(psnrs);
-data = struct('cleanId', ilab_put(I, 'clean'), 'noisyId', ilab_put(N, 'noisy'), ...
-    'noisy', qn, 'results', {results}, 'best', labels{best}, ...
-    'charts', struct('psnr', ilab_barChart(psnrs, labels, 'PSNR (higher is better)', 'PSNR (dB)'), ...
-                     'ssim', ilab_barChart(ssims, labels, 'SSIM (higher is better)', 'SSIM'), ...
-                     'time', ilab_barChart(times, labels, 'Processing time', 'Time (ms)')));
 end

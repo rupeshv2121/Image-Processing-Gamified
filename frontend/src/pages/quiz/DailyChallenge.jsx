@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../../AppContext'
-import { asArray, fmt, fmtPsnr } from '../../api'
+import { asArray, fmtPsnr } from '../../api'
 import ImagePair from '../../components/ImagePair'
 import { Card, ImageView, Note } from '../../components/ui'
 import { BLOCKS } from './PipelineGame'
@@ -73,7 +73,7 @@ export default function DailyChallenge() {
       </Card>
 
       <div className="grid-2">
-        <ImageView id={day.degradedId} title="Degraded (your input)" height={300} caption={`PSNR ${fmtPsnr(day.psnr)} · SSIM ${fmt(day.ssim, 3)} vs target`} />
+        <ImageView id={day.degradedId} title="Degraded (your input)" height={300} caption={`PSNR ${fmtPsnr(day.psnr)} vs target`} />
         <ImageView id={day.cleanId} title="Target" height={300} caption="Match this image as closely as you can" />
       </div>
 
@@ -103,7 +103,7 @@ export default function DailyChallenge() {
       {res && out && (
         <>
           <Note kind={res.verdict === 'correct' ? 'ok' : res.verdict === 'partial' ? 'warn' : 'error'}>
-            <b>{res.feedback}</b> {res.points} points{res.psnrBonus && res.verdict !== 'wrong' ? ` (incl. +${res.psnrBonus} PSNR bonus)` : ''} — PSNR {fmtPsnr(res.before.psnr)} → {fmtPsnr(res.after.psnr)}, SSIM {fmt(res.before.ssim, 3)} → {fmt(res.after.ssim, 3)}.
+            <b>{res.feedback}</b> {res.points} points{res.psnrBonus && res.verdict !== 'wrong' ? ` (incl. +${res.psnrBonus} PSNR bonus)` : ''} — PSNR {fmtPsnr(res.before.psnr)} → {fmtPsnr(res.after.psnr)}.
             {res.verdict !== 'correct' && <div style={{ marginTop: 6 }}>Hint: think about which degradation you see first. {day.attempts >= 2 && <>The ideal pipeline is <b>{asArray(res.expected).map(label).join(' → ')}</b>. {res.explanation}</>}</div>}
             {res.verdict === 'correct' && <div style={{ marginTop: 6 }}>{res.explanation} Come back tomorrow to keep your streak!</div>}
           </Note>
