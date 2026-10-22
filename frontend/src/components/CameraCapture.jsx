@@ -16,7 +16,7 @@ export default function CameraCapture({ onCapture, onClose }) {
     let live = true
     const start = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setError('This browser cannot access a camera. Open ImageLab at http://localhost and use a recent Chrome, Edge or Firefox.')
+        setError('This browser cannot access a camera. Open Spatia at http://localhost and use a recent Chrome, Edge or Firefox.')
         return
       }
       try {

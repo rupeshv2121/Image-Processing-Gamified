@@ -66,7 +66,7 @@ export default function LiveHost() {
       subtitle="Students join with a code on their own devices, every question has a timer, and MATLAB measures each answer time for the live leaderboard.">
       {!asArray(matlab.lan).length && (
         <Note kind="warn">
-          <b>Students’ devices cannot reach ImageLab yet.</b> It is running for this computer only. To let phones and laptops on the same
+          <b>Students’ devices cannot reach Spatia yet.</b> It is running for this computer only. To let phones and laptops on the same
           Wi-Fi join, close the ImageLab server window and start <code>start_imagelab_lan.bat</code> (or type <code>ImageLab('lan')</code> in MATLAB).
           Other devices can then only sign in and play the live quiz.
         </Note>
@@ -188,7 +188,7 @@ function HostLobby({ host, players, lan, onKick }) {
       <div className="live-joinpanel">
         <div>
           <div className="live-joinlabel">Join on your phone or laptop</div>
-          {addr ? <div className="live-url">{addr}<span>/#live</span></div> : <div className="live-url muted">ImageLab → Live quiz</div>}
+          {addr ? <div className="live-url">{addr}<span>/#live</span></div> : <div className="live-url muted">Spatia → Live quiz</div>}
           <div className="live-joinlabel mt-sm">and enter the code</div>
           <div className="live-code" aria-label={`Code ${host.code.split('').join(' ')}`}>{fmtCode(host.code)}</div>
           {lan.length > 1 && <div className="tiny faint">Also reachable at {lan.slice(1).map((u) => u.replace(/^https?:\/\//, '')).join(', ')}</div>}

@@ -201,7 +201,7 @@ export default function HistogramLab() {
             <div className="grid-2">
               <Card title="Original"><Histogram counts={res.histBefore} height={200} /></Card>
               <Card title="Enhanced">
-                <Histogram counts={res.histAfter} color="#22a565" height={200} mapping={res.mapping} target={res.target} />
+                <Histogram counts={res.histAfter} color="#2f9e5b" height={200} mapping={res.mapping} target={res.target} />
                 {res.mapping && <p className="small faint mt-sm">Orange curve: the transfer function s = T(r).{res.target ? ' Green dashed: the desired histogram.' : ''}</p>}
               </Card>
             </div>

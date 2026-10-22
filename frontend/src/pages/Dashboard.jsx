@@ -39,7 +39,7 @@ export default function Dashboard() {
     <div className="page">
       <section className="welcome">
         <div>
-          <h1>{doneCount ? `Welcome back, ${profile?.name?.split(' ')[0] || 'to the lab'}` : `Welcome to ImageLab${profile ? `, ${profile.name.split(' ')[0]}` : ''}`}</h1>
+          <h1>{doneCount ? `Welcome back, ${profile?.name?.split(' ')[0] || 'to the lab'}` : `Welcome to Spatia${profile ? `, ${profile.name.split(' ')[0]}` : ''}`}</h1>
           <p>
             {doneCount === all.length
               ? 'Every mission complete — try the Arcade challenges or generate your reports.'

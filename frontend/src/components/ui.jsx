@@ -326,7 +326,7 @@ export function KernelGrid({ matrix, editable, onChange, highlight, small, title
   )
 }
 
-export function Histogram({ counts, color = '#1f5aa6', height = 140, title, mapping, target }) {
+export function Histogram({ counts, color = '#2f6fd6', height = 140, title, mapping, target }) {
   const data = asArray(counts)
   if (!data.length) return null
   const max = Math.max(...data, 1)
@@ -382,7 +382,7 @@ export function LineChart({ series, x = ['', ''], title, height = 160, yMin, yMa
         {series.map((s, k) => {
           const vals = asArray(s.values)
           return (
-            <polyline key={k} fill="none" stroke={s.color || '#1f5aa6'} strokeWidth="2" vectorEffect="non-scaling-stroke"
+            <polyline key={k} fill="none" stroke={s.color || '#2f6fd6'} strokeWidth="2" vectorEffect="non-scaling-stroke"
               strokeDasharray={s.dashed ? '5 4' : undefined}
               points={vals.map((v, i) => `${px(i, vals.length)},${py(v ?? lo)}`).join(' ')} />
           )
@@ -392,7 +392,7 @@ export function LineChart({ series, x = ['', ''], title, height = 160, yMin, yMa
       {series.some((s) => s.label) && (
         <div className="row small muted" style={{ gap: 14, marginTop: 4, flexWrap: 'wrap' }}>
           {series.filter((s) => s.label).map((s) => (
-            <span key={s.label}><span className="swatch" style={{ background: s.color || '#1f5aa6' }} />{s.label}</span>
+            <span key={s.label}><span className="swatch" style={{ background: s.color || '#2f6fd6' }} />{s.label}</span>
           ))}
         </div>
       )}

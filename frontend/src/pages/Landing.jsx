@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt, imageUrl, run } from '../api'
+import { Logo, SITE_NAME, SITE_TAGLINE } from '../components/Brand'
 import Icon from '../components/Icon'
 import ThemeToggle from '../components/ThemeToggle'
 import { MEDALS, UNITS, unitProgress } from '../content/missions'
+import '../landing.css'
 
 // ---------------------------------------------------------------- hero animation
 // A 3x3 averaging kernel slides over an 8x8 "image"; the output fills in as it goes.
@@ -34,11 +36,15 @@ function KernelAnimation() {
   }
   const done = step >= OUT * OUT
   return (
-    <div className="kanim">
-      <div className="kanim-grids">
+    <div className="lp-kanim">
+      <div className="lp-kanim-head">
+        <span className="lp-dots" aria-hidden="true"><i /><i /><i /></span>
+        <span className="mono">g = imfilter(f, ones(3)/9)</span>
+      </div>
+      <div className="lp-kanim-grids">
         <div>
-          <div className="kanim-label">Input f</div>
-          <div className="kgrid" style={{ gridTemplateColumns: `repeat(${N}, auto)` }}>
+          <div className="lp-kanim-label">Input f</div>
+          <div className="lp-kgrid" style={{ gridTemplateColumns: `repeat(${N}, auto)` }}>
             {INPUT.map((v, i) => {
               const r = Math.floor(i / N)
               const c = i % N
@@ -48,10 +54,10 @@ function KernelAnimation() {
             })}
           </div>
         </div>
-        <Icon name="arrow" size={26} className="faint" />
+        <Icon name="arrow" size={22} className="lp-kanim-arrow" />
         <div>
-          <div className="kanim-label">Output g = mean 3×3</div>
-          <div className="kgrid" style={{ gridTemplateColumns: `repeat(${OUT}, auto)` }}>
+          <div className="lp-kanim-label">Output g</div>
+          <div className="lp-kgrid" style={{ gridTemplateColumns: `repeat(${OUT}, auto)` }}>
             {Array.from({ length: OUT * OUT }, (_, i) => {
               const filled = done || i <= pos
               const v = filled ? mean(Math.floor(i / OUT), i % OUT) : null
@@ -60,8 +66,8 @@ function KernelAnimation() {
           </div>
         </div>
       </div>
-      <div className="kanim-caption">
-        {done ? 'Salt pixels smeared — a median filter would remove them. Try it in the lab →' : `g(${pr + 2},${pc + 2}) = Σ f / 9 = ${mean(pr, pc)}`}
+      <div className="lp-kanim-caption">
+        {done ? 'Salt pixels smeared — a median filter would remove them.' : `g(${pr + 2},${pc + 2}) = Σ f / 9 = ${mean(pr, pc)}`}
       </div>
     </div>
   )
@@ -130,11 +136,11 @@ function LiveDemo() {
   const f = DEMO_FILTERS.find((x) => x.name === filter)
 
   return (
-    <div className="grid-2" style={{ alignItems: 'center', gap: 56 }}>
+    <div className="lp-split">
       <div>
-        <div className="eyebrow">Live · computed by MATLAB right now</div>
-        <h2 className="l-h2">Drag to see a filter clean an image</h2>
-        <p className="muted" style={{ fontSize: 16.5, margin: '14px 0 26px' }}>
+        <div className="lp-eyebrow ch-g"><span className="lp-live" /> Live · computed by MATLAB right now</div>
+        <h2 className="lp-h2">Drag to see a filter clean an image</h2>
+        <p className="lp-text">
           8% of the pixels in this photo were replaced by salt & pepper noise. Choose a filter — MATLAB runs it and
           measures the result. Notice how the non-linear median filter wins.
         </p>
@@ -143,16 +149,15 @@ function LiveDemo() {
             <button key={d.name} className={filter === d.name ? 'active' : ''} onClick={() => setFilter(d.name)}>{d.label}</button>
           ))}
         </div>
-        <div className="row" style={{ gap: 28 }}>
-          <div><div className="faint tiny">NOISY PSNR</div><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--red-500)' }}>{base ? `${fmt(base.psnr, 1)} dB` : '—'}</div></div>
-          <Icon name="arrow" className="faint" />
-          <div><div className="faint tiny">{f.label.toUpperCase()} PSNR</div><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--green-500)' }}>{res ? `${fmt(res.psnr, 1)} dB` : '…'}</div></div>
-          <div><div className="faint tiny">MSE</div><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy-800)' }}>{res ? fmt(res.mse, 4) : '…'}</div></div>
+        <div className="lp-metrics">
+          <div><span>Noisy PSNR</span><b className="bad">{base ? `${fmt(base.psnr, 1)} dB` : '—'}</b></div>
+          <div><span>{f.label} PSNR</span><b className="good">{res ? `${fmt(res.psnr, 1)} dB` : '…'}</b></div>
+          <div><span>MSE</span><b>{res ? fmt(res.mse, 4) : '…'}</b></div>
         </div>
         <p className="small faint" style={{ marginTop: 14 }}>{f.label} is a {f.kind} filter{res ? ` · ${fmt(res.timeMs, 0)} ms in MATLAB` : ''}.</p>
       </div>
       <div
-        ref={box} className="compare" style={{ '--pos': `${pos}%` }}
+        ref={box} className="lp-compare" style={{ '--pos': `${pos}%` }}
         onMouseDown={(e) => { dragging.current = true; move(e.clientX) }}
         onMouseMove={(e) => dragging.current && move(e.clientX)}
         onMouseUp={() => { dragging.current = false }} onMouseLeave={() => { dragging.current = false }}
@@ -167,7 +172,7 @@ function LiveDemo() {
             <span className="tagr">{f.label} filtered</span>
           </>
         ) : (
-          <div className="compare-placeholder">
+          <div className="lp-compare-placeholder">
             {error ? error : matlab.ok ? 'MATLAB is preparing the demo…' : 'Waiting for MATLAB to start… (first start can take a minute)'}
           </div>
         )}
@@ -194,10 +199,10 @@ function Teaser() {
     if (k === t.a) setXp((x) => x + 100)
   }
   return (
-    <div className="teaser">
+    <div className="lp-teaser">
       <div className="row between">
-        <span className="badge badge-navy">Sample question {i + 1}/{TEASERS.length}</span>
-        <span className="row" style={{ gap: 6, fontWeight: 700, color: 'var(--navy-800)' }}>
+        <span className="lp-tag">Sample question {i + 1}/{TEASERS.length}</span>
+        <span className="row" style={{ gap: 6, fontWeight: 700 }}>
           <Icon name="star" size={17} /> {xp} XP {pick === t.a && <span key={i} className="xp-pop">+100</span>}
         </span>
       </div>
@@ -213,17 +218,109 @@ function Teaser() {
       {pick != null && (
         <div className="row between" style={{ marginTop: 18 }}>
           <span className="small muted" style={{ flex: 1 }}>{t.e}</span>
-          <button className="btn btn-navy" onClick={() => { setI((i + 1) % TEASERS.length); setPick(null) }}>Next →</button>
+          <button className="lp-btn lp-btn-dark" onClick={() => { setI((i + 1) % TEASERS.length); setPick(null) }}>Next →</button>
         </div>
       )}
     </div>
   )
 }
 
+// ---------------------------------------------------------------- navbar
+// [id, label, colour channel of its accent]
+const SECTIONS = [
+  ['how', 'How it works', 'r'],
+  ['demo', 'Live demo', 'g'],
+  ['syllabus', 'Syllabus', 'b'],
+  ['features', 'Features', 'r'],
+  ['arcade', 'Arcade', 'g'],
+]
+const CH = ['r', 'g', 'b']
+
+function LandingNav({ scroller, enter, signedIn }) {
+  const { matlab } = useApp()
+  const [scrolled, setScrolled] = useState(false)
+  const [active, setActive] = useState(null)
+  const [open, setOpen] = useState(false)
+
+  // Raise the bar once the page scrolls, and highlight the section in view
+  useEffect(() => {
+    const root = scroller.current
+    if (!root) return
+    const onScroll = () => setScrolled(root.scrollTop > 8)
+    root.addEventListener('scroll', onScroll, { passive: true })
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) setActive(e.target.id) })
+    }, { root, rootMargin: '-45% 0px -50% 0px' })
+    SECTIONS.forEach(([id]) => { const el = document.getElementById(id); if (el) io.observe(el) })
+    const onTop = () => { if (root.scrollTop < 200) setActive(null) }
+    root.addEventListener('scroll', onTop, { passive: true })
+    return () => { root.removeEventListener('scroll', onScroll); root.removeEventListener('scroll', onTop); io.disconnect() }
+  }, [scroller])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  const go = (e, id) => {
+    e.preventDefault()
+    setOpen(false)
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
+  const status = matlab.ok ? `MATLAB ${matlab.release}` : matlab.ready ? 'MATLAB unavailable' : 'Starting MATLAB…'
+
+  return (
+    <header className={`lp-nav ${scrolled ? 'scrolled' : ''} ${open ? 'open' : ''}`}>
+      <div className="lp-nav-bar">
+        <a className="lp-brand" href="#home" onClick={(e) => { e.preventDefault(); scroller.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+          <Logo />
+          <b>{SITE_NAME}</b>
+        </a>
+        <nav className="lp-nav-links" aria-label="Sections">
+          {SECTIONS.map(([id, label, ch]) => (
+            <a key={id} href={`#${id}`} className={`ch-${ch} ${active === id ? 'active' : ''}`} aria-current={active === id ? 'true' : undefined} onClick={(e) => go(e, id)}>{label}</a>
+          ))}
+        </nav>
+        <div className="lp-nav-actions">
+          <span className="lp-status" title={status} role="status">
+            <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} aria-hidden="true" />
+            <span className="lp-status-text">{status}</span>
+          </span>
+          <ThemeToggle className="lp-icon-btn" />
+          <a className="lp-btn lp-btn-primary lp-nav-cta" href={enter}>{signedIn ? 'Open dashboard' : 'Sign in'} <Icon name="arrow" size={15} /></a>
+          <button className="lp-icon-btn lp-menu-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="lp-sheet" aria-label={open ? 'Close menu' : 'Open menu'}>
+            <Icon name={open ? 'close' : 'menu'} size={20} />
+          </button>
+        </div>
+      </div>
+      {open && (
+        <nav className="lp-sheet" id="lp-sheet" aria-label="Sections">
+          {SECTIONS.map(([id, label]) => (
+            <a key={id} href={`#${id}`} className={active === id ? 'active' : ''} onClick={(e) => go(e, id)}>{label}</a>
+          ))}
+          <a className="lp-btn lp-btn-primary" href={enter}>{signedIn ? 'Open dashboard' : 'Sign in'}</a>
+        </nav>
+      )}
+    </header>
+  )
+}
+
 // ---------------------------------------------------------------- page
+const FEATURES = [
+  ['code', 'Toolbox vs manual', 'Every key algorithm twice: medfilt2 next to an explicit sort-and-pick loop — with identical results.'],
+  ['conv', 'Step-by-step convolution', 'Watch the kernel flip and slide, with every product and sum shown.'],
+  ['kernel', 'Kernel playground', 'Type any 3×3 – 7×7 kernel and see MATLAB apply it as you edit.'],
+  ['chart', 'Objective restoration', 'Measure every filter and deblurring method by MSE and PSNR against the original.'],
+  ['file', 'Experiments & reports', '13 university-style experiments and one-click lab reports.'],
+  ['users', 'Classroom mode', 'Projector-ready live quiz with a big timer for the whole class.'],
+]
+
 export default function Landing() {
   const { matlab, progress, meta, role } = useApp()
   const enter = role === 'teacher' ? '#class' : role === 'student' ? '#dashboard' : '#start'
+  const scroller = useRef(null)
   const [top, setTop] = useState([])
   useEffect(() => {
     if (matlab.ok) run('leaderboard', { action: 'get' }).then((d) => setTop(asArray(d).slice(0, 3))).catch(() => {})
@@ -232,136 +329,112 @@ export default function Landing() {
   const earned = asArray(progress?.badges).filter((b) => b.earned)
 
   return (
-    <div className="landing">
-      <nav className="l-nav" aria-label="Main">
-        <a className="brand" href="#home">
-          <span className="logo"><i /><i /><i /><i /></span>
-          <span><b>ImageLab</b></span>
-        </a>
-        <a className="l-link" href="#home" onClick={(e) => { e.preventDefault(); scrollTo('how') }}>How it works</a>
-        <a className="l-link" href="#home" onClick={(e) => { e.preventDefault(); scrollTo('demo') }}>Live demo</a>
-        <a className="l-link" href="#home" onClick={(e) => { e.preventDefault(); scrollTo('quest') }}>Quest</a>
-        <a className="l-link" href="#home" onClick={(e) => { e.preventDefault(); scrollTo('arcade') }}>Arcade</a>
-        <span className="spacer" />
-        <span className="pill l-status" style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)', color: '#c9d4e5' }}>
-          <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} /> {matlab.ok ? `MATLAB ${matlab.release}` : matlab.ready ? 'MATLAB unavailable' : 'Starting MATLAB…'}
-        </span>
-        <ThemeToggle className="icon-btn l-theme" />
-        <a className="btn btn-primary" href={enter}>Enter the Lab</a>
-      </nav>
+    <div className="landing" ref={scroller}>
+      <LandingNav scroller={scroller} enter={enter} signedIn={!!role} />
 
-      <header className="l-hero">
-        <div className="l-hero-inner">
+      <header className="lp-hero">
+        <div className="lp-inner lp-hero-inner">
           <div className="reveal">
-            <span className="l-chip"><Icon name="sparkles" size={15} /> Image Enhancement using Spatial Domain Filters</span>
+            <span className="lp-chip"><span className="rgb-marks" aria-hidden="true"><i /><i /><i /></span> Image Enhancement using Spatial Domain Filters</span>
             <h1>Learn image processing by <em>doing it</em> in MATLAB.</h1>
-            <p className="lead">
-              ImageLab is an interactive laboratory where every filter runs in MATLAB — both the toolbox call and a
+            <p className="lp-lead">
+              {SITE_NAME} is an interactive laboratory where every filter runs in MATLAB — both the toolbox call and a
               hand-written implementation — so you see not just <i>what</i> happens, but <i>how</i>.
             </p>
-            <div className="row" style={{ gap: 14 }}>
-              <a className="btn btn-primary btn-lg" href={enter}>
-                <Icon name="play" size={17} /> {meta ? 'Continue learning' : 'Start the lab'}
+            <div className="lp-cta-row">
+              <a className="lp-btn lp-btn-primary lp-btn-lg" href={enter}>
+                <Icon name="play" size={16} /> {meta ? 'Continue learning' : 'Start the lab'}
               </a>
-              <button className="btn btn-lg" onClick={() => scrollTo('demo')}>See it live</button>
-            </div>
-            <div className="l-trust">
-              <div><b><CountUp to={4} /></b>syllabus units</div>
-              <div><b><CountUp to={13} /></b>experiments</div>
-              <div><b><CountUp to={90} /></b>quiz questions</div>
-              <div><b><CountUp to={60} suffix="+" /></b>MATLAB functions</div>
+              <button className="lp-btn lp-btn-outline lp-btn-lg" onClick={() => scrollTo('demo')}>See it live</button>
             </div>
           </div>
-          <div className="reveal" style={{ animationDelay: '0.15s' }}>
+          <div className="reveal" style={{ animationDelay: '0.12s' }}>
             <KernelAnimation />
           </div>
         </div>
+        <div className="lp-inner">
+          <dl className="lp-stats">
+            <div className="ch-r"><dt>Syllabus units</dt><dd><CountUp to={4} /></dd></div>
+            <div className="ch-g"><dt>Experiments</dt><dd><CountUp to={13} /></dd></div>
+            <div className="ch-b"><dt>Quiz questions</dt><dd><CountUp to={90} /></dd></div>
+            <div><dt>MATLAB functions</dt><dd><CountUp to={60} suffix="+" /></dd></div>
+          </dl>
+        </div>
       </header>
 
-      <section className="l-section" id="how">
-        <div className="l-inner">
-          <div className="l-head">
-            <div className="eyebrow">How it works</div>
-            <h2>Three steps from pixels to understanding</h2>
-            <p>No black boxes: every result can be traced back to the MATLAB code that produced it.</p>
+      <section className="lp-section" id="how">
+        <div className="lp-inner">
+          <div className="lp-head">
+            <div className="lp-eyebrow ch-r">How it works</div>
+            <h2 className="lp-h2">Three steps from pixels to understanding</h2>
+            <p className="lp-text">No black boxes: every result can be traced back to the MATLAB code that produced it.</p>
           </div>
-          <div className="l-steps">
+          <ol className="lp-steps">
             {[
               ['image', 'Load an image', 'Use a sample or your own photo. MATLAB reads it and reports size, class and colour space.'],
               ['sliders', 'Experiment', 'Add noise, filter, equalise, sharpen, detect edges — and compare the toolbox with the manual version.'],
               ['trophy', 'Prove it', 'Run the 13 experiments, generate reports, beat the quiz and climb the leaderboard.'],
             ].map(([ic, t, d], k) => (
-              <div className="l-step" key={t}>
-                <span className="n">0{k + 1}</span>
-                <div className="ic"><Icon name={ic} size={24} /></div>
+              <li className={`lp-step ch-${CH[k]}`} key={t}>
+                <div className="lp-step-top">
+                  <span className="lp-ic"><Icon name={ic} size={20} /></span>
+                  <span className="lp-step-n">0{k + 1}</span>
+                </div>
                 <h3>{t}</h3>
                 <p>{d}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
-      <section className="l-section alt" id="demo">
-        <div className="l-inner"><LiveDemo /></div>
+      <section className="lp-section lp-alt" id="demo">
+        <div className="lp-inner"><LiveDemo /></div>
       </section>
 
-      <section className="l-section dark" id="quest">
-        <div className="l-inner">
-          <div className="l-head">
-            <div className="eyebrow">Your quest</div>
-            <h2>Four units. Four levels. One lab.</h2>
-            <p>Each syllabus unit is a level of missions. Complete them to earn XP and unlock badges.</p>
+      <section className="lp-section lp-dark" id="syllabus">
+        <div className="lp-inner">
+          <div className="lp-head">
+            <div className="lp-eyebrow ch-b">Your path</div>
+            <h2 className="lp-h2">Four units. Four levels. One lab.</h2>
+            <p className="lp-text">Each syllabus unit is a level of missions. Complete them to earn XP and unlock badges.</p>
           </div>
-          <div className="quest">
-            {UNITS.map((u) => {
+          <div className="lp-units">
+            {UNITS.map((u, k) => {
               const pr = unitProgress(u, progress, { imageLoaded: !!meta })
-              const r = 52
-              const c = 2 * Math.PI * r
               return (
-                <a key={u.id} className="quest-node" href={`#${u.lab}`}>
-                  <div className="orb">
-                    <svg width="110" height="110" viewBox="0 0 110 110">
-                      <circle cx="55" cy="55" r={r} stroke="rgba(255,255,255,0.1)" strokeWidth="5" fill="none" />
-                      <circle cx="55" cy="55" r={r} stroke="var(--green-400)" strokeWidth="5" fill="none" strokeLinecap="round"
-                        strokeDasharray={c} strokeDashoffset={c * (1 - pr.ratio)} />
-                    </svg>
-                    {u.num}
+                <a key={u.id} className={`lp-unit ch-${CH[k % 3]}`} href={`#${u.lab}`}>
+                  <div className="row between">
+                    <span className="lp-unit-num">Unit {u.num}</span>
+                    <span className="lp-unit-count">{pr.done}/{pr.total}</span>
                   </div>
-                  <h4>{u.title}</h4>
+                  <h3>{u.title}</h3>
                   <p>{u.subtitle}</p>
-                  <span className="lvl">{pr.done}/{pr.total} missions</span>
+                  <div className="lp-unit-bar" aria-label={`${pr.done} of ${pr.total} missions done`}><i style={{ width: `${pr.ratio * 100}%` }} /></div>
                 </a>
               )
             })}
           </div>
-          <div className="row center" style={{ marginTop: 56, gap: 14 }}>
+          <div className="lp-badges">
             {earned.length ? earned.slice(0, 6).map((b) => (
-              <span key={b.id} className="l-chip" style={{ margin: 0 }}>{MEDALS[b.id]} {b.name}</span>
+              <span key={b.id} className="lp-chip lp-chip-dark">{MEDALS[b.id]} {b.name}</span>
             )) : ['🧪 Filter Master', '🔍 Edge Detective', '🔄 Convolution Expert', '💯 Perfect Quiz'].map((b) => (
-              <span key={b} className="l-chip" style={{ margin: 0, opacity: 0.7 }}>{b}</span>
+              <span key={b} className="lp-chip lp-chip-dark">{b}</span>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="l-section">
-        <div className="l-inner">
-          <div className="l-head">
-            <div className="eyebrow">Inside the lab</div>
-            <h2>Built to make the theory visible</h2>
+      <section className="lp-section" id="features">
+        <div className="lp-inner">
+          <div className="lp-head">
+            <div className="lp-eyebrow ch-r">Inside the lab</div>
+            <h2 className="lp-h2">Built to make the theory visible</h2>
           </div>
-          <div className="f-grid">
-            {[
-              ['code', 'var(--navy-100)', 'var(--navy-600)', 'Toolbox vs manual', 'Every key algorithm twice: medfilt2 next to an explicit sort-and-pick loop — with identical results.'],
-              ['conv', 'var(--green-100)', 'var(--green-600)', 'Step-by-step convolution', 'Watch the kernel flip and slide, with every product and sum shown.'],
-              ['kernel', 'var(--amber-100)', '#b47a0b', 'Kernel playground', 'Type any 3×3 – 7×7 kernel and see MATLAB apply it as you edit.'],
-              ['chart', 'var(--violet-100)', 'var(--violet-500)', 'Objective restoration', 'Measure every filter and deblurring method by MSE and PSNR against the original.'],
-              ['file', 'var(--navy-100)', 'var(--navy-600)', 'Experiments & reports', '13 university-style experiments and one-click lab reports.'],
-              ['user', 'var(--green-100)', 'var(--green-600)', 'Classroom mode', 'Projector-ready quiz with a big timer for the whole class.'],
-            ].map(([ic, bg, fg, t, d]) => (
-              <div className="f-card" key={t}>
-                <div className="ic" style={{ background: bg, color: fg }}><Icon name={ic} size={24} /></div>
+          <div className="lp-features">
+            {FEATURES.map(([ic, t, d], k) => (
+              <div className={`lp-feature ch-${CH[k % 3]}`} key={t}>
+                <span className="lp-ic"><Icon name={ic} size={20} /></span>
                 <h3>{t}</h3>
                 <p>{d}</p>
               </div>
@@ -370,12 +443,12 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="l-section alt" id="arcade">
-        <div className="l-inner grid-2" style={{ alignItems: 'center', gap: 56 }}>
+      <section className="lp-section lp-alt" id="arcade">
+        <div className="lp-inner lp-split">
           <div>
-            <div className="eyebrow">The Arcade</div>
-            <h2 className="l-h2">Ten questions. Ten seconds each.</h2>
-            <p className="muted" style={{ fontSize: 16.5, margin: '14px 0 28px' }}>
+            <div className="lp-eyebrow ch-g">The Arcade</div>
+            <h2 className="lp-h2">Ten questions. Ten seconds each.</h2>
+            <p className="lp-text">
               Rapid Fire, Kernel Quiz, Guess the Filter, Build the Pipeline and a timed restoration challenge.
               Streaks multiply your score — the best make the podium.
             </p>
@@ -391,24 +464,31 @@ export default function Landing() {
                 )
               })}
             </div>
-            <a className="btn btn-primary btn-lg" href="#quiz" style={{ marginTop: 28 }}><Icon name="gamepad" size={18} /> Open the Arcade</a>
+            <a className="lp-btn lp-btn-primary lp-btn-lg" href="#quiz" style={{ marginTop: 28 }}><Icon name="gamepad" size={18} /> Open the Arcade</a>
           </div>
           <Teaser />
         </div>
       </section>
 
-      <section className="l-cta">
-        <h2>Ready to filter some pixels?</h2>
-        <p>Everything runs offline in MATLAB on your computer.</p>
-        <div className="row center" style={{ gap: 14 }}>
-          <a className="btn btn-primary btn-lg" href={enter}>Enter the Lab</a>
-          <a className="btn btn-lg" style={{ background: 'transparent', color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} href="#learn">Read the theory</a>
+      <section className="lp-cta">
+        <div className="lp-inner lp-cta-inner">
+          <div>
+            <span className="rgb-marks bar" aria-hidden="true"><i /><i /><i /></span>
+            <h2>Ready to filter some pixels?</h2>
+            <p>Everything runs offline in MATLAB on your computer.</p>
+          </div>
+          <div className="lp-cta-row">
+            <a className="lp-btn lp-btn-primary lp-btn-lg" href={enter}>Enter the lab</a>
+            <a className="lp-btn lp-btn-ghost-dark lp-btn-lg" href="#learn">Read the theory</a>
+          </div>
         </div>
       </section>
 
-      <footer className="l-foot">
-        <span>ImageLab — Interactive Image Processing Laboratory</span>
-        <span>Spatial-domain processing · MATLAB {matlab.release || ''} · offline</span>
+      <footer className="lp-foot">
+        <div className="lp-inner lp-foot-inner">
+          <span className="lp-brand"><Logo /><b>{SITE_NAME}</b><small>{SITE_TAGLINE}</small></span>
+          <span>MATLAB {matlab.release || ''} · runs offline</span>
+        </div>
       </footer>
     </div>
   )

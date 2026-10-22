@@ -78,7 +78,7 @@ export default function ClassSettings() {
             </div>
           </form>
           {pinMsg && <Note kind={pinMsg.kind}>{pinMsg.text}</Note>}
-          <p className="small muted mt-sm">ImageLab stores only a salted hash of the PIN and of every student password (PBKDF2, data/imagelab.db). Five wrong attempts lock sign-in for five minutes.</p>
+          <p className="small muted mt-sm">Spatia stores only a salted hash of the PIN and of every student password (PBKDF2, data/imagelab.db). Five wrong attempts lock sign-in for five minutes.</p>
         </Card>
       </div>
       {manage && <StudentsModal onClose={() => { setManage(false); refreshProfiles(); refresh({ force: true }) }} />}

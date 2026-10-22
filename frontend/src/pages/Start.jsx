@@ -1,9 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
 import { run } from '../api'
+import { Logo, SITE_NAME, SITE_TAGLINE } from '../components/Brand'
 import Icon from '../components/Icon'
 import ThemeToggle from '../components/ThemeToggle'
-import { Note, Tabs } from '../components/ui'
+import { Note } from '../components/ui'
+
+// Decorative: one small 6x6 colour image split into its R, G and B channels.
+// Each channel is a bright blob in a different place; opacity = intensity.
+const CHANNELS = [['r', 'R', 1.5, 1.5], ['g', 'G', 2.5, 3.5], ['b', 'B', 4, 2]].map(([ch, label, cy, cx]) => ({
+  ch,
+  label,
+  cells: Array.from({ length: 36 }, (_, i) => {
+    const d = Math.hypot(Math.floor(i / 6) - cy, (i % 6) - cx)
+    return 0.12 + 0.88 * Math.max(0, 1 - d / 4)
+  }),
+}))
+
+function Channels() {
+  return (
+    <div className="auth-channels" aria-hidden="true">
+      {CHANNELS.map(({ ch, label, cells }) => (
+        <figure key={ch} className={`ch-${ch}`}>
+          <div className="auth-channel">{cells.map((v, i) => <i key={i} style={{ opacity: v }} />)}</div>
+          <figcaption>{label}</figcaption>
+        </figure>
+      ))}
+    </div>
+  )
+}
 
 // Sign-in page. Students sign in with their roll number (or name) and
 // password; the teacher with the PIN. The backend checks the credentials
@@ -61,26 +86,50 @@ export default function Start({ next }) {
   const switchMode = (m) => { setMode(m); setError(null); setInfo(null); setForm((f) => ({ ...f, password: '', repeat: '' })) }
   const disabled = !matlab.ok || busy
 
-  return (
-    <div className="start">
-      <header className="start-head">
-        <a className="brand" href="#home">
-          <span className="logo" aria-hidden="true"><i /><i /><i /><i /></span>
-          <span><b>ImageLab</b><small>Image Processing Laboratory</small></span>
-        </a>
-        <ThemeToggle />
-      </header>
-      <main className="start-main signin">
-        <h1>Sign in to ImageLab</h1>
-        <p className="subtitle">Your dashboard, progress and Code Lab work are kept under your own account.</p>
-        {!matlab.ok && <Note kind="warn">{matlab.ready ? 'MATLAB is not available.' : 'Starting MATLAB… this takes up to a minute the first time.'}</Note>}
-        {sessionMessage && <Note kind="warn">{sessionMessage}</Note>}
+  const heading = tab === 'teacher' ? ['Teacher sign in', 'Manage your class, assignments and the live quiz.']
+    : mode === 'register' ? ['Create your account', 'Join the class with your name and roll number.']
+      : mode === 'claim' ? ['Choose a password', 'This is your first sign-in — pick a password for your account.']
+        : ['Welcome back', 'Sign in to continue your labs, experiments and quizzes.']
 
-        <section className="card start-card">
+  return (
+    <div className="auth">
+      <aside className="auth-side">
+        <a className="brand" href="#home">
+          <Logo />
+          <span><b>{SITE_NAME}</b><small>{SITE_TAGLINE}</small></span>
+        </a>
+        <div className="auth-pitch">
+          <Channels />
+          <h2>Learn image processing by doing it in MATLAB.</h2>
+          <ul>
+            <li className="ch-r"><span className="auth-ic"><Icon name="flask" size={16} /></span>Hands-on labs for all four syllabus units</li>
+            <li className="ch-g"><span className="auth-ic"><Icon name="chart" size={16} /></span>Your progress, XP and reports in one place</li>
+            <li className="ch-b"><span className="auth-ic"><Icon name="gamepad" size={16} /></span>Live class quizzes and the Arcade</li>
+          </ul>
+        </div>
+        <a className="auth-back" href="#home"><Icon name="arrow" size={14} className="flip" /> Back to home</a>
+      </aside>
+
+      <main className="auth-main">
+        <div className="auth-top">
+          <a className="brand auth-brand-mobile" href="#home"><Logo /><b>{SITE_NAME}</b></a>
+          <ThemeToggle />
+        </div>
+        <div className="auth-form-wrap">
+          <h1>{heading[0]}</h1>
+          <p className="auth-sub">{heading[1]}</p>
+
           {matlab.remote ? <Note>Sign in with your student account to join the live quiz.</Note> : (
-            <Tabs tabs={[{ key: 'student', label: 'Student' }, { key: 'teacher', label: 'Teacher' }]} active={tab}
-              onChange={(t) => { setTab(t); setError(null) }} />
+            <div className="segmented auth-role" role="tablist" aria-label="Sign in as">
+              {[['student', 'Student'], ['teacher', 'Teacher']].map(([k, label]) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''}
+                  onClick={() => { setTab(k); setError(null) }}>{label}</button>
+              ))}
+            </div>
           )}
+
+          {!matlab.ok && <Note kind="warn">{matlab.ready ? 'MATLAB is not available.' : 'Starting MATLAB… this takes up to a minute the first time.'}</Note>}
+          {sessionMessage && <Note kind="warn">{sessionMessage}</Note>}
 
           {tab === 'student' && mode === 'login' && (
             <form className="signin-form" onSubmit={studentLogin}>
@@ -89,11 +138,11 @@ export default function Start({ next }) {
               <label className="field"><span className="field-label">Password</span>
                 <input type="password" autoComplete="current-password" value={form.password} onChange={set('password')} required /></label>
               <label className="check"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Keep me signed in on this computer</label>
-              <button className="btn btn-primary" type="submit" disabled={disabled || !form.identifier || !form.password}>Sign in</button>
-              <p className="small muted">First time? Type your roll number and the password you want — ImageLab will ask you to confirm it.
+              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || !form.identifier || !form.password}>{busy ? 'Signing in…' : 'Sign in'}</button>
+              <p className="auth-hint">First time? Type your roll number and the password you want — {SITE_NAME} will ask you to confirm it.
                 Forgot your password? Ask your teacher to reset it.</p>
               {options.selfRegister && (
-                <p className="small">New to the class? <button type="button" className="link-btn" onClick={() => switchMode('register')}>Create an account</button></p>
+                <p className="auth-switch">New to the class? <button type="button" className="link-btn" onClick={() => switchMode('register')}>Create an account</button></p>
               )}
             </form>
           )}
@@ -105,8 +154,8 @@ export default function Start({ next }) {
                 <input type="password" autoComplete="new-password" value={form.password} onChange={set('password')} minLength={6} autoFocus required /></label>
               <label className="field"><span className="field-label">Repeat the password</span>
                 <input type="password" autoComplete="new-password" value={form.repeat} onChange={set('repeat')} required /></label>
-              <button className="btn btn-primary" type="submit" disabled={disabled || form.password.length < 6}>Set password and sign in</button>
-              <button type="button" className="link-btn" onClick={() => switchMode('login')}>← Back</button>
+              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || form.password.length < 6}>Set password and sign in</button>
+              <p className="auth-switch"><button type="button" className="link-btn" onClick={() => switchMode('login')}>← Back</button></p>
             </form>
           )}
 
@@ -116,13 +165,15 @@ export default function Start({ next }) {
                 <input type="text" autoComplete="name" value={form.name} onChange={set('name')} maxLength={40} autoFocus required /></label>
               <label className="field"><span className="field-label">Roll number (you sign in with it)</span>
                 <input type="text" autoComplete="username" value={form.roll} onChange={set('roll')} maxLength={20} required /></label>
-              <label className="field"><span className="field-label">Password (at least 6 characters)</span>
-                <input type="password" autoComplete="new-password" value={form.password} onChange={set('password')} minLength={6} required /></label>
-              <label className="field"><span className="field-label">Repeat the password</span>
-                <input type="password" autoComplete="new-password" value={form.repeat} onChange={set('repeat')} required /></label>
+              <div className="auth-row">
+                <label className="field"><span className="field-label">Password</span>
+                  <input type="password" autoComplete="new-password" value={form.password} onChange={set('password')} minLength={6} placeholder="6+ characters" required /></label>
+                <label className="field"><span className="field-label">Repeat password</span>
+                  <input type="password" autoComplete="new-password" value={form.repeat} onChange={set('repeat')} required /></label>
+              </div>
               <label className="check"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Keep me signed in on this computer</label>
-              <button className="btn btn-primary" type="submit" disabled={disabled || !form.name.trim() || !form.roll.trim() || form.password.length < 6}>Create account</button>
-              <button type="button" className="link-btn" onClick={() => switchMode('login')}>← I already have an account</button>
+              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || !form.name.trim() || !form.roll.trim() || form.password.length < 6}>Create account</button>
+              <p className="auth-switch">Already have an account? <button type="button" className="link-btn" onClick={() => switchMode('login')}>Sign in</button></p>
             </form>
           )}
 
@@ -132,13 +183,13 @@ export default function Start({ next }) {
                 <label className="field"><span className="field-label">Teacher PIN</span>
                   <input type="password" inputMode="numeric" autoComplete="current-password" value={form.pin} onChange={set('pin')} autoFocus required /></label>
               ) : <Note kind="warn">No teacher PIN is set yet — set one in Class settings right after signing in.</Note>}
-              <button className="btn btn-navy" type="submit" disabled={disabled || (options.hasPin && !form.pin)}>Sign in as teacher</button>
-              <p className="small muted">The teacher session ends when this browser tab is closed.</p>
+              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || (options.hasPin && !form.pin)}>Sign in as teacher</button>
+              <p className="auth-hint">The teacher session ends when this browser tab is closed.</p>
             </form>
           )}
 
-          {error && <Note kind="error">{error.message}</Note>}
-        </section>
+          {error && <div className="mt-sm"><Note kind="error">{error.message}</Note></div>}
+        </div>
       </main>
     </div>
   )

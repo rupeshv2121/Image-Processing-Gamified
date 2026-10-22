@@ -4,14 +4,14 @@ import { Card, Page } from '../components/ui'
 export default function About() {
   const { matlab } = useApp()
   return (
-    <Page eyebrow="About" title="About ImageLab" subtitle="Interactive Image Processing Laboratory">
+    <Page eyebrow="About" title="About Spatia" subtitle="Interactive Image Processing Laboratory">
       <div className="grid-2">
         <Card title="Project">
           <div className="prose">
-            <p><b>Title:</b> ImageLab — Interactive Image Processing Laboratory</p>
+            <p><b>Title:</b> Spatia — Interactive Image Processing Laboratory</p>
             <p><b>Topic:</b> Image Enhancement using Different Spatial Domain Filters</p>
             <p><b>Subtitle:</b> An Interactive MATLAB-Based Image Processing and Learning Laboratory</p>
-            <p>ImageLab covers the four syllabus units — fundamentals, image enhancement, degradation/restoration/colour, and segmentation/representation — with hands-on labs, 13 experiments, a quiz system and report generation.</p>
+            <p>Spatia covers the four syllabus units — fundamentals, image enhancement, degradation/restoration/colour, and segmentation/representation — with hands-on labs, 13 experiments, a quiz system and report generation.</p>
             <p><b>Scope:</b> spatial-domain processing only. Frequency-domain filtering (FFT, ideal / Butterworth / Gaussian low- and high-pass filters) is intentionally not included.</p>
           </div>
         </Card>

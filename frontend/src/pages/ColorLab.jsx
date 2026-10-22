@@ -170,8 +170,8 @@ export default function ColorLab() {
           {pseudo?.method === 'transform' && (
             <Card title="Transfer functions R(r), G(r), B(r)">
               <LineChart height={150} x={['0', '255']} yMin={0} yMax={255} series={[
-                { values: pseudo.curves.r, color: '#e0413a', label: 'Red' },
-                { values: pseudo.curves.g, color: '#22a565', label: 'Green' },
+                { values: pseudo.curves.r, color: '#d1453b', label: 'Red' },
+                { values: pseudo.curves.g, color: '#2f9e5b', label: 'Green' },
                 { values: pseudo.curves.b, color: '#2f6fd6', label: 'Blue' },
               ]} />
             </Card>

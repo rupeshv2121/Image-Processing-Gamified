@@ -70,7 +70,7 @@ export default function RestorationLab() {
       <h4>Restoration</h4>
       {METHODS.map((m) => <p key={m.value} className="small"><b>{m.label}</b> — {m.text}</p>)}
       <h4>Spatial domain only</h4>
-      <p className="small">Textbooks compute these filters with the Fourier transform. ImageLab solves the same least-squares problems <b>(H′H + λR′R) f = H′g</b> iteratively with the conjugate-gradient method, where every step is a convolution with h or its 180° rotation. When the iterations converge the result equals the frequency-domain filter; stopping early is itself a form of regularisation (watch the PSNR-per-iteration curve).</p>
+      <p className="small">Textbooks compute these filters with the Fourier transform. Spatia solves the same least-squares problems <b>(H′H + λR′R) f = H′g</b> iteratively with the conjugate-gradient method, where every step is a convolution with h or its 180° rotation. When the iterations converge the result equals the frequency-domain filter; stopping early is itself a form of regularisation (watch the PSNR-per-iteration curve).</p>
     </>
   )
 
@@ -151,7 +151,7 @@ export default function RestorationLab() {
                 left={{ id: deg.id, title: 'Degraded' }}
                 right={{ id: pick.id, title: pick.desc, badge: fmtPsnr(pick.psnr), actions: <UseButton id={pick.id} label={pick.desc} /> }} />
               <Card title="PSNR after each iteration">
-                <LineChart height={160} x={['1', String(history.length)]} series={[{ values: history, color: '#22a565', label: 'restored' }, { values: history.map(() => deg.psnr), color: '#999', label: 'degraded', dashed: true }]} />
+                <LineChart height={160} x={['1', String(history.length)]} series={[{ values: history, color: '#2f9e5b', label: 'restored' }, { values: history.map(() => deg.psnr), color: '#999', label: 'degraded', dashed: true }]} />
                 <p className="small muted mt-sm">
                   Best after iteration {bestIt} ({fmt(Math.max(...history), 2)} dB); final {fmtPsnr(pick.psnr)}, MSE {fmt(pick.mse, 5)}, {fmt(pick.timeMs, 0)} ms.
                   {bestIt < history.length && ' After the peak the noise is amplified faster than detail is recovered — stop earlier or regularise more.'}

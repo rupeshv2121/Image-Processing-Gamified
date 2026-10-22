@@ -65,7 +65,7 @@ function ExperimentDetail({ exp, onBack }) {
             <h4>How it works</h4>
             <ol>{howItWorks.map((l, i) => <li key={i}>{l}</li>)}</ol>
           </div>
-          <p className="small muted" style={{ marginTop: 8 }}>ImageLab functions used: {asArray(exp.functions).map((f) => `${f}.m`).join(', ')}</p>
+          <p className="small muted" style={{ marginTop: 8 }}>Spatia functions used: {asArray(exp.functions).map((f) => `${f}.m`).join(', ')}</p>
           {showSource && <CodeModal functions={asArray(exp.functions)} onClose={() => setShowSource(false)} />}
         </Card>
       )}

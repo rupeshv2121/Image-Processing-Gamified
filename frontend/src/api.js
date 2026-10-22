@@ -44,13 +44,13 @@ export async function run(op, params = {}) {
       body: JSON.stringify({ op, params: { ...params, ...(session ? { token: session.token } : {}), ...(session?.role === 'teacher' ? { track: false } : {}) } }),
     })
   } catch {
-    throw new Error('Cannot reach the ImageLab server. Start it with start_imagelab.bat.')
+    throw new Error('Cannot reach the Spatia server. Start it with start_imagelab.bat.')
   }
   let json
   try {
     json = await res.json()
   } catch {
-    throw new Error('The ImageLab server returned an invalid response.')
+    throw new Error('The Spatia server returned an invalid response.')
   }
   if (!json.ok) {
     const err = new Error(json.error || 'Unknown MATLAB error.')
@@ -100,7 +100,7 @@ export function uploadImage(file) {
         if (!json.ok) reject(new Error(json.error || 'Upload failed.'))
         else resolve(json.data)
       } catch {
-        reject(new Error('Cannot reach the ImageLab server.'))
+        reject(new Error('Cannot reach the Spatia server.'))
       }
     }
     reader.readAsDataURL(file)

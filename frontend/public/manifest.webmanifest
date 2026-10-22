@@ -1,6 +1,6 @@
 {
-  "name": "ImageLab – Interactive Image Processing Laboratory",
-  "short_name": "ImageLab",
+  "name": "Spatia – Spatial-Domain Image Processing Lab",
+  "short_name": "Spatia",
   "description": "Learn spatial-domain image processing with MATLAB.",
   "start_url": "/#dashboard",
   "scope": "/",

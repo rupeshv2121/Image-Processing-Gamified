@@ -100,7 +100,7 @@ export default function LiveQuiz() {
   })
 
   if (!matlab.ok) {
-    return <Page eyebrow="Live quiz" title="Live quiz"><p className="muted"><span className="spinner dark" /> Connecting to ImageLab…</p></Page>
+    return <Page eyebrow="Live quiz" title="Live quiz"><p className="muted"><span className="spinner dark" /> Connecting to Spatia…</p></Page>
   }
 
   if (!state?.joined) {

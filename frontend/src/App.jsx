@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useApp } from './AppContext'
 import { cancelRun, imageUrl } from './api'
+import { Logo, SITE_NAME } from './components/Brand'
 import Icon from './components/Icon'
 import { ProfileMenu } from './components/Profiles'
 import ThemeToggle from './components/ThemeToggle'
@@ -174,7 +175,7 @@ function RemoteNav({ route }) {
   return (
     <>
       <NavLink to="live" icon="zap" label="Live quiz" route={route} />
-      <p className="nav-note">On this device you can join the live quiz. The labs and everything else are on the ImageLab computer.</p>
+      <p className="nav-note">On this device you can join the live quiz. The labs and everything else are on the Spatia computer.</p>
     </>
   )
 }
@@ -183,8 +184,8 @@ function Sidebar({ route, role, remote }) {
   return (
     <aside className={`sidebar ${role === 'teacher' ? 'sidebar-teacher' : ''}`} id="sidebar">
       <a className="brand" href={`#${HOME[role]}`}>
-        <span className="logo" aria-hidden="true"><i /><i /><i /><i /></span>
-        <span><b>ImageLab</b><small>{role === 'teacher' ? 'Teacher' : 'Image Processing Laboratory'}</small></span>
+        <Logo />
+        <span><b>{SITE_NAME}</b><small>{role === 'teacher' ? 'Teacher' : 'Image Processing Laboratory'}</small></span>
       </a>
       <nav aria-label="Main">
         {remote ? <RemoteNav route={route} /> : role === 'teacher' ? <TeacherNav route={route} /> : <StudentNav route={route} />}
@@ -203,7 +204,7 @@ function TopBar({ onMenu, navOpen, navCollapsed }) {
   return (
     <header className="topbar">
       <button className="icon-btn menu-btn" onClick={onMenu} aria-label={navOpen || !navCollapsed ? 'Close menu' : 'Open menu'} aria-expanded={navOpen || !navCollapsed} aria-controls="sidebar"><Icon name="menu" /></button>
-      <span className="pill" role="status" title={matlab.ok ? (matlab.ipt ? 'Image Processing Toolbox functions are used' : 'Toolbox not installed — ImageLab uses its manual MATLAB implementations') : ''}>
+      <span className="pill" role="status" title={matlab.ok ? (matlab.ipt ? 'Image Processing Toolbox functions are used' : 'Toolbox not installed — Spatia uses its manual MATLAB implementations') : ''}>
         <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} aria-hidden="true" />
         {matlab.ok ? <>MATLAB <b>{matlab.release}</b>{!matlab.ipt && <span className="faint">· manual mode</span>}</> : matlab.ready ? <span style={{ color: 'var(--red-500)' }}>MATLAB unavailable</span> : 'Starting MATLAB…'}
       </span>

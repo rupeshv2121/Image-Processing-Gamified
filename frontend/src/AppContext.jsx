@@ -69,7 +69,7 @@ export function AppProvider({ children }) {
           return
         }
       } catch {
-        if (!stop) setMatlab((m) => ({ ...m, error: 'Waiting for the ImageLab server…' }))
+        if (!stop) setMatlab((m) => ({ ...m, error: 'Waiting for the Spatia server…' }))
       }
       if (!stop) setTimeout(poll, 1500)
     }

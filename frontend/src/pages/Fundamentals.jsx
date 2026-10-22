@@ -173,7 +173,7 @@ export default function Fundamentals() {
           {percept.kind === 'machbands' && (
             <Card title="Intensity profile across the bands">
               <LineChart height={170} x={['left', 'right']} series={[
-                { values: percept.actual, color: '#1f5aa6', label: 'actual intensity (flat steps)' },
+                { values: percept.actual, color: '#2f6fd6', label: 'actual intensity (flat steps)' },
                 { values: percept.perceived, color: '#e08a1e', label: 'perceived brightness (lateral-inhibition model)', dashed: true },
               ]} />
               <p className="small muted mt-sm">Every band is perfectly flat, yet each looks lighter next to its darker neighbour and darker next to its lighter one. The retina's centre–surround cells (modelled here by a difference-of-Gaussians filter) overshoot at edges — the visual system enhances edges.</p>

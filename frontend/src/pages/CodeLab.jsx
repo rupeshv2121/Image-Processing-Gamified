@@ -181,7 +181,7 @@ export default function CodeLab() {
                 <code>img</code> is {current ? 'the current Workspace image' : <>the sample <b>peppers.png</b> (load an image in the Workspace to use your own)</>}.
                 Store a result image in <code>out</code> and send it to the Workspace with one click.
               </p>
-              {!ipt && <p className="small muted mt-sm">The Image Processing Toolbox is not installed, so <code>imfilter</code>, <code>fspecial</code>, <code>medfilt2</code>, <code>imnoise</code>, <code>imhist</code>, <code>histeq</code>, <code>padarray</code>, <code>graythresh</code> … are ImageLab's base-MATLAB stand-ins with the same calling syntax.</p>}
+              {!ipt && <p className="small muted mt-sm">The Image Processing Toolbox is not installed, so <code>imfilter</code>, <code>fspecial</code>, <code>medfilt2</code>, <code>imnoise</code>, <code>imhist</code>, <code>histeq</code>, <code>padarray</code>, <code>graythresh</code> … are Spatia's base-MATLAB stand-ins with the same calling syntax.</p>}
             </Card>
           ) : task && (
             <Card title={task.title} extra={

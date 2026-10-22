@@ -57,13 +57,13 @@ export const TOPICS = [
   },
   {
     id: 'matlab', unit: 'Unit I', title: 'MATLAB: Vectors, Matrices, Functions & Plotting', lab: 'docs', category: 'Fundamentals',
-    summary: 'The MATLAB essentials used throughout ImageLab.',
+    summary: 'The MATLAB essentials used throughout Spatia.',
     body: [
       'Vectors and matrices: v = [1 2 3]; A = [1 2; 3 4]; A(2,1) indexes row 2, column 1; A(:) turns a matrix into a column vector; A(1:2:end, :) takes every second row (used for sampling).',
       'Element-wise operators .* ./ .^ work pixel by pixel (e.g. window .* kernel in correlation); * is matrix multiplication.',
-      'Functions are written in .m files: function J = meanFilter(I, k) ... end. Every algorithm in ImageLab is such a function (folder algorithms/).',
+      'Functions are written in .m files: function J = meanFilter(I, k) ... end. Every algorithm in Spatia is such a function (folder algorithms/).',
       'Graph plotting: plot(x, y), bar(values) (used in the filter comparison), imhist / histogram, subplot and imshow for image montages.',
-      'Vectorisation (whole-matrix operations) is much faster than loops; ImageLab shows both: the loop version to explain the algorithm, the vectorised/toolbox version for speed.',
+      'Vectorisation (whole-matrix operations) is much faster than loops; Spatia shows both: the loop version to explain the algorithm, the vectorised/toolbox version for speed.',
     ],
     formula: "J = sum(window(:) .* K(:));      bar([psnr1 psnr2 psnr3])",
   },
@@ -104,9 +104,9 @@ export const TOPICS = [
   },
   {
     id: 'toolbox', unit: 'Unit II', title: 'Introduction to the MATLAB Image Processing Toolbox', lab: 'docs', category: 'Fundamentals',
-    summary: 'The toolbox functions used in this course, and the base-MATLAB code ImageLab uses without them.',
+    summary: 'The toolbox functions used in this course, and the base-MATLAB code Spatia uses without them.',
     body: [
-      'The Image Processing Toolbox (IPT) adds hundreds of functions on top of base MATLAB. Check it with license(\'test\', \'image_toolbox\') or ver. ImageLab calls the toolbox when it is installed and otherwise runs its own base-MATLAB version of every algorithm (core/hasIPT.m) — the "manual" code you can read with "View MATLAB Code".',
+      'The Image Processing Toolbox (IPT) adds hundreds of functions on top of base MATLAB. Check it with license(\'test\', \'image_toolbox\') or ver. Spatia calls the toolbox when it is installed and otherwise runs its own base-MATLAB version of every algorithm (core/hasIPT.m) — the "manual" code you can read with "View MATLAB Code".',
       'Reading and display: imread, imwrite, imshow, imfinfo, montage, imtool (interactive pixel viewer). Classes: im2double, im2uint8 and rgb2gray convert between data types and colour; images are uint8 0–255 or double 0–1.',
       'Enhancement: imhist, histeq (equalisation and matching), imadjust and stretchlim (contrast stretching), imcomplement (negative).',
       'Spatial filtering: fspecial creates kernels (\'average\', \'gaussian\', \'laplacian\', \'sobel\', \'prewitt\', \'motion\', \'disk\'); imfilter applies them (correlation by default, \'conv\' for convolution; padding \'replicate\', \'symmetric\'); medfilt2 and ordfilt2 are the order-statistic filters; wiener2 is the adaptive local filter.',
@@ -213,7 +213,7 @@ export const TOPICS = [
       'Typical PSFs: uniform linear MOTION (camera or object moving during the exposure), ATMOSPHERIC TURBULENCE H(u,v) = exp(−k(u² + v²)^(5/6)), close to a Gaussian, and OUT-OF-FOCUS blur (a uniform disc). The PSF can be estimated by observation (image a point), by experimentation or by mathematical modelling.',
       'INVERSE FILTERING F̂ = G/H divides by H; where H is near zero the noise term N/H explodes, so it only works without noise or limited to low frequencies.',
       'WIENER filtering minimises the mean squared error: F̂ = [H* / (|H|² + K)]·G, with K the noise-to-signal power ratio. CONSTRAINED LEAST SQUARES replaces K by γ|P|² (P = Laplacian) and needs only the noise variance. RICHARDSON–LUCY is an iterative maximum-likelihood method for Poisson noise.',
-      'ImageLab solves the same problems in the spatial domain: (H′H + λR′R)f = H′g by conjugate gradients, each step only convolutions with h. Stopping the iterations early also regularises — the Restoration Lab plots PSNR per iteration.',
+      'Spatia solves the same problems in the spatial domain: (H′H + λR′R)f = H′g by conjugate gradients, each step only convolutions with h. Stopping the iterations early also regularises — the Restoration Lab plots PSNR per iteration.',
     ],
     formula: 'g = h ★ f + η      F̂ = H*·G / (|H|² + K)      F̂ = H*·G / (|H|² + γ|P|²)',
   },

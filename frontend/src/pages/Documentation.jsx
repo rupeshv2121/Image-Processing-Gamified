@@ -63,14 +63,14 @@ const FOLDERS = {
 export default function Documentation() {
   const [open, setOpen] = useState(null)
   return (
-    <Page eyebrow="Help" title="Documentation" subtitle="How ImageLab is built and a browser for every MATLAB function in the project.">
+    <Page eyebrow="Help" title="Documentation" subtitle="How Spatia is built and a browser for every MATLAB function in the project.">
       <div className="grid-2">
         <Card title="Architecture">
           <div className="prose small">
             <p><b>MATLAB is the image-processing engine.</b> Every algorithm is a MATLAB function (.m file). The browser only displays results.</p>
             <div className="formula" style={{ fontSize: 13 }}>{'React UI  ──JSON──▶  backend/ (FastAPI)  ──MATLAB Engine──▶  api/ilab_dispatch.m\n                                                             │\n              PNG images ◀── runtime/images ◀──────────────┘  algorithms/, noise/, histogram/ …'}</div>
             <p>The backend (Python, FastAPI) contains no image processing: it handles sign-in, progress, quizzes, the live quiz and the classroom, starts MATLAB, sends every image operation to <code>ilab_dispatch.m</code> and serves the PNG files MATLAB writes.</p>
-            <p>Each algorithm has a <b>toolbox</b> version (imfilter, medfilt2, histeq, edge …) and a <b>manual</b> version written with loops / matrix operations. Without the Image Processing Toolbox, ImageLab automatically uses the manual base-MATLAB code.</p>
+            <p>Each algorithm has a <b>toolbox</b> version (imfilter, medfilt2, histeq, edge …) and a <b>manual</b> version written with loops / matrix operations. Without the Image Processing Toolbox, Spatia automatically uses the manual base-MATLAB code.</p>
           </div>
         </Card>
         <Card title="User guide (short)">

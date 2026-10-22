@@ -127,7 +127,7 @@ export default function LiveBuilder({ draft, setDraft, onOpen, opening }) {
           {draft.questions.length > 0 && <button className="btn btn-ghost btn-small btn-danger" onClick={() => setQ(() => [])}>Remove all</button>}
         </div>
         {draft.questions.length === 0 ? (
-          <p className="muted small mt">No questions yet. Pick them from the ImageLab question bank, draw a random set, or write your own.</p>
+          <p className="muted small mt">No questions yet. Pick them from the Spatia question bank, draw a random set, or write your own.</p>
         ) : (
           <ol className="live-qlist">
             {draft.questions.map((q, i) => (
