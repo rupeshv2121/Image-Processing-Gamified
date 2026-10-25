@@ -96,7 +96,7 @@ export default function Dashboard() {
         <div className="stat"><div className="ic"><Icon name="file" /></div><div><div className="v">{asArray(p.experimentsCompleted).length}<span className="faint" style={{ fontSize: 15 }}> / 13</span></div><div className="l">Experiments</div></div></div>
         <div className="stat"><div className="ic navy"><Icon name="layers" /></div><div><div className="v">{p.filtersTested || 0}</div><div className="l">Filters tested</div></div></div>
         <div className="stat"><div className="ic amber"><Icon name="trophy" /></div><div><div className="v">{p.bestScore || 0}</div><div className="l">Best quiz score</div></div></div>
-        <div className="stat"><div className="ic violet"><Icon name="code" /></div><div><div className="v">{codeTasks.solved.length}<span className="faint" style={{ fontSize: 15 }}> / {codeTasks.tasks.length || 11}</span></div><div className="l">Code tasks solved</div></div></div>
+        <div className="stat"><div className="ic violet"><Icon name="code" /></div><div><div className="v">{codeTasks.tasks.filter((t) => codeTasks.solved.includes(t.id)).length}<span className="faint" style={{ fontSize: 15 }}> / {codeTasks.tasks.length}</span></div><div className="l">Code tasks solved</div></div></div>
         <div className="stat"><div className="ic"><Icon name="book" /></div><div><div className="v">{asArray(p.topicsCompleted).length}<span className="faint" style={{ fontSize: 15 }}> / {TOPICS.length}</span></div><div className="l">Topics read</div></div></div>
       </div>
 

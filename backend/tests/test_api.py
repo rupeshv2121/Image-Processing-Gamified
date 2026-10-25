@@ -85,25 +85,82 @@ def test_quiz_submit_with_leaderboard(api, teacher):
     qs = api.ok("quizQuestions", token=tok, n=3)
     assert len(qs) == 3 and {"id", "options", "answer", "kernel"} <= set(qs[0])
     res = [{"category": "Noise", "difficulty": "easy", "correct": True, "timeLeft": 2}]
-    data = api.ok("quizSubmit", token=tok, results=res, name="Stu", roll="S1")
+    data = api.ok("quizSubmit", token=tok, results=res, name="Somebody else", roll="X9")
     assert data["summary"]["score"] == 110 and data["leaderboard"][0]["Rank"] == 1
-    assert api.ok("leaderboard", token="")[0]["Name"] == "Stu"
+    entry = api.ok("leaderboard", token="")[0]
+    assert (entry["Name"], entry["Roll"]) == ("Stu", "S1") and entry["ProfileId"]   # always the student's own name
+    assert api.ok("quizSubmit", token=tok, results=res)["leaderboard"] == []        # no name: not posted
     assert api.error("leaderboard", token=tok, action="clear")["errorId"] == "ImageLab:forbidden"
     assert api.ok("leaderboard", action="clear") == []
 
 
-def test_code_lab_records_submissions_and_badges(api, matlab, teacher):
+def test_leaderboard_follows_renamed_and_deleted_students(api, teacher):
+    added = api.ok("profiles", action="add", name="Stu", roll="S1")
+    tok = api.ok("auth", token="", action="login", identifier="S1", password=added["password"])["token"]
+    res = [{"category": "Noise", "difficulty": "easy", "correct": True, "timeLeft": 2}]
+    for _ in range(2):
+        api.ok("quizSubmit", token=tok, results=res, name="x")
+    api.ok("leaderboard", token=tok, action="add", entry={"name": "Fake", "score": 5, "mode": "Challenge (easy)"})
+    board = api.ok("leaderboard")
+    assert len(board) == 3 and {e["Name"] for e in board} == {"Stu"}
+    api.ok("profiles", action="update", id=added["id"], name="Stuart", roll="S1")
+    assert {e["Name"] for e in api.ok("leaderboard")} == {"Stuart"}
+    api.ok("profiles", action="remove", id=added["id"])
+    assert api.ok("leaderboard") == []
+
+
+def test_students_get_their_xp_with_every_answer(api, teacher):
     pw = api.ok("profiles", action="add", name="Stu", roll="S1")["password"]
     tok = api.ok("auth", token="", action="login", identifier="S1", password=pw)["token"]
-    assert api.error("codeTaskSolution", token=tok, taskId="negative")["errorId"] == "ImageLab:invalidParameter"
-    api.ok("runCode", token=tok, taskId="negative", code="out = 1 - img;")
-    assert api.ok("codeTasks", token=tok)["solved"] == ["negative"]
-    assert api.ok("codeTaskSolution", token=tok, taskId="negative")["code"]
+    r = api.raw("filter", token=tok, id="x", name="median", k=3)
+    assert r["xp"] == {"xp": 10, "level": 1}
+    assert "xp" not in api.raw("filter", id="x", name="mean", k=3)             # the teacher has no XP
+
+
+def _task(**extra):
+    return {"title": "Negative", "level": "Easy", "instructions": "Line one\nLine two", "starter": "out = img;",
+            "solution": "out = 1 - img;", "hints": "Use 1 - img", "forbidden": "imcomplement, conv2",
+            "sample": "peppers.png", "prep": "gray", "compare": "image", "tol": 0.001, "border": 0, **extra}
+
+
+def test_teacher_writes_code_lab_tasks(api, matlab, teacher):
+    pw = api.ok("profiles", action="add", name="Stu", roll="S1")["password"]
+    tok = api.ok("auth", token="", action="login", identifier="S1", password=pw)["token"]
+    assert api.ok("codeTasks", token=tok)["tasks"] == []                         # nothing ready-made
+    assert api.ok("codeTaskEdit", action="templates")[0]["solution"] == "out = 1 - img;"
+    assert api.ok("codeTaskEdit", action="check", task=_task(title=""))["ok"]
+    assert api.error("codeTaskEdit", action="save", task=_task(sample="nope.png"))["errorId"] == "ImageLab:invalidParameter"
+    assert api.error("codeTaskEdit", action="save", task=_task(forbidden="rm -rf"))["errorId"] == "ImageLab:invalidParameter"
+    task = api.ok("codeTaskEdit", action="save", task=_task())["task"]
+    assert task["status"] == "draft" and task["instructions"] == ["Line one", "Line two"]
+    assert task["forbidden"] == ["imcomplement", "conv2"]
+    assert api.ok("codeTasks", token=tok)["tasks"] == []                         # drafts are hidden
+    assert api.error("codeTaskEdit", token=tok, action="list")["errorId"] == "ImageLab:forbidden"
+    tid = task["id"]
+    api.ok("codeTaskEdit", action="setState", id=tid, status="assigned", due="2020-01-01", note="soon")
+
+    listed = api.ok("codeTasks", token=tok)["tasks"]
+    assert [t["id"] for t in listed] == [tid] and "solution" not in listed[0] and listed[0]["teacherNote"] == "soon"
+    assert api.ok("codeTaskStart", token=tok, taskId=tid)["inputId"]
+    assert api.error("codeTaskSolution", token=tok, taskId=tid)["errorId"] == "ImageLab:invalidParameter"
+    api.ok("runCode", token=tok, taskId=tid, code="out = 1 - img;")
+    op, params = matlab.calls[-1]
+    assert op == "runCode" and params["task"]["solution"] == "out = 1 - img;"      # MATLAB grades against it
+    assert api.ok("codeTasks", token=tok)["solved"] == [tid]
+    assert api.ok("codeTaskSolution", token=tok, taskId=tid)["code"] == "out = 1 - img;"
     sid = api.ok("auth", token=tok, action="me")["profileId"]
-    sub = api.ok("classroom", action="submission", id=sid, taskId="negative")
+    sub = api.ok("classroom", action="submission", id=sid, taskId=tid)
     assert sub["entry"]["passed"] and sub["entry"]["passedCode"] == "out = 1 - img;"
-    api.ok("classroom", action="setCodeTask", taskId="gamma", status="locked")
-    assert api.error("runCode", token=tok, taskId="gamma", code="x")["errorId"] == "ImageLab:taskLocked"
+    o = api.ok("classroom", action="overview")
+    assert o["codeTasks"][0]["solvedBy"] == 1 and o["dashboard"]["overdueCount"] == 1
+    assert api.ok("classroom", action="student", id=sid)["code"][0]["passed"]
+
+    edited = api.ok("codeTaskEdit", action="save", task={**_task(title="Negative 2"), "id": tid, "status": "locked"})
+    assert edited["task"]["id"] == tid and edited["task"]["created"] == task["created"]
+    assert api.error("runCode", token=tok, taskId=tid, code="x")["errorId"] == "ImageLab:taskLocked"
+    api.ok("codeTaskEdit", action="remove", id=tid)
+    assert api.ok("codeTasks", token=tok)["tasks"] == []
+    assert api.ok("classroom", action="submissions")["tasks"] == []
 
 
 def test_classroom_views(api, teacher):
@@ -158,16 +215,29 @@ def test_upload(client, matlab):
     assert list(matlab.image_dir.parent.joinpath("uploads").iterdir()) == []      # temporary file removed
 
 
-def test_remote_devices_only_get_the_live_quiz(settings, matlab):
+def test_students_devices_get_everything_but_the_code_lab(settings, matlab, api, teacher):
+    pw = api.ok("profiles", action="add", name="Stu", roll="S1")["password"]
     with TestClient(create_app(settings, matlab), client=("192.168.1.50", 5000)) as c:
         c.app.state.dispatcher.data_ready.wait(5)
+
+        def run(op, **params):
+            return c.post("/api/run", json={"op": op, "params": params}).json()
+
         assert c.get("/api/status").json()["remote"] is True
-        assert c.post("/api/run", json={"op": "auth", "params": {"action": "options"}}).json()["ok"]
-        r = c.post("/api/run", json={"op": "runCode", "params": {"code": "x"}})
-        assert r.status_code == 403 and r.json()["errorId"] == "ImageLab:remote"
-        assert c.post("/api/run", json={"op": "auth", "params": {"action": "teacherLogin"}}).status_code == 403
-        assert c.get("/api/image/x.png").status_code == 403
-        assert c.post("/api/upload", json={}).status_code == 403
+        assert run("auth", action="options")["ok"]
+        assert run("filter", id="x", name="mean")["errorId"] == "ImageLab:remote"         # sign in first
+        assert run("auth", action="teacherLogin")["errorId"] == "ImageLab:remote"         # no teacher mode
+        tok = run("auth", action="login", identifier="S1", password=pw)["data"]["token"]
+        assert run("filter", id="x", name="mean", token=tok)["ok"]
+        assert run("progress", token=tok)["ok"] and run("live", action="state", token=tok)["ok"]
+        assert run("runCode", code="x", token=tok)["errorId"] == "ImageLab:remote"         # arbitrary MATLAB code
+        assert run("codeWarmup", token=tok)["errorId"] == "ImageLab:remote"
+        assert run("filter", id="x", name="mean", token=teacher)["errorId"] == "ImageLab:remote"
+        image_id = run("loadSample", name="peppers.png", token=tok)["data"]["id"]
+        assert c.get(f"/api/image/{image_id}.png").status_code == 200
+        data = base64.b64encode(b"\x89PNG fake").decode()
+        assert c.post("/api/upload", json={"name": "a.png", "data": data}).status_code == 403
+        assert c.post("/api/upload", json={"name": "a.png", "data": data, "token": tok}).json()["ok"]
 
 
 def test_nan_and_inf_become_null(api, matlab, monkeypatch):

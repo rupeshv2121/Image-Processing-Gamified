@@ -1,14 +1,21 @@
 function out = codeTasks(action, varargin)
-%CODETASKS MATLAB programming tasks of the Code Lab, with automatic grading.
-%   list = codeTasks('list')               public task descriptions (no answers)
-%   t    = codeTasks('get', id)            one task (including its reference)
-%   I    = codeTasks('input', id)          the input image img for that task
-%   g    = codeTasks('grade', id, ws, I)   grade the student's workspace ws
-%                                          (struct of variables, must contain out)
+%CODETASKS Grading of Code Lab tasks, and the built-in example tasks.
+%   The teacher writes the class's tasks (stored by the backend); each one
+%   names an input image, a model solution and how to compare. MATLAB gets
+%   the task definition t with every call:
+%   T = codeTasks('templates')             built-in examples the teacher can
+%                                          start from (with solution, no handle)
+%   I = codeTasks('input', t)              the input image img for task t
+%   g = codeTasks('grade', t, ws, E)       grade the student's workspace ws
+%                                          (struct of variables, must contain
+%                                          out) against the expected result E
+%                                          (the model solution's out)
+%   E = codeTasks('reference', id, I)      a built-in example's own reference
+%                                          result (tests)
 %
 %   Every task gives the student an image img (double, [0,1]) and asks for
-%   the result in the variable out. The grader recomputes the expected
-%   result with ImageLab's own MATLAB functions and compares:
+%   the result in the variable out. The grader compares it with the result
+%   of the teacher's model solution on the same input:
 %       compare = 'image'      mean absolute error <= tol
 %       compare = 'normalized' both divided by their maximum first (gradients)
 %       compare = 'binary'     fraction of differing pixels <= tol
@@ -20,18 +27,16 @@ function out = codeTasks(action, varargin)
 %   algorithm themselves.
 
 switch action
-    case 'list'
-        T = tasks();
-        out = arrayfun(@(t) rmfield(t, {'reference', 'solution', 'prep'}), T, 'UniformOutput', false);
-    case 'get'
-        out = find1(varargin{1});
+    case 'templates'
+        out = arrayfun(@(t) rmfield(t, 'reference'), tasks(), 'UniformOutput', false);
     case 'input'
-        out = taskInput(find1(varargin{1}));
+        out = taskInput(varargin{1});
     case 'grade'
-        t = find1(varargin{1});
-        out = grade(t, varargin{2}, varargin{3});
-    case 'solution'
-        out = find1(varargin{1}).solution;
+        out = grade(varargin{1}, varargin{2}, varargin{3});
+    case 'reference'
+        % independent expected result of a built-in example (tests check the solutions with it)
+        T = tasks();
+        out = T(strcmp({T.id}, varargin{1})).reference(varargin{2});
     otherwise
         error('ImageLab:internal', 'Unknown codeTasks action "%s".', action);
 end
@@ -267,29 +272,30 @@ function s = nl()
 s = newline;
 end
 
-function t = find1(id)
-T = tasks();
-idx = find(strcmp({T.id}, char(id)), 1);
-if isempty(idx)
-    error('ImageLab:invalidParameter', 'Unknown Code Lab task "%s".', char(id));
-end
-t = T(idx);
-end
-
 % =========================================================================
 function I = taskInput(t)
 % Deterministic input image (the same for every student and every run),
 % at most 256 pixels on a side so loops written by students stay fast.
 generateSampleImages(false);
-[A, map] = imread(sampleImages('path', t.sample));
+[A, map] = imread(sampleImages('path', char(t.sample)));
 if ~isempty(map), A = ind2rgb(A, map); end
-G = toGray(toDouble(A(:, :, 1:min(3, size(A, 3)))));
-s = 256 / max(size(G));
-if s < 1, G = min(max(resizeImage(G, round(size(G, 1) * s), round(size(G, 2) * s)), 0), 1); end
-G = round(G * 255) / 255;                       % exact 8-bit grey levels
-switch t.prep
+C = toDouble(A(:, :, 1:min(3, size(A, 3))));
+s = 256 / max(size(C, 1), size(C, 2));
+if s < 1
+    small = zeros(round(size(C, 1) * s), round(size(C, 2) * s), size(C, 3));
+    for c = 1:size(C, 3)
+        small(:, :, c) = resizeImage(C(:, :, c), size(small, 1), size(small, 2));
+    end
+    C = min(max(small, 0), 1);
+end
+C = round(C * 255) / 255;                       % exact 8-bit levels
+G = round(toGray(C) * 255) / 255;
+switch char(t.prep)
     case 'gray'
         I = G;
+    case 'color'
+        I = C;
+        if size(I, 3) == 1, I = repmat(I, 1, 1, 3); end
     case 'saltpepper'
         state = rng(7);
         I = addSaltPepperNoise(G, 0.06);
@@ -297,13 +303,18 @@ switch t.prep
     case 'binary'
         I = G > 0.5;
     otherwise
-        error('ImageLab:internal', 'Unknown task input "%s".', t.prep);
+        error('ImageLab:invalidParameter', 'Unknown task input "%s".', char(t.prep));
 end
 end
 
 % =========================================================================
-function g = grade(t, ws, I)
-expected = t.reference(I);
+function g = grade(t, ws, expected)
+t.compare = char(t.compare);
+if isinteger(expected)
+    expected = double(expected) / double(intmax(class(expected)));
+else
+    expected = double(expected);
+end
 g = struct('passed', false, 'match', 0, 'message', '', 'checks', {{}}, ...
     'expectedId', '', 'diffId', '', 'mae', [], 'mismatch', []);
 if strcmp(t.compare, 'vector')

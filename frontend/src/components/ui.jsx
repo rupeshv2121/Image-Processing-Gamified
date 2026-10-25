@@ -5,9 +5,20 @@ import { useApp } from '../AppContext'
 import Icon from './Icon'
 
 // ------------------------------------------------------------------ layout
-export function Page({ title, subtitle, actions, eyebrow, children }) {
+// back: { label, href } or { label, onClick } - the page's own "up one level" button
+export function BackButton({ label = 'Back', href, onClick }) {
+  const Tag = href ? 'a' : 'button'
+  return (
+    <Tag className="btn btn-small page-back" href={href} onClick={onClick}>
+      <Icon name="arrow" size={15} className="flip" /> {label}
+    </Tag>
+  )
+}
+
+export function Page({ title, subtitle, actions, eyebrow, back, children }) {
   return (
     <div className="page">
+      {back && <BackButton {...back} />}
       <div className="page-head">
         <div>
           {eyebrow && <div className="eyebrow">{eyebrow}</div>}
@@ -187,8 +198,35 @@ function PixelPanel({ px, pixels }) {
   )
 }
 
+// zoom: 1 = fit the image into the box; 2 = twice that size, and so on (scrollable)
+function useZoomStyle(zoom, scroller, natural, shown) {
+  const [box, setBox] = useState(null)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(() => setBox({ w: el.clientWidth, h: el.clientHeight }))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [scroller, shown])
+  // keep the middle of the image in view when zooming
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+      el.scrollTop = (el.scrollHeight - el.clientHeight) / 2
+    })
+  }, [zoom, scroller])
+  if (zoom === 1 || !natural || !box?.w || !box?.h) return undefined
+  const fit = Math.min(box.w / natural.w, box.h / natural.h, 1)
+  return { width: Math.round(natural.w * fit * zoom), height: 'auto', maxWidth: 'none', maxHeight: 'none', flex: 'none' }
+}
+
 export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, height, badge, actions, emptyText, inspectable = true }) {
   const ref = useRef(null)
+  const scroller = useRef(null)
+  const [natural, setNatural] = useState(null)
+  const zoomStyle = useZoomStyle(zoom, scroller, natural, !!id)
   const [inspect, setInspect] = useState(false)
   const [pixels, setPixels] = useState(null)
   const [px, setPx] = useState(null)
@@ -230,16 +268,17 @@ export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, hei
       )}
       <div className="imgview-box" style={height ? { height } : undefined}>
         {id ? (
-          <div className="imgview-scroll">
+          <div className="imgview-scroll" ref={scroller}>
             <img
               ref={ref}
               src={imageUrl(id)}
               alt={title || 'image'}
               onClick={click}
+              onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
               onPointerMove={inspect ? move : undefined}
               onPointerLeave={inspect ? () => setPx(null) : undefined}
               className={`${pixelated || inspect ? 'pixelated' : ''} ${onPick || inspect ? 'pickable' : ''}`}
-              style={zoom !== 1 ? { width: `${zoom * 100}%`, maxWidth: 'none', maxHeight: 'none', height: 'auto' } : undefined}
+              style={zoomStyle}
             />
           </div>
         ) : (
@@ -421,7 +460,7 @@ export function BarChart({ values, labels, title, unit = '', height = 180, highe
 }
 
 // ------------------------------------------------------------------ modal
-export function Modal({ title, onClose, children, wide }) {
+export function Modal({ title, onClose, children, wide, className = '' }) {
   const box = useRef(null)
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -440,7 +479,7 @@ export function Modal({ title, onClose, children, wide }) {
   // top bar) would otherwise become the containing block of this fixed overlay.
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div ref={box} tabIndex={-1} className={`modal ${wide ? 'wide' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div ref={box} tabIndex={-1} className={`modal ${wide ? 'wide' : ''} ${className}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="modal-head">
           <h3 id={titleId}>{title}</h3>
           <button className="icon-btn" onClick={onClose} aria-label="Close">✕</button>
@@ -477,27 +516,29 @@ export function CodeModal({ functions = [], snippets = [], onClose }) {
   const snippet = snippets.find((s) => `s:${s.title}` === active)
   const src = sources[active]
   return (
-    <Modal title="MATLAB Code" onClose={onClose} wide>
+    <Modal title="MATLAB Code" onClose={onClose} wide className="code-modal">
       <Tabs tabs={tabs} active={active} onChange={setActive} />
-      {snippet && (
-        <>
-          <pre className="code">{snippet.code}</pre>
-          {snippet.explain && (
-            <div className="how">
-              <h4>How it works</h4>
-              <ol>{snippet.explain.map((l, i) => <li key={i}>{l}</li>)}</ol>
-            </div>
-          )}
-        </>
-      )}
-      {!snippet && src && (
-        <>
-          <div className="code-file">{src.file}</div>
-          <pre className="code">{highlight(src.code)}</pre>
-        </>
-      )}
-      {!snippet && !src && !error && <p className="muted">Loading source from MATLAB…</p>}
-      {error && <Note kind="error">{error}</Note>}
+      <div className="code-pane">
+        {snippet && (
+          <>
+            <pre className="code">{snippet.code}</pre>
+            {snippet.explain && (
+              <div className="how">
+                <h4>How it works</h4>
+                <ol>{snippet.explain.map((l, i) => <li key={i}>{l}</li>)}</ol>
+              </div>
+            )}
+          </>
+        )}
+        {!snippet && src && (
+          <>
+            <div className="code-file">{src.file}</div>
+            <pre className="code">{highlight(src.code)}</pre>
+          </>
+        )}
+        {!snippet && !src && !error && <p className="muted">Loading source from MATLAB…</p>}
+        {error && <Note kind="error">{error}</Note>}
+      </div>
     </Modal>
   )
 }

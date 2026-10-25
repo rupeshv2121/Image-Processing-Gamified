@@ -42,7 +42,8 @@ function ExperimentDetail({ exp, onBack }) {
 
   return (
     <Page eyebrow="Experiment" title={`Experiment ${exp.number}: ${exp.title}`} subtitle={exp.aim}
-      actions={<>{done && <span className="badge">Completed</span>}<button className="btn" onClick={onBack}>← All experiments</button></>}>
+      back={{ label: 'All experiments', onClick: onBack }}
+      actions={done && <span className="badge">Completed</span>}>
       {exp.status === 'assigned' && <Note kind="warn"><b>Assigned by your teacher</b>{exp.due ? ` · due ${dueText(exp.due)}` : ''}{exp.teacherNote ? ` — ${exp.teacherNote}` : ''}</Note>}
       {locked && <Note kind="error"><b>Locked by your teacher.</b> You can read the theory and code, but running it in MATLAB is disabled until it is unlocked.</Note>}
       <div className={exp.status !== 'open' ? 'mt-sm' : ''}><Tabs tabs={TABS} active={tab} onChange={setTab} /></div>

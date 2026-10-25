@@ -8,11 +8,11 @@ from pathlib import Path
 from imagelab.errors import AppError
 
 EXPERIMENTS = [{"number": n, "title": f"Experiment {n}", "aim": "...", "defaultImage": "peppers.png"} for n in (1, 2, 3)]
-CODE_TASKS = [
+CODE_TEMPLATES = [
     {"id": "negative", "title": "Image negative", "level": "Easy", "unit": "Unit II", "topic": "Intensity",
-     "forbidden": ["imcomplement"]},
-    {"id": "gamma", "title": "Gamma correction", "level": "Easy", "unit": "Unit II", "topic": "Intensity",
-     "forbidden": []},
+     "instructions": ["Store the negative of img in out."], "starter": "out = img;", "hints": "out = 1 - img;",
+     "forbidden": "imcomplement", "sample": "peppers.png", "prep": "gray", "compare": "image", "tol": 0.001,
+     "border": 0, "solution": "out = 1 - img;"},
 ]
 QUALITY = {"mse": 0.01, "psnr": 20.0}
 
@@ -47,8 +47,13 @@ class FakeMatlab:
         self.calls.append((op, params))
         if op == "experimentCatalog":
             return EXPERIMENTS
-        if op == "codeTaskList":
-            return CODE_TASKS
+        if op == "codeTaskTemplates":
+            return CODE_TEMPLATES
+        if op == "codeTaskStart":
+            return {"inputId": self._image("taskin")}
+        if op == "codeTaskCheck":
+            return {"inputId": self._image("taskin"), "expectedId": self._image("expected"), "output": "",
+                    "error": [], "size": "4x4", "class": "double", "ok": True, "message": "OK"}
         if op == "samples":
             return [{"name": n} for n in ("peppers.png", "shapes.png", "coins.png")]
         if op == "kernelPresets":
@@ -67,11 +72,9 @@ class FakeMatlab:
                     "after": QUALITY, "processingMs": 5.0}
         if op == "runCode":
             data = {"output": "", "figures": [], "variables": [], "error": [], "grade": [], "newBadges": []}
-            if params.get("taskId"):
+            if params.get("task"):
                 data["grade"] = {"passed": self.grade_passed, "match": 100 if self.grade_passed else 10}
             return data
-        if op == "codeTaskSolution":
-            return {"code": "out = 1 - img;"}
         if op == "runExperiment":
             return {"number": params["number"], "images": [], "metrics": [], "observations": []}
         if op == "regions":

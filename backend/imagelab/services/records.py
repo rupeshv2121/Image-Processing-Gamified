@@ -11,7 +11,12 @@ MAX_KERNEL_SIZE = 31
 
 # ----------------------------------------------------------------- leaderboard
 class LeaderboardService:
-    """Ranked by score, then accuracy (ties keep the order they were added)."""
+    """Every quiz score, ranked by score, then accuracy (ties keep the order they were added).
+
+    Each entry carries the student's profile id (ProfileId; '' for entries from
+    before it was stored), so the UI can show one row per student and a deleted
+    student's scores go with them.
+    """
 
     def __init__(self, repo: LeaderboardRepository):
         self.repo = repo
@@ -27,8 +32,14 @@ class LeaderboardService:
         self.repo.add({"Name": name, "Roll": str(entry.get("roll") or "").strip(),
                        "Score": to_float(entry.get("score")), "Accuracy": to_float(entry.get("accuracy")),
                        "BestStreak": to_float(entry.get("bestStreak")), "Mode": str(entry.get("mode") or "Rapid Fire"),
-                       "Date": now_text()})
+                       "Date": now_text(), "ProfileId": str(entry.get("profileId") or "")})
         return self.get()
+
+    def remove_student(self, profile: dict) -> None:
+        self.repo.remove_student(profile["id"], profile["name"], profile.get("roll", ""))
+
+    def rename_student(self, profile: dict) -> None:
+        self.repo.rename_student(profile["id"], profile["name"], profile.get("roll", ""))
 
     def clear(self) -> list[dict]:
         self.repo.clear()
@@ -116,3 +127,6 @@ class SubmissionService:
 
     def remove(self, profile_id: str) -> None:
         self.repo.remove_profile(profile_id)
+
+    def remove_task(self, task_id: str) -> None:
+        self.repo.remove_task(task_id)

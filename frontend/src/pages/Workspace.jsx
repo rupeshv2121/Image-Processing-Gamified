@@ -7,6 +7,9 @@ import ImagePair from '../components/ImagePair'
 import { EmptyState } from '../components/LabPage'
 import { Card, CodeButton, Histogram, Modal, Page, Tabs } from '../components/ui'
 
+// Zoom steps (1 = fit the image into the view)
+const ZOOMS = [1, 1.5, 2, 3, 4, 6, 8]
+
 export default function Workspace() {
   const app = useApp()
   const { current, original, meta, call, history, index } = app
@@ -59,9 +62,9 @@ export default function Workspace() {
             <button className="btn" onClick={app.reset} disabled={!current} title="Reset to original" aria-label="Reset to original"><Icon name="reset" size={17} /></button>
           </div>
           <div className="btn-group">
-            <button className="btn" onClick={() => setZoom((z) => Math.max(1, z / 1.5))} disabled={!current} title="Zoom out" aria-label="Zoom out"><Icon name="zoomout" size={17} /></button>
+            <button className="btn" onClick={() => setZoom((z) => [...ZOOMS].reverse().find((s) => s < z) ?? ZOOMS[0])} disabled={!current || zoom <= ZOOMS[0]} title="Zoom out" aria-label="Zoom out"><Icon name="zoomout" size={17} /></button>
             <button className="btn" onClick={() => setZoom(1)} disabled={!current} title="Fit to view" aria-label={`Zoom ${Math.round(zoom * 100)}%, fit to view`}>{Math.round(zoom * 100)}%</button>
-            <button className="btn" onClick={() => setZoom((z) => Math.min(8, z * 1.5))} disabled={!current} title="Zoom in" aria-label="Zoom in"><Icon name="zoomin" size={17} /></button>
+            <button className="btn" onClick={() => setZoom((z) => ZOOMS.find((s) => s > z) ?? z)} disabled={!current || zoom >= ZOOMS[ZOOMS.length - 1]} title="Zoom in" aria-label="Zoom in"><Icon name="zoomin" size={17} /></button>
           </div>
           <button className="btn" onClick={toGray} disabled={!current}>Grayscale</button>
           <button className="btn btn-navy" onClick={openInfo} disabled={!current}><Icon name="info" size={17} /> Image info</button>

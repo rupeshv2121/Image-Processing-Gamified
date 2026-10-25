@@ -201,6 +201,9 @@ code { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 0.92em; bac
 .btn-danger { color: var(--red-500); }
 .icon-btn { border: none; background: transparent; cursor: pointer; color: var(--text-2); padding: 6px; border-radius: 8px; display: inline-grid; place-items: center; }
 .icon-btn:hover { background: var(--line-2); color: var(--navy-800); }
+.icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; }
+.flip { transform: rotate(180deg); }
+.page-back { margin-bottom: 14px; }
 .btn-group { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
 .btn-group .btn { border: none; border-radius: 0; border-right: 1px solid var(--line); }
 .btn-group .btn:last-child { border-right: none; }
@@ -346,6 +349,18 @@ pre.code .cm { color: #8fd19e; }
 .modal.wide { width: min(1000px, 100%); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--line); }
 .modal-body { padding: 22px 24px; overflow-y: auto; }
+/* The MATLAB code dialog keeps one height for every tab; the code scrolls inside */
+.modal.code-modal { height: min(86vh, 820px); }
+.code-modal .modal-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.code-modal .tabs { flex-shrink: 0; }
+.code-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.code-pane pre.code { flex: 1 1 200px; min-height: 160px; max-height: none; }
+.code-pane .how, .code-pane .code-file { flex-shrink: 0; margin: 0; }
+/* Teacher: Code Lab task editor */
+.task-editor { gap: 14px; }
+.task-editor textarea { width: 100%; resize: vertical; }
+.task-code .field-label { display: block; margin-bottom: 6px; }
+.task-check { display: flex; flex-direction: column; gap: 10px; }
 .alert-text { font-size: 15px; margin-bottom: 20px; }
 .drawer-backdrop { position: fixed; inset: 0; background: var(--backdrop); z-index: 45; animation: fade 0.15s; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: var(--surface); z-index: 46; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; animation: slide 0.22s ease-out; }

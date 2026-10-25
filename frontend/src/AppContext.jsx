@@ -1,13 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { asArray, getSession, run, serverStatus, setSession, setSessionLostHandler, uploadImage } from './api'
+import { asArray, getSession, run, serverStatus, setSession, setSessionLostHandler, setXpHandler, uploadImage } from './api'
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
 
 export function AppProvider({ children }) {
-  // remote: this browser is a student device on the classroom network (live quiz only)
+  // server: the Spatia server answers (sign-in and the live quiz need nothing more)
+  // ok: MATLAB is running too (image operations)
+  // remote: this browser is a student's own device on the classroom network (no Code Lab)
   // lan: the addresses students open to join (classroom network mode, start_imagelab_lan.bat)
-  const [matlab, setMatlab] = useState({ ready: false, ok: false, error: null, ipt: false, release: '', remote: false, lan: [] })
+  const [matlab, setMatlab] = useState({ server: false, ready: false, ok: false, error: null, ipt: false, release: '', remote: false, lan: [] })
   const [history, setHistory] = useState([]) // [{id, label}]
   const [index, setIndex] = useState(-1)
   const [meta, setMeta] = useState(null) // {name, info, original, resized}
@@ -40,21 +42,27 @@ export function AppProvider({ children }) {
   // ---------------------------------------------------------- MATLAB status
   useEffect(() => {
     let stop = false
+    let checkedSession = false
     const poll = async () => {
       try {
         const s = await serverStatus()
+        const base = { server: true, remote: !!s.remote, lan: s.lan || [] }
+        if (!stop) setMatlab((m) => (m.server ? m : { ...m, ...base, error: null }))
+        // A remembered session is only valid while the server still knows its token
+        // (signing in never waits for MATLAB to start)
+        if (!checkedSession && getSession()) {
+          checkedSession = true
+          const me = await run('auth', { action: 'me' }).catch(() => null)
+          if (me && !stop) {
+            await refreshProfiles()
+            refreshProgress()
+          }
+        }
         if (s.ready) {
           if (s.matlab) {
-            const ping = await run('ping')
-            if (!stop) setMatlab({ ready: true, ok: true, error: null, ipt: ping.ipt, iptLicensed: ping.iptLicensed, release: ping.release, remote: !!s.remote, lan: s.lan || [] })
-            // A remembered session is only valid while MATLAB still knows its token
-            if (getSession()) {
-              const me = await run('auth', { action: 'me' }).catch(() => null)
-              if (me && !stop) {
-                await refreshProfiles()
-                refreshProgress()
-              }
-            }
+            const ping = await run('ping').catch(() => null)
+            if (!ping) throw new Error('MATLAB is not answering yet')
+            if (!stop) setMatlab({ ...base, ready: true, ok: true, error: null, ipt: ping.ipt, iptLicensed: ping.iptLicensed, release: ping.release })
             // Deep link for demos: #filters?sample=peppers.png loads a sample image
             const m = window.location.hash.match(/[?&]sample=([\w.-]+)/)
             if (m && !stop && !s.remote) {
@@ -65,11 +73,11 @@ export function AppProvider({ children }) {
                 setMeta({ name: data.name, info: data.info, original: data.original, resized: data.resized })
               }
             }
-          } else if (!stop) setMatlab({ ready: true, ok: false, error: s.error, remote: !!s.remote, lan: s.lan || [] })
+          } else if (!stop) setMatlab({ ...base, ready: true, ok: false, error: s.error })
           return
         }
       } catch {
-        if (!stop) setMatlab((m) => ({ ...m, error: 'Waiting for the Spatia server…' }))
+        if (!stop) setMatlab((m) => ({ ...m, error: m.server ? 'Waiting for MATLAB…' : 'Waiting for the Spatia server…' }))
       }
       if (!stop) setTimeout(poll, 1500)
     }
@@ -185,6 +193,17 @@ export function AppProvider({ children }) {
     })
     return () => setSessionLostHandler(null)
   }, [clearWork])
+
+  // XP and level arrive with every answer to a signed-in student (labs, quizzes,
+  // Code Lab, live quiz): keep the level chip and the profile menu current
+  useEffect(() => {
+    setXpHandler(({ xp, level }) => {
+      setProgress((p) => (p && (p.xp !== xp || p.level !== level) ? { ...p, xp, level } : p))
+      setProfiles((list) => (list.some((x) => x.id === getSession()?.profileId && x.xp !== xp)
+        ? list.map((x) => (x.id === getSession()?.profileId ? { ...x, xp, level } : x)) : list))
+    })
+    return () => setXpHandler(null)
+  }, [])
 
   // ------------------------------------------------------------- image state
   const setNewImage = useCallback((data) => {

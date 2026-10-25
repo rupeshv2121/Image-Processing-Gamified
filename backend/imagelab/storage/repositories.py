@@ -150,6 +150,10 @@ class SubmissionRepository:
         with self.db.transaction() as db:
             db.execute("DELETE FROM submissions WHERE profile_id = ?", (profile_id,))
 
+    def remove_task(self, task_id: str) -> None:
+        with self.db.transaction() as db:
+            db.execute("DELETE FROM submissions WHERE task_id = ?", (task_id,))
+
 
 class SettingsRepository:
     """Small JSON values by key (the classroom settings)."""
@@ -191,14 +195,25 @@ class LeaderboardRepository:
 
     def all(self) -> list[dict]:
         return [{"Name": r["name"], "Roll": r["roll"], "Score": r["score"], "Accuracy": r["accuracy"],
-                 "BestStreak": r["best_streak"], "Mode": r["mode"], "Date": r["date"]}
+                 "BestStreak": r["best_streak"], "Mode": r["mode"], "Date": r["date"], "ProfileId": r["profile_id"]}
                 for r in self.db.query("SELECT * FROM leaderboard ORDER BY seq")]
 
     def add(self, e: dict) -> None:
         with self.db.transaction() as db:
-            db.execute("INSERT INTO leaderboard (name, roll, score, accuracy, best_streak, mode, date) "
-                       "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                       (e["Name"], e["Roll"], e["Score"], e["Accuracy"], e["BestStreak"], e["Mode"], e["Date"]))
+            db.execute("INSERT INTO leaderboard (name, roll, score, accuracy, best_streak, mode, date, profile_id) "
+                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                       (e["Name"], e["Roll"], e["Score"], e["Accuracy"], e["BestStreak"], e["Mode"], e["Date"],
+                        e.get("ProfileId", "")))
+
+    def remove_student(self, profile_id: str, name: str, roll: str) -> None:
+        """A student's scores; entries from before profile ids were stored are matched by name and roll."""
+        with self.db.transaction() as db:
+            db.execute("DELETE FROM leaderboard WHERE profile_id = ? "
+                       "OR (profile_id = '' AND lower(name) = lower(?) AND roll = ?)", (profile_id, name, roll))
+
+    def rename_student(self, profile_id: str, name: str, roll: str) -> None:
+        with self.db.transaction() as db:
+            db.execute("UPDATE leaderboard SET name = ?, roll = ? WHERE profile_id = ?", (name, roll, profile_id))
 
     def clear(self) -> None:
         with self.db.transaction() as db:
@@ -228,6 +243,18 @@ class OrderedDocuments:
             db.execute(f"DELETE FROM {self.table} WHERE id NOT IN "
                        f"(SELECT id FROM {self.table} ORDER BY seq DESC LIMIT ?)", (keep,))
 
+    def save(self, doc: dict) -> None:
+        """Insert doc as the newest entry, or update it in place (its position is kept)."""
+        with self.db.transaction() as db:
+            if db.execute(f"SELECT 1 FROM {self.table} WHERE id = ?", (doc["id"],)).fetchone():
+                db.execute(f"UPDATE {self.table} SET doc = ? WHERE id = ?", (dumps(doc), doc["id"]))
+                return
+            top = db.execute(f"SELECT COALESCE(MAX(seq), 0) AS s FROM {self.table}").fetchone()["s"]
+            db.execute(f"INSERT INTO {self.table} (id, seq, doc) VALUES (?, ?, ?)", (doc["id"], top + 1, dumps(doc)))
+
+    def count(self) -> int:
+        return self.db.one(f"SELECT COUNT(*) AS n FROM {self.table}")["n"]
+
     def remove(self, doc_id: str) -> None:
         with self.db.transaction() as db:
             db.execute(f"DELETE FROM {self.table} WHERE id = ?", (doc_id,))
@@ -255,3 +282,4 @@ class Repositories:
         self.leaderboard = LeaderboardRepository(db)
         self.live_sets = OrderedDocuments(db, "live_sets")
         self.live_results = OrderedDocuments(db, "live_results")
+        self.code_tasks = OrderedDocuments(db, "code_tasks")

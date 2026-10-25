@@ -4,7 +4,8 @@ import { asArray } from '../api'
 import { Note } from './ui'
 
 // Builds the report payload and asks MATLAB (generateReport.m) to write it.
-export default function ReportForm({ experiment, run, quizScore }) {
+// ensureRun (optional): returns the experiment's run, running it first if needed
+export default function ReportForm({ experiment, run: given, ensureRun, quizScore }) {
   const { call } = useApp()
   const { profile } = useApp()
   const [students, setStudents] = useState(() => localStorage.getItem('imagelab.students') || profile?.name || '')
@@ -16,6 +17,8 @@ export default function ReportForm({ experiment, run, quizScore }) {
       localStorage.setItem('imagelab.students', students)
       localStorage.setItem('imagelab.rolls', rolls)
     } catch { /* storage unavailable */ }
+    const run = given || (ensureRun ? await ensureRun() : null)
+    if (ensureRun && !run) return                    // the run failed - MATLAB already said why
     const payload = {
       title: `Experiment ${experiment.number}: ${experiment.title}`,
       students, rollNumbers: rolls, experimentNumber: experiment.number,
@@ -46,7 +49,9 @@ export default function ReportForm({ experiment, run, quizScore }) {
         <label className="field"><span className="field-label">Roll number(s)</span>
           <input type="text" value={rolls} onChange={(e) => setRolls(e.target.value)} /></label>
       </div>
-      {!run && <Note kind="warn">Run the experiment first so the report contains input/output images and metrics.</Note>}
+      {!given && (ensureRun
+        ? <Note>The experiment has not been run yet — generating the report runs it in MATLAB first, so the report gets its images and measurements.</Note>
+        : <Note kind="warn">Run the experiment first so the report contains input/output images and metrics.</Note>)}
       <div className="row">
         <button className="btn btn-primary" onClick={generate}>⎙ Generate report</button>
         {link?.pdf && <a className="btn btn-navy" href={`/reports/${link.pdf}`} download>Download PDF</a>}

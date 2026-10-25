@@ -128,7 +128,7 @@ export default function ImagePair({ left, right, height = 420, modes = ['side', 
           <ImageView height={height} pixelated={pixelated} zoom={zoom} {...right} />
         </div>
       )}
-      {mode === 'single' && <ImageView height={height} pixelated={pixelated} {...right} />}
+      {mode === 'single' && <ImageView height={height} pixelated={pixelated} zoom={zoom} {...right} />}
       {mode === 'slider' && (
         <CompareSlider before={left.id} after={right.id} beforeLabel={plain(left.title, 'Before')} afterLabel={plain(right.title, 'After')}
           height={height} pixelated={pixelated} />

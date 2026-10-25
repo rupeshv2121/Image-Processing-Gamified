@@ -6,7 +6,9 @@ import MatlabEditor from '../components/MatlabEditor'
 import { Card, ImageGrid, ImageView, Note, Page, UseButton } from '../components/ui'
 
 // MATLAB Code Lab: students write real MATLAB code in the browser; MATLAB runs
-// it (codelab/runStudentCode.m) and grades task solutions (codelab/codeTasks.m).
+// it (codelab/runStudentCode.m) and grades task solutions against the teacher's
+// model solution (codelab/codeTasks.m). The tasks are written by the teacher
+// (Assignments → Code Lab tasks); students only see published ones.
 
 const FREE = 'free'
 const FREE_STARTER = `% Free practice - write any MATLAB code and press Run (Ctrl+Enter).
@@ -153,18 +155,23 @@ export default function CodeLab() {
       subtitle="Write real MATLAB code in the browser. MATLAB runs it, shows the Command Window, figures and workspace — and checks your task solutions automatically.">
       <div className="code-lab">
         <aside className="code-tasks card" aria-label="Tasks">
-          <div className="lab-panel-title">Tasks · {solved.length}/{tasks.length} solved</div>
+          <div className="lab-panel-title">Tasks · {tasks.filter((t) => solved.includes(t.id)).length}/{tasks.length} solved</div>
           <button className={`task-item ${isFree ? 'active' : ''}`} onClick={() => setTaskId(FREE)} aria-current={isFree}>
             <Icon name="code" size={16} /> <span className="task-name">Free practice</span>
           </button>
+          {tasks.length === 0 && (
+            <p className="small muted" style={{ padding: '8px 10px' }}>
+              {teacher ? <>No tasks yet. Write them under <a href="#assign">Assignments → Code Lab tasks</a>.</> : 'Your teacher has not published any tasks yet — use Free practice meanwhile.'}
+            </p>
+          )}
           {tasks.map((t) => (
             <button key={t.id} className={`task-item ${t.id === taskId ? 'active' : ''} ${t.status === 'locked' ? 'locked' : ''}`} onClick={() => setTaskId(t.id)} aria-current={t.id === taskId}>
               <span className={`task-tick ${solved.includes(t.id) ? 'done' : ''}`} aria-label={solved.includes(t.id) ? 'solved' : t.status === 'locked' ? 'locked' : 'not solved'}>
                 {solved.includes(t.id) ? '✓' : t.status === 'locked' ? <Icon name="lock" size={10} /> : ''}
               </span>
               <span className="task-name">{t.title}
-                <small>{t.status === 'assigned' ? <b className={t.due && t.due < today && !solved.includes(t.id) ? 'overdue' : 'assigned'}>
-                  {t.due ? `Assigned · due ${t.due}` : 'Assigned'}</b> : `${t.unit} · ${t.topic}`}</small>
+                <small>{t.status === 'draft' ? <b>Draft — students cannot see it</b> : t.status === 'assigned' ? <b className={t.due && t.due < today && !solved.includes(t.id) ? 'overdue' : 'assigned'}>
+                  {t.due ? `Assigned · due ${t.due}` : 'Assigned'}</b> : t.topic || t.level}</small>
               </span>
               <span className={LEVEL_BADGE[t.level] || 'badge'}>{t.level}</span>
             </button>
@@ -173,7 +180,7 @@ export default function CodeLab() {
 
         <div className="stack code-main">
           {!matlab.ok && <Note kind="warn">The Code Lab needs MATLAB. {matlab.ready ? 'MATLAB is not available.' : 'MATLAB is starting…'}</Note>}
-          {teacher && <Note>Teacher preview: you can run every task (also locked ones) and see each model solution. Your runs are not recorded. Student work is under <a href="#submissions">Code submissions</a>.</Note>}
+          {teacher && <Note>Teacher preview: you can run every task (also drafts and locked ones) and see each model solution. Your runs are not recorded. Write and publish tasks under <a href="#assign">Assignments</a>; student work is under <a href="#submissions">Code submissions</a>.</Note>}
 
           {isFree ? (
             <Card title="Free practice">
@@ -191,7 +198,8 @@ export default function CodeLab() {
               </span>}>
               <div className="task-brief">
                 <div className="stack-sm">
-                  <div className="eyebrow" style={{ margin: 0 }}>{task.unit} · {task.topic}</div>
+                  {task.topic && <div className="eyebrow" style={{ margin: 0 }}>{task.topic}</div>}
+                  {teacher && task.status === 'draft' && <Note>Draft: students cannot see this task until you publish it under <a href="#assign">Assignments</a>.</Note>}
                   {locked && <Note kind="warn">Your teacher has locked this task for now.</Note>}
                   {task.status === 'assigned' && (
                     <Note kind={task.due && task.due < today && !solved.includes(task.id) ? 'error' : 'warn'}>

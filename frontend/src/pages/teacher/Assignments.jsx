@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { asArray } from '../../api'
 import { Card, Page, Segmented, Tabs } from '../../components/ui'
+import CodeTasks from './CodeTasks'
 import { TeacherError, todayStr, useTeacher } from './TeacherData'
 
 // One row of either table: open / assigned (with due date + note) / locked
@@ -45,29 +46,12 @@ export default function Assignments() {
   const [tab, setTab] = useState('code')
   const total = overview?.studentCount || 0
   const experiments = asArray(overview?.experiments)
-  const tasks = asArray(overview?.codeTasks)
 
   return (
-    <Page eyebrow="Teacher" title="Assignments" subtitle="Choose what students may do. Assigned work is pinned to every student's dashboard with its due date; locked work cannot be run.">
+    <Page eyebrow="Teacher" title="Assignments" subtitle="Write the class's Code Lab tasks and choose what students may do. Assigned work is pinned to every student's dashboard with its due date; locked work cannot be run.">
       <TeacherError />
-      <Tabs tabs={[{ key: 'code', label: `Code Lab tasks (${tasks.length})` }, { key: 'experiments', label: `Experiments (${experiments.length})` }]} active={tab} onChange={setTab} />
-      {!overview ? <p className="muted">Loading…</p> : tab === 'code' ? (
-        <Card title="Code Lab tasks" extra={<span className="small faint">Changes apply immediately for every student</span>}>
-          <div className="table-scroll">
-            <table className="data exp-table">
-              <thead><tr><th>Level</th><th>Task</th><th>Status</th><th>Due date & note</th><th>Solved</th></tr></thead>
-              <tbody>
-                {tasks.map((t) => (
-                  <AssignRow key={t.id} rowKey={t.id} label={t.level} title={t.title} item={t} done={t.solvedBy} total={total}
-                    extra={<div className="tiny faint">{t.unit} · {t.topic} · <a href={`#code?task=${t.id}`}>preview</a> · tried by {t.triedBy}</div>}
-                    onSave={(x) => act({ action: 'setCodeTask', taskId: t.id, ...x })} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="small muted mt-sm">MATLAB refuses to run <b>locked</b> tasks for students. As the teacher you can still open and run every task (your runs are never recorded) and see the model solution.</p>
-        </Card>
-      ) : (
+      <Tabs tabs={[{ key: 'code', label: 'Code Lab tasks' }, { key: 'experiments', label: `Experiments (${experiments.length})` }]} active={tab} onChange={setTab} />
+      {tab === 'code' ? <CodeTasks /> : !overview ? <p className="muted">Loading…</p> : (
         <Card title="Experiments" extra={<span className="small faint">Changes apply immediately for every student</span>}>
           <div className="table-scroll">
             <table className="data exp-table">

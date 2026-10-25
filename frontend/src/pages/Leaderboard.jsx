@@ -3,6 +3,7 @@ import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
 import { initials, StudentsModal } from '../components/Profiles'
 import { Card, Modal, Page, Segmented, Tabs } from '../components/ui'
+import { bestPerStudent } from '../leaderboard'
 
 export default function Leaderboard() {
   const { call, matlab, profiles, profileId, refreshProfiles, role } = useApp()
@@ -27,7 +28,7 @@ export default function Leaderboard() {
     setConfirm(false)
   }
   const modes = ['all', ...new Set(rows.map((r) => r.Mode))]
-  const shown = rows.filter((r) => mode === 'all' || r.Mode === mode)
+  const shown = bestPerStudent(rows.filter((r) => mode === 'all' || r.Mode === mode))
 
   return (
     <Page eyebrow="Play" title="Leaderboard" subtitle="Top quiz scores and the class ranking of every student profile on this computer."
@@ -56,27 +57,29 @@ export default function Leaderboard() {
       )}
       {tab === 'scores' && <Card>
         {modes.length > 2 && <div style={{ marginBottom: 12 }}><Segmented value={mode} onChange={setMode} options={modes.map((m) => ({ value: m, label: m === 'all' ? 'All modes' : m }))} /></div>}
-        {shown.length ? (
+        {shown.length ? (<>
           <table className="data">
-            <thead><tr><th>Rank</th><th>Name</th><th>Roll no.</th><th>Score</th><th>Accuracy</th><th>Best streak</th><th>Mode</th><th>Date</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Name</th><th>Roll no.</th><th>Best score</th><th>Accuracy</th><th>Best streak</th><th>Mode</th><th>Quizzes</th><th>Date</th></tr></thead>
             <tbody>
               {shown.map((r, i) => (
-                <tr key={i} className={i === 0 ? 'best' : ''}>
+                <tr key={r.ProfileId || `${r.Name}|${r.Roll}`} className={i === 0 ? 'best' : ''}>
                   <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
-                  <td>{r.Name}</td><td>{r.Roll}</td><td><b>{r.Score}</b></td><td>{fmt(r.Accuracy, 1)}%</td>
-                  <td>{r.BestStreak}</td><td>{r.Mode}</td><td className="small muted">{r.Date}</td>
+                  <td>{r.Name}{r.ProfileId && r.ProfileId === profileId && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</td>
+                  <td>{r.Roll}</td><td><b>{r.Score}</b></td><td>{fmt(r.Accuracy, 1)}%</td>
+                  <td>{r.BestStreak}</td><td>{r.Mode}</td><td>{r.Attempts}</td><td className="small muted">{r.Date}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        ) : (
-          <p className="muted">No scores yet. Play the <a href="#quiz">Rapid Fire Quiz</a> and enter your name to appear here.</p>
+          <p className="small muted mt-sm">Each student appears once, with their best {mode === 'all' ? 'score of any mode' : `${mode} score`}. Quizzes = how many {mode === 'all' ? '' : `${mode} `}scores they have posted.</p>
+        </>) : (
+          <p className="muted">No scores yet. Play the <a href="#quiz">Rapid Fire Quiz</a> and tick “Post my score” to appear here.</p>
         )}
       </Card>}
       {manage && <StudentsModal onClose={() => setManage(false)} />}
       {confirm && (
         <Modal title="Clear the leaderboard?" onClose={() => setConfirm(false)}>
-          <p>All {rows.length} leaderboard entries will be deleted. This cannot be undone.</p>
+          <p>All {rows.length} quiz scores on the leaderboard will be deleted. This cannot be undone.</p>
           <div className="row right"><button className="btn" onClick={() => setConfirm(false)}>Cancel</button><button className="btn btn-primary" onClick={clear}>Clear</button></div>
         </Modal>
       )}

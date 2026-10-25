@@ -42,7 +42,7 @@ if isempty(table)
                          'describeRegion', 'color', 'colorEnhance', 'pseudocolor', 'neighborhood', 'steps'}
         @restorationOps, {'lpiDegrade', 'deconvolve'}
         @gameOps,       {'guessFilter', 'degrade', 'applyPipeline'}
-        @codeLabOps,    {'codeTaskList', 'codeTaskStart', 'codeTaskSolution', 'codeWarmup', 'runCode'}
+        @codeLabOps,    {'codeTaskTemplates', 'codeTaskStart', 'codeTaskCheck', 'codeWarmup', 'runCode'}
         @experimentOps, {'experimentCatalog', 'runExperiment', 'report'}};
     table = containers.Map('KeyType', 'char', 'ValueType', 'any');
     for r = 1:size(routes, 1)

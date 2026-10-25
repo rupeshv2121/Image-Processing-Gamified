@@ -24,7 +24,7 @@ export default function LiveHost() {
   const poll = useCallback(() => run('live', { action: 'host' }).then(apply).catch(() => {}), [apply])
 
   useEffect(() => {
-    if (!matlab.ok) return undefined
+    if (!matlab.server) return undefined              // run by the server - no need to wait for MATLAB
     let stop = false
     let timer
     const loop = async () => {
@@ -35,7 +35,7 @@ export default function LiveHost() {
     }
     loop()
     return () => { stop = true; clearTimeout(timer) }
-  }, [matlab.ok, poll, host?.active, host?.phase === 'finished']) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [matlab.server, poll, host?.active, host?.phase === 'finished']) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Teacher actions. qIndex tells MATLAB which question this screen showed, so a
   // double click (or two open tabs) never skips a question.

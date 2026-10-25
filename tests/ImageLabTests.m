@@ -639,20 +639,43 @@ classdef ImageLabTests < matlab.unittest.TestCase
 
         % -------------------------------------------------- code lab
         function codeTaskSolutionsPassAndStartersFail(tc)
+            % The built-in examples (templates for the teacher's tasks): each
+            % model solution matches the example's independent reference and
+            % passes its check; the starter code does not.
             ilab_store('init', fullfile(tempdir, 'ilab_test_images'));
-            T = codeTasks('list');
+            T = codeTasks('templates');
             for k = 1:numel(T)
                 t = T{k};
-                I = codeTasks('input', t.id);
-                full = codeTasks('get', t.id);
-                r = runStudentCode(codeTasks('solution', t.id), I, struct('forbidden', {full.forbidden}));
+                I = codeTasks('input', t);
+                r = runStudentCode(t.solution, I, struct('forbidden', {t.forbidden}));
                 tc.verifyEmpty(r.error, t.id);
-                g = codeTasks('grade', t.id, struct('out', r.outValue), I);
+                g = codeTasks('grade', t, struct('out', r.outValue), codeTasks('reference', t.id, I));
                 tc.verifyTrue(g.passed, sprintf('%s: model solution must pass (%s)', t.id, g.message));
                 r = runStudentCode(t.starter, I, struct());
                 ws = struct(); if r.hasOut, ws.out = r.outValue; end
-                tc.verifyFalse(codeTasks('grade', t.id, ws, I).passed, [t.id ': starter code must not pass']);
+                tc.verifyFalse(codeTasks('grade', t, ws, codeTasks('reference', t.id, I)).passed, ...
+                    [t.id ': starter code must not pass']);
             end
+        end
+
+        function codeLabGradesAgainstTheTeachersSolution(tc)
+            % A teacher's task as the backend sends it (JSON-decoded struct)
+            ilab_store('init', fullfile(tempdir, 'ilab_test_images'));
+            task = struct('sample', 'peppers.png', 'prep', 'color', 'compare', 'image', 'tol', 1e-3, ...
+                'border', 0, 'forbidden', {{'imcomplement'}}, 'solution', 'out = 1 - img;');
+            p = struct('task', task, 'code', 'out = 1 - img;');
+            d = codeLabOps('runCode', p);
+            tc.verifyTrue(d.grade.passed, d.grade.message);
+            tc.verifyEqual(size(codeTasks('input', task), 3), 3);
+            p.code = 'out = img;';
+            tc.verifyFalse(codeLabOps('runCode', p).grade.passed);
+            p.code = 'out = imcomplement(img);';
+            tc.verifyError(@() codeLabOps('runCode', p), ?MException);     % forbidden function is refused
+            c = codeLabOps('codeTaskCheck', struct('task', task));
+            tc.verifyTrue(c.ok, c.message);
+            task.solution = 'out = img(1:10, 1:10);';
+            c = codeLabOps('codeTaskCheck', struct('task', task));
+            tc.verifyFalse(c.ok);
         end
 
         function codeLabCapturesOutputErrorsAndFigures(tc)

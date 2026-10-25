@@ -17,12 +17,20 @@ TEACHER_UNLESS = {
     "profiles": ("", "list"),
     "leaderboard": ("", "get", "add"),
     "live": ("", "join", "state", "answer", "leave"),
+    "codeTaskEdit": (),
 }
 SIGNED_IN = {"profiles", "progress", "codeTaskSolution", "quizSubmit", "report", "runExperiment", "live"}
 
-# What a device other than the ImageLab computer may do (classroom network mode)
-REMOTE_OPS = {"ping", "auth", "live"}
+# Classroom network mode: a device other than the Spatia computer (a student's
+# phone or laptop). Before signing in it may only ping and sign in; a signed-in
+# STUDENT may then use the student side of the app (labs, quizzes, experiments,
+# reports, live quiz) - except the Code Lab, which runs arbitrary MATLAB code on
+# the Spatia computer (runStudentCode.m is not a security sandbox).
+REMOTE_ANONYMOUS = {"ping", "auth"}
+REMOTE_FORBIDDEN = {"runCode", "codeWarmup", "codeTaskStart", "codeTaskSolution", "codeTaskEdit"}
 REMOTE_AUTH = {"options", "login", "register", "logout", "me", "changePassword"}
+REMOTE_MESSAGE = ("Sign in with your student account first. The Code Lab and teacher mode "
+                  "only work on the Spatia computer itself.")
 
 
 def check(op: str, params: dict, caller: Caller) -> None:
@@ -37,8 +45,11 @@ def check(op: str, params: dict, caller: Caller) -> None:
         raise session_ended()
 
 
-def remote_allowed(op: object, params: dict) -> bool:
-    """Students' own devices: sign-in and the live quiz only (Code Lab runs MATLAB code)."""
-    if op not in REMOTE_OPS:
-        return False
-    return op != "auth" or str(param(params, "action", "me")) in REMOTE_AUTH
+def remote_allowed(op: object, params: dict, caller: Caller | None) -> bool:
+    """Students' own devices: sign-in, then the student side of the app without the Code Lab."""
+    if op == "auth":
+        return str(param(params, "action", "me")) in REMOTE_AUTH
+    if op in REMOTE_ANONYMOUS:
+        return True
+    student = caller is not None and caller.session is not None and not caller.is_teacher
+    return student and op not in REMOTE_FORBIDDEN

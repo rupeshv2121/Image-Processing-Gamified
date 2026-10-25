@@ -35,6 +35,11 @@ export function setSession(next, remember = false) {
 let onSessionLost = null
 export const setSessionLostHandler = (fn) => { onSessionLost = fn }
 
+// Every answer to a signed-in student carries their current XP and level
+// ({xp, level}); the top bar's level chip follows it without extra requests.
+let onXp = null
+export const setXpHandler = (fn) => { onXp = fn }
+
 export async function run(op, params = {}) {
   let res
   try {
@@ -62,6 +67,7 @@ export async function run(op, params = {}) {
     }
     throw err
   }
+  if (json.xp && session?.role === 'student') onXp?.(json.xp)
   return json.data
 }
 
@@ -94,7 +100,8 @@ export function uploadImage(file) {
         const res = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: file.name, data }),
+          // the token lets a signed-in student upload from their own device (classroom network)
+          body: JSON.stringify({ name: file.name, data, ...(session ? { token: session.token } : {}) }),
         })
         const json = await res.json()
         if (!json.ok) reject(new Error(json.error || 'Upload failed.'))

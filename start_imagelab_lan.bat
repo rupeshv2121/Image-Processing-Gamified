@@ -1,4 +1,5 @@
 @echo off
-REM Classroom network mode: students join the live quiz from their own phones and
-REM laptops (they can do nothing else from there). The server window shows the address.
+REM Classroom network mode: students sign in on their own phones and laptops and use
+REM the labs, quizzes and the live quiz (not the Code Lab or teacher mode). The server
+REM window shows the address.
 call "%~dp0start_imagelab.bat" --lan %*
