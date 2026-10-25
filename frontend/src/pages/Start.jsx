@@ -44,9 +44,10 @@ export default function Start({ next }) {
   const [info, setInfo] = useState(null)
   const [busy, setBusy] = useState(false)
 
+  // Signing in is answered by the server itself - it never waits for MATLAB to start
   useEffect(() => {
-    if (matlab.ok) run('auth', { action: 'options' }).then(setOptions).catch(() => {})
-  }, [matlab.ok])
+    if (matlab.server) run('auth', { action: 'options' }).then(setOptions).catch(() => {})
+  }, [matlab.server])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const go = (hash) => { window.location.hash = hash }
@@ -84,7 +85,7 @@ export default function Start({ next }) {
   })
 
   const switchMode = (m) => { setMode(m); setError(null); setInfo(null); setForm((f) => ({ ...f, password: '', repeat: '' })) }
-  const disabled = !matlab.ok || busy
+  const disabled = !matlab.server || busy
 
   const heading = tab === 'teacher' ? ['Teacher sign in', 'Manage your class, assignments and the live quiz.']
     : mode === 'register' ? ['Create your account', 'Join the class with your name and roll number.']
@@ -119,7 +120,7 @@ export default function Start({ next }) {
           <h1>{heading[0]}</h1>
           <p className="auth-sub">{heading[1]}</p>
 
-          {matlab.remote ? <Note>Sign in with your student account to join the live quiz.</Note> : (
+          {matlab.remote ? <Note>Sign in with your student account. Teacher mode and the Code Lab work on the Spatia computer only.</Note> : (
             <div className="segmented auth-role" role="tablist" aria-label="Sign in as">
               {[['student', 'Student'], ['teacher', 'Teacher']].map(([k, label]) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''}
@@ -128,7 +129,8 @@ export default function Start({ next }) {
             </div>
           )}
 
-          {!matlab.ok && <Note kind="warn">{matlab.ready ? 'MATLAB is not available.' : 'Starting MATLAB… this takes up to a minute the first time.'}</Note>}
+          {!matlab.server ? <Note kind="warn">Connecting to the Spatia server…</Note>
+            : !matlab.ok && !matlab.remote && <Note>{matlab.ready ? 'MATLAB is not available — you can sign in, but the labs need MATLAB.' : 'MATLAB is starting (up to a minute the first time) — you can already sign in.'}</Note>}
           {sessionMessage && <Note kind="warn">{sessionMessage}</Note>}
 
           {tab === 'student' && mode === 'login' && (
@@ -137,7 +139,7 @@ export default function Start({ next }) {
                 <input type="text" autoComplete="username" value={form.identifier} onChange={set('identifier')} autoFocus required /></label>
               <label className="field"><span className="field-label">Password</span>
                 <input type="password" autoComplete="current-password" value={form.password} onChange={set('password')} required /></label>
-              <label className="check"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Keep me signed in on this computer</label>
+              <label className="check"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Keep me signed in on this {matlab.remote ? 'device' : 'computer'}</label>
               <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || !form.identifier || !form.password}>{busy ? 'Signing in…' : 'Sign in'}</button>
               <p className="auth-hint">First time? Type your roll number and the password you want — {SITE_NAME} will ask you to confirm it.
                 Forgot your password? Ask your teacher to reset it.</p>

@@ -36,19 +36,23 @@ export default function LiveQuiz() {
     }
   }, [apply])
 
-  // Every second while in a quiz; every 3 s while waiting for one to open
+  // Every second while in a quiz; every 2 s while waiting for one to open.
+  // The live quiz is run by the server itself - it never waits for MATLAB.
   useEffect(() => {
-    if (!matlab.ok) return undefined
+    if (!matlab.server) return undefined
     let stop = false
     let timer
     const loop = async () => {
       await poll()
       const s = latest.current
-      if (!stop) timer = setTimeout(loop, !s?.joined ? 3000 : s.phase === 'finished' ? 5000 : 1000)
+      if (!stop) timer = setTimeout(loop, !s?.joined ? 2000 : s.phase === 'finished' ? 5000 : 1000)
     }
     loop()
-    return () => { stop = true; clearTimeout(timer) }
-  }, [matlab.ok, poll])
+    // A phone that was asleep or in the background checks at once when it comes back
+    const wake = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', wake)
+    return () => { stop = true; clearTimeout(timer); document.removeEventListener('visibilitychange', wake) }
+  }, [matlab.server, poll])
 
   const phase = state?.joined ? state.phase : null
   const qIndex = state?.qIndex
@@ -99,7 +103,7 @@ export default function LiveQuiz() {
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  if (!matlab.ok) {
+  if (!matlab.server) {
     return <Page eyebrow="Live quiz" title="Live quiz"><p className="muted"><span className="spinner dark" /> Connecting to Spatia…</p></Page>
   }
 
@@ -108,6 +112,7 @@ export default function LiveQuiz() {
       <Page eyebrow="Live quiz" title="Join the live quiz" subtitle="Enter the 6-digit code shown on your teacher's screen.">
         <div className="live-joinbox">
           <form className="card live-joinform" onSubmit={join}>
+            {state?.active && state.canJoin && <Note kind="ok"><b>“{state.title}” is open{state.phase !== 'lobby' ? ' and has started' : ''}.</b> Type the code from the projector to join.</Note>}
             <label className="field">
               <span className="field-label">Quiz code</span>
               <input type="text" inputMode="numeric" autoComplete="off" className="live-codeinput" placeholder="123 456" maxLength={7}
@@ -117,7 +122,6 @@ export default function LiveQuiz() {
             <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={sending || code.replace(/\D/g, '').length !== 6}>
               <Icon name="play" size={16} /> Join
             </button>
-            {state?.active && state.canJoin && <Note kind="ok">A live quiz is open: <b>{state.title}</b></Note>}
             {state?.active && !state.canJoin && <Note kind="warn">“{state.title}” is running, but joining is closed.</Note>}
             {state && !state.active && <p className="small muted">No live quiz is open right now — this page checks automatically.</p>}
             {offline && <p className="small faint">Reconnecting…</p>}

@@ -112,10 +112,13 @@ call('applyPipeline', struct('cleanId', d.data.cleanId, 'degradedId', d.data.deg
     'steps', {{struct('block', 'median', 'k', 3), struct('block', 'gaussian')}}));
 
 % Code Lab and experiments
-call('codeTaskList', struct());
-call('codeTaskStart', struct('taskId', 'meanfilter'));
-call('codeTaskSolution', struct('taskId', 'negative'));
-call('runCode', struct('taskId', 'negative', 'code', 'out = 1 - img;'));
+tpl = call('codeTaskTemplates', struct());
+if iscell(tpl.data), first = tpl.data{1}; else, first = tpl.data(1); end
+task = struct('sample', 'peppers.png', 'prep', 'saltpepper', 'compare', 'image', 'tol', 1e-3, ...
+    'border', 1, 'forbidden', {{'medfilt2'}}, 'solution', first.solution);
+call('codeTaskStart', struct('task', task));
+call('codeTaskCheck', struct('task', task));
+call('runCode', struct('task', task, 'code', 'out = 1 - img;'));
 call('runCode', struct('id', id, 'code', sprintf('J = rgb2gray(img);\nimshow(J)\nout = J;')));
 call('experimentCatalog', struct());
 for e = 1:13

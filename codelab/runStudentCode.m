@@ -11,6 +11,8 @@ function data = runStudentCode(code, img, opts)
 %       forbidden - cell array of function names the code must not call,
 %                   e.g. {'imfilter','conv2'} for "write the loop yourself"
 %       maxImages - workspace image variables to return (default 6)
+%       figures   - false: do not export the figures the code draws
+%                   (default true)
 %
 %   data fields:
 %       output     Command Window text (like MATLAB's command window)
@@ -84,7 +86,7 @@ others = setdiff(findall(groot, 'Type', 'figure'), [figsBefore; pool(:); drawn(:
 figs = [drawn(:); others(:)];
 for k = 1:numel(figs)
     try
-        if numel(data.figures) < 6 && ~isempty(figs(k).Children)
+        if field(opts, 'figures', true) && numel(data.figures) < 6 && ~isempty(figs(k).Children)
             data.figures{end+1} = saveFigure(figs(k));
         end
     catch

@@ -12,8 +12,9 @@ function ImageLab(mode)
 %   functions in algorithms/, noise/, histogram/, metrics/, segmentation/ ...
 %   Close the "ImageLab server" window to stop the interface.
 %
-%   ImageLab('lan')  classroom network mode: students join the live quiz
-%   from their own devices (they can do nothing else from there).
+%   ImageLab('lan')  classroom network mode: students sign in on their own
+%   devices and use the labs, quizzes and the live quiz (the Code Lab and
+%   teacher mode stay on this computer).
 %
 %   Requirements: Python 3.9-3.12 with the MATLAB Engine API
 %   (run setup_imagelab.bat once), see README.md.

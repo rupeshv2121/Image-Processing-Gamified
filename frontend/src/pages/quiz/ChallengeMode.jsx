@@ -8,7 +8,7 @@ import { BLOCKS } from './PipelineGame'
 const label = (k) => BLOCKS.find((b) => b.key === k)?.label || k
 
 export default function ChallengeMode() {
-  const { current, call, notify } = useApp()
+  const { current, call, notify, profile, role } = useApp()
   const [level, setLevel] = useState('medium')
   const [ch, setCh] = useState(null)
   const [steps, setSteps] = useState([])
@@ -17,8 +17,7 @@ export default function ChallengeMode() {
   const [left, setLeft] = useState(0)
   const [preview, setPreview] = useState(null)
   const [result, setResult] = useState(null)
-  const [name, setName] = useState('')
-  const [roll, setRoll] = useState('')
+  const [name, setName] = useState(() => profile?.name || '')
   const startTime = useRef(0)
 
   useEffect(() => {
@@ -58,8 +57,8 @@ export default function ChallengeMode() {
     const d = await call('challengeScore', { cleanId: ch.cleanId, degradedId: ch.degradedId, steps: stepParams(), timeUsed: used, timeLimit: ch.timeLimit }, { label: 'Scoring' })
     if (d) {
       setResult({ ...d, used })
-      if (name.trim()) {
-        await call('leaderboard', { action: 'add', entry: { name, roll, score: d.score, accuracy: Math.max(0, Math.min(100, 100 * (1 - d.after.mse / d.before.mse))), bestStreak: 0, mode: `Challenge (${level})` } }, { label: 'Saving score' })
+      if (name.trim() && role === 'student') {
+        await call('leaderboard', { action: 'add', entry: { score: d.score, accuracy: Math.max(0, Math.min(100, 100 * (1 - d.after.mse / d.before.mse))), bestStreak: 0, mode: `Challenge (${level})` } }, { label: 'Saving score' })
         notify('Score saved to the leaderboard')
       }
     }
@@ -69,7 +68,7 @@ export default function ChallengeMode() {
     <NeedImage>
       {!ch || result ? (
         <Card title="Timed image restoration challenge">
-          <PlayerFields name={name} roll={roll} setName={setName} setRoll={setRoll} />
+          <PlayerFields name={name} setName={setName} />
           <div className="row" style={{ marginTop: 12 }}>
             <Segmented value={level} onChange={setLevel} options={[{ value: 'easy', label: 'Easy (90 s)' }, { value: 'medium', label: 'Medium (60 s)' }, { value: 'hard', label: 'Hard (60 s)' }]} />
             <button className="btn btn-primary" onClick={begin}>{result ? 'Play again' : 'Start challenge'}</button>

@@ -3,8 +3,9 @@
 Roll numbers are unique (students sign in with them). The first profile
 'default' always exists and cannot be deleted. When a profile is removed,
 the listeners registered with `on_removed` delete everything that belongs
-to it (account, progress, Code Lab submissions), so this service does not
-need to know about them.
+to it (account, progress, Code Lab submissions, leaderboard scores), so
+this service does not need to know about them. `on_renamed` listeners keep
+copies of the name up to date (the leaderboard).
 """
 
 from __future__ import annotations
@@ -39,12 +40,22 @@ class ProfileService:
     def __init__(self, repo: ProfileRepository, progress: ProgressService):
         self.repo = repo
         self.progress = progress
-        self._removed_listeners: list[Callable[[str], None]] = []
+        self._removed_listeners: list[Callable[[dict], None]] = []
+        self._renamed_listeners: list[Callable[[dict], None]] = []
         if repo.count() == 0:
             repo.add(DEFAULT_PROFILE)
 
     def on_removed(self, listener: Callable[[str], None]) -> None:
+        """listener(profile_id) after a profile was deleted."""
+        self._removed_listeners.append(lambda profile: listener(profile["id"]))
+
+    def on_removed_profile(self, listener: Callable[[dict], None]) -> None:
+        """listener(profile) after a profile was deleted - for records that also stored the name."""
         self._removed_listeners.append(listener)
+
+    def on_renamed(self, listener: Callable[[dict], None]) -> None:
+        """listener(profile) after its name or roll number changed."""
+        self._renamed_listeners.append(listener)
 
     # ------------------------------------------------------------ reading
     def roster(self) -> list[dict]:
@@ -89,15 +100,18 @@ class ProfileService:
         name, roll = self._clean_name(name), self._clean_roll(roll)
         self._check_unique(others, name, roll)
         self.repo.update(profile_id, name, roll)
+        for listener in self._renamed_listeners:
+            listener(self.repo.get(profile_id))
         return self.list()
 
     def remove(self, profile_id: str) -> list[dict]:
         if profile_id == DEFAULT_PROFILE["id"]:
             raise invalid("The first profile cannot be deleted (you can rename it).")
-        if self.get(profile_id) is not None:
+        profile = self.get(profile_id)
+        if profile is not None:
             self.repo.remove(profile_id)
             for listener in self._removed_listeners:
-                listener(profile_id)
+                listener(profile)
         return self.list()
 
     # ------------------------------------------------------------ validation

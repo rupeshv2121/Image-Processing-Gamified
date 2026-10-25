@@ -19,14 +19,16 @@ const GAMES = [
   { key: 'classroom', icon: '🎓', title: 'Classroom Mode', text: 'Projector mode for juniors: big question, big timer, reveal and explain.' },
 ]
 
-export function PlayerFields({ name, roll, setName, setRoll }) {
+// Opt in to the leaderboard. Scores are always posted under the signed-in
+// student's own name and roll number; name = '' means "do not post".
+export function PlayerFields({ name, setName }) {
+  const { profile, role } = useApp()
+  if (role !== 'student' || !profile) return <p className="small muted">Teacher mode: scores are not posted to the leaderboard.</p>
   return (
-    <div className="grid-2">
-      <label className="field"><span className="field-label">Name (for the leaderboard)</span>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" /></label>
-      <label className="field"><span className="field-label">Roll number</span>
-        <input type="text" value={roll} onChange={(e) => setRoll(e.target.value)} placeholder="Optional" /></label>
-    </div>
+    <label className="check">
+      <input type="checkbox" checked={!!name} onChange={(e) => setName(e.target.checked ? profile.name : '')} />
+      Post my score to the leaderboard as <b>{profile.name}</b>{profile.roll ? ` (${profile.roll})` : ''}
+    </label>
   )
 }
 
@@ -166,7 +168,6 @@ function TimedQuiz({ mode }) {
   const [questions, setQuestions] = useState(null)
   const [summary, setSummary] = useState(null)
   const [name, setName] = useState(() => profile?.name || '')
-  const [roll, setRoll] = useState(() => profile?.roll || '')
   const [classScore, setClassScore] = useState(null)
 
   const finish = async (results) => {
@@ -176,7 +177,7 @@ function TimedQuiz({ mode }) {
       setQuestions(null)
       return
     }
-    const d = await call('quizSubmit', { results, name, roll, mode: mode === 'kernel' ? 'Kernel Quiz' : 'Rapid Fire' }, { label: 'Scoring quiz' })
+    const d = await call('quizSubmit', { results, name, mode: mode === 'kernel' ? 'Kernel Quiz' : 'Rapid Fire' }, { label: 'Scoring quiz' })
     if (d) {
       setSummary(d)
       refreshProgress()
@@ -197,7 +198,7 @@ function TimedQuiz({ mode }) {
       {classScore && <Note kind="ok">Class result of the last session: <b>{classScore.correct} / {classScore.total}</b> answered correctly.</Note>}
       {mode === 'classroom'
         ? <p className="small">Put this on the projector. The question and a 10-second timer are shown in large type. Click the option the class chooses (or let the timer run out / "Reveal answer now"), then discuss the explanation.</p>
-        : <PlayerFields name={name} roll={roll} setName={setName} setRoll={setRoll} />}
+        : <PlayerFields name={name} setName={setName} />}
       <div style={{ marginTop: 12 }}>
         <QuizSetup mode={mode} onStart={(qs) => { setClassScore(null); setQuestions(qs) }} />
       </div>
@@ -218,7 +219,7 @@ export default function QuizHub() {
   const current = GAMES.find((g) => g.key === game)
   return (
     <Page title={current ? current.title : 'Arcade'} eyebrow="Play" subtitle={current ? current.text : 'Eight ways to test yourself. Questions, images and scores all come from MATLAB.'}
-      actions={game && <button className="btn" onClick={() => setGame(null)}>← All games</button>}>
+      back={game ? { label: 'All games', onClick: () => setGame(null) } : null}>
       {!game && (
         <div className="game-tiles">
           {GAMES.map((g) => (

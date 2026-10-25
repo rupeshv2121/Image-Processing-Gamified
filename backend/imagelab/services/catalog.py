@@ -1,8 +1,9 @@
 """Catalogues that belong to MATLAB code and are read from MATLAB once.
 
 The experiments (experimentCatalog.m) describe MATLAB code that
-runExperiment.m executes, the Code Lab tasks (codeTasks.m) carry MATLAB
-graders, and the kernel presets come from kernelPresets.m. The backend
+runExperiment.m executes, the example Code Lab tasks (codeTasks.m) are
+templates for the teacher's own tasks, and the kernel presets come from
+kernelPresets.m. The backend
 asks MATLAB for them on first use and keeps them in memory - they only
 change when the .m files change (restart the server).
 """
@@ -12,7 +13,6 @@ from __future__ import annotations
 import threading
 from typing import Any, Callable
 
-from ..errors import invalid
 from ..matlab import MatlabGateway
 from ..utils import as_list
 
@@ -44,15 +44,17 @@ class MatlabCatalog:
         return [int(e["number"]) for e in self.experiments()]
 
     # ------------------------------------------------------------ Code Lab
-    def code_tasks(self) -> list[dict]:
-        """Public task descriptions (no reference solution)."""
-        return self._get("codeTasks", lambda: as_list(self.matlab.call("codeTaskList")))
-
-    def code_task(self, task_id: str) -> dict:
-        for t in self.code_tasks():
-            if t["id"] == task_id:
-                return t
-        raise invalid(f'Unknown Code Lab task "{task_id}".')
+    def code_task_templates(self) -> list[dict]:
+        """The built-in example tasks (with model solution) a teacher can start a task from."""
+        def load() -> list[dict]:
+            out = []
+            for t in as_list(self.matlab.call("codeTaskTemplates")):
+                t = dict(t)
+                for key in ("instructions", "hints", "forbidden"):
+                    t[key] = [str(x) for x in as_list(t.get(key))]
+                out.append(t)
+            return out
+        return self._get("codeTaskTemplates", load)
 
     # ------------------------------------------------------------ kernels
     def kernel_presets(self) -> dict[str, dict]:

@@ -9,9 +9,10 @@
     GET  /reports/<file>             reports and exports
     GET  /*                          the built React UI (single-page app)
 
-Classroom network mode: other devices may only sign in and play the live
-quiz (rpc/access.py: remote_allowed) - Code Lab runs MATLAB code and the
-labs write files, so they stay on this computer.
+Classroom network mode: another device may sign in; a signed-in student may
+then use the student side of the app (rpc/access.py: remote_allowed) and
+read result images and reports. The Code Lab (it runs arbitrary MATLAB code),
+teacher mode and cancelling MATLAB stay on this computer.
 """
 
 from __future__ import annotations
@@ -38,6 +39,8 @@ from ..config import Settings
 from ..container import Services
 from ..errors import AppError
 from ..matlab import MatlabEngine, MatlabGateway
+from ..caller import Caller
+from ..rpc.access import REMOTE_MESSAGE as REMOTE_ACCESS
 from ..rpc.access import remote_allowed
 from ..rpc.cache import ResultCache
 from ..rpc.dispatcher import Dispatcher
@@ -58,8 +61,7 @@ for _ext, _type in ((".js", "text/javascript"), (".mjs", "text/javascript"), (".
 IMAGE_FILE = re.compile(r"^([A-Za-z0-9_\-]+)\.png$")
 REPORT_FILE = re.compile(r"^[A-Za-z0-9_\-.]+$")
 UPLOAD_TYPES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif"}
-REMOTE_MESSAGE = ("On this device you can join the live quiz. Everything else "
-                  "(labs, Code Lab, teacher sign-in) works on the ImageLab computer.")
+REMOTE_MESSAGE = "This works on the Spatia computer only."
 NO_STORE = {"Cache-Control": "no-store"}
 
 
@@ -197,11 +199,9 @@ def create_app(settings: Settings, matlab: MatlabGateway | None = None) -> FastA
         except AppError as exc:
             return failure(exc.message, 400)
         op, params = body.get("op"), body.get("params") or {}
-        if remote(request) and not remote_allowed(op, params if isinstance(params, dict) else {}):
-            return failure(REMOTE_MESSAGE, 403, errorId="ImageLab:remote")
         if not isinstance(op, str):
             return failure("Missing 'op'.", 400)
-        return envelope(await run_in_threadpool(dispatcher.run, op, params))
+        return envelope(await run_in_threadpool(dispatcher.run, op, params, remote(request)))
 
     @app.post("/api/cancel")
     def cancel(request: Request):
@@ -214,12 +214,14 @@ def create_app(settings: Settings, matlab: MatlabGateway | None = None) -> FastA
 
     @app.post("/api/upload")
     async def upload(request: Request):
-        if remote(request):
-            return failure(REMOTE_MESSAGE, 403, errorId="ImageLab:remote")
         try:
             body = await read_json(request, int(settings.max_upload_bytes * 1.4))
         except AppError as exc:
             return failure(exc.message, 400)
+        if remote(request):                            # students' devices: signed-in students only
+            caller = Caller(services.auth.resolve(str(body.get("token") or "")))
+            if not remote_allowed("upload", {}, caller):
+                return failure(REMOTE_ACCESS, 403, errorId="ImageLab:remote")
         return envelope(await run_in_threadpool(_import_upload, body))
 
     def _import_upload(body: dict) -> dict:
@@ -245,25 +247,23 @@ def create_app(settings: Settings, matlab: MatlabGateway | None = None) -> FastA
             tmp.unlink(missing_ok=True)
 
     # ------------------------------------------------------------ files
-    def local_file(request: Request, folder: Path, name: str, pattern: re.Pattern, **kw) -> Response:
-        if remote(request):
-            return Response("Only available on the ImageLab computer", status_code=403)
+    def local_file(folder: Path, name: str, pattern: re.Pattern, **kw) -> Response:
         path = folder / name
         if not pattern.match(name) or not path.is_file():
             return Response("Not found", status_code=404)
         return FileResponse(path, **kw)
 
     @app.get("/api/image/{name}")
-    def image(request: Request, name: str):
-        return local_file(request, settings.image_dir, name, IMAGE_FILE, headers={"Cache-Control": "max-age=3600"})
+    def image(name: str):
+        return local_file(settings.image_dir, name, IMAGE_FILE, headers={"Cache-Control": "max-age=3600"})
 
     @app.get("/api/download/{name}")
-    def download(request: Request, name: str):
-        return local_file(request, settings.image_dir, name, IMAGE_FILE, filename=f"imagelab_{name}", headers=NO_STORE)
+    def download(name: str):
+        return local_file(settings.image_dir, name, IMAGE_FILE, filename=f"imagelab_{name}", headers=NO_STORE)
 
     @app.get("/reports/{name}")
-    def report(request: Request, name: str):
-        return local_file(request, settings.report_dir, name, REPORT_FILE, headers=NO_STORE)
+    def report(name: str):
+        return local_file(settings.report_dir, name, REPORT_FILE, headers=NO_STORE)
 
     @app.get("/api/{rest:path}")
     def unknown_api(rest: str):

@@ -223,8 +223,12 @@ const ALGOS = [
   { key: 'regiongrow', label: 'Region growing', lab: 'segmentation', text: 'Pixels join the region in queue order when they are close enough to the seed value.' },
 ]
 
+const stepCount = (which, d) => (which === 'median' ? asArray(d.steps).length
+  : which === 'histeq' ? 2 * d.N + d.L : asArray(d.events).length)
+
 export default function Animations() {
-  const { call, matlab } = useApp()
+  const { call, matlab, notify } = useApp()
+  const runs = useRef(0)
   const [algo, setAlgo] = useState(() => {
     const m = window.location.hash.match(/[?&]algo=(\w+)/)
     return m && EXAMPLES[m[1]] ? m[1] : 'median'
@@ -248,7 +252,11 @@ export default function Animations() {
     if (which === 'histeq') params.levels = levels
     if (which === 'regiongrow') Object.assign(params, { seedRow: seed.row, seedCol: seed.col, tolerance: tol, conn })
     const d = await call('steps', params, { label: `${ALGOS.find((x) => x.key === which).label}: computing every step` })
-    if (d) setData((x) => ({ ...x, [which]: d }))
+    if (!d) return
+    // A new run number restarts the player even when the result is unchanged
+    runs.current += 1
+    setData((x) => ({ ...x, [which]: { ...d, run: runs.current } }))
+    if (runs.current > 1) notify(`MATLAB computed ${stepCount(which, d)} steps`)
   }
   useEffect(() => {
     if (matlab.ok && !data[algo]) animate(algo)
@@ -281,7 +289,7 @@ export default function Animations() {
                   <Segmented value={conn} onChange={setConn} options={[{ value: 4, label: '4-connected' }, { value: 8, label: '8-connected' }]} />
                 </>
               )}
-              <button className="btn btn-primary btn-block" onClick={() => animate()}>▶ Compute steps in MATLAB</button>
+              <button className="btn btn-primary btn-block" onClick={() => animate()} disabled={!matlab.ok}>▶ Compute steps in MATLAB</button>
               {error && <Note kind="error">{error}</Note>}
               <p className="tiny faint">Keyboard: click the player, then Space = play/pause, ← → = step.</p>
             </div>
@@ -290,9 +298,9 @@ export default function Animations() {
         <div className="lab-results">
           {!d ? <Card><p className="muted">{matlab.ok ? 'MATLAB is computing the steps…' : 'Waiting for MATLAB…'}</p></Card> : (
             <>
-              {algo === 'median' && <MedianView key={JSON.stringify(d.output)} d={d} />}
-              {algo === 'histeq' && <HisteqView key={JSON.stringify(d.output) + d.L} d={d} />}
-              {algo === 'regiongrow' && <RegionView key={JSON.stringify(d.order) + d.tolerance + d.conn} d={d} />}
+              {algo === 'median' && <MedianView key={d.run} d={d} />}
+              {algo === 'histeq' && <HisteqView key={d.run} d={d} />}
+              {algo === 'regiongrow' && <RegionView key={d.run} d={d} />}
             </>
           )}
         </div>

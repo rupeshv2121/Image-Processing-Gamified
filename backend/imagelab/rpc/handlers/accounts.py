@@ -83,8 +83,6 @@ def register(r: Registry) -> None:
             "setPin": lambda: room.set_pin(str(param(p, "pin", "")), str(param(p, "newPin", ""))),
             "setExperiment": lambda: room.set_experiment(param(p, "number", 0), str(param(p, "status", "open")),
                                                          str(param(p, "due", "")), str(param(p, "note", ""))),
-            "setCodeTask": lambda: room.set_code_task(str(param(p, "taskId", "")), str(param(p, "status", "open")),
-                                                      str(param(p, "due", "")), str(param(p, "note", ""))),
         }
         if action not in actions:
             raise invalid(f'Unknown classroom action "{action}".')
@@ -95,8 +93,13 @@ def register(r: Registry) -> None:
         board = call.app.leaderboard
         action = str(param(call.params, "action", "get"))
         if action == "add":
+            # The signed-in student's own name, roll number and id - never what the browser says
+            profile = call.app.profiles.get(call.caller.student_id or "")
+            if profile is None:                        # the teacher demonstrating a game
+                return board.get()
             entry = call.params.get("entry")
-            return board.add(entry if isinstance(entry, dict) else {})
+            entry = entry if isinstance(entry, dict) else {}
+            return board.add({**entry, "name": profile["name"], "roll": profile["roll"], "profileId": profile["id"]})
         if action == "clear":                          # teacher only (rpc/access.py)
             return board.clear()
         if action == "get":

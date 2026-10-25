@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { asArray, fmt, run } from '../../api'
+import Icon from '../../components/Icon'
 import { initials } from '../../components/Profiles'
 import { Card, Metrics, Note, Page } from '../../components/ui'
 import { MEDALS } from '../../content/missions'
@@ -7,11 +8,13 @@ import SubmissionModal from './SubmissionModal'
 import { timeAgo, todayStr } from './TeacherData'
 
 const idFromHash = () => decodeURIComponent((window.location.hash.match(/[?&]id=([^&]+)/) || [])[1] || '')
+const REFRESH_MS = 15000
 
 export default function StudentDetail() {
   const [id, setId] = useState(idFromHash)
   const [s, setS] = useState(null)
   const [error, setError] = useState(null)
+  const [loadedAt, setLoadedAt] = useState(null)
   const [open, setOpen] = useState(null)        // task id whose code is shown
 
   useEffect(() => {
@@ -19,14 +22,24 @@ export default function StudentDetail() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+  // Live while open: reloaded every 15 s and when the window gets the focus back,
+  // so new Code Lab runs, quizzes and XP show up without leaving the page
+  const load = useCallback((quiet) => run('classroom', { action: 'student', id })
+    .then((d) => { setS(d); setError(null); setLoadedAt(new Date()) })
+    .catch((e) => { if (!quiet) setError(e.message) }), [id])
   useEffect(() => {
-    if (!id) return
+    if (!id) return undefined
     setS(null); setError(null)
-    run('classroom', { action: 'student', id }).then(setS).catch((e) => setError(e.message))
-  }, [id])
+    load(false)
+    const t = setInterval(() => document.visibilityState === 'visible' && load(true), REFRESH_MS)
+    const onFocus = () => load(true)
+    window.addEventListener('focus', onFocus)
+    return () => { clearInterval(t); window.removeEventListener('focus', onFocus) }
+  }, [id, load])
 
-  if (error) return <Page eyebrow="Teacher" title="Student"><Note kind="error">{error}</Note><a className="btn mt-sm" href="#students">← All students</a></Page>
-  if (!s) return <Page eyebrow="Teacher" title="Student"><p className="muted">{id ? 'Loading…' : 'No student selected.'}</p></Page>
+  const back = { href: '#students', label: 'All students' }
+  if (error) return <Page back={back} eyebrow="Teacher" title="Student"><Note kind="error">{error}</Note></Page>
+  if (!s) return <Page back={back} eyebrow="Teacher" title="Student"><p className="muted">{id ? 'Loading…' : 'No student selected.'}</p></Page>
 
   const sum = s.summary
   const code = asArray(s.code)
@@ -34,9 +47,13 @@ export default function StudentDetail() {
   const today = todayStr()
   const badges = asArray(sum.badges).filter((b) => b.earned)
   return (
-    <Page eyebrow={<a href="#students">← Students</a>}
+    <Page back={back} eyebrow="Teacher · Student"
       title={<span className="row" style={{ gap: 14 }}><span className="avatar lg">{initials(s.name)}</span>{s.name}</span>}
-      subtitle={`${s.roll ? `Roll no. ${s.roll} · ` : ''}${s.created ? `joined ${s.created} · ` : ''}last active ${timeAgo(s.lastActive)}`}>
+      subtitle={`${s.roll ? `Roll no. ${s.roll} · ` : ''}${s.created ? `joined ${s.created} · ` : ''}last active ${timeAgo(s.lastActive)}`}
+      actions={<>
+        {loadedAt && <span className="small faint">Updated {loadedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+        <button className="btn" onClick={() => load(false)}><Icon name="reset" size={16} /> Refresh</button>
+      </>}>
       <div className="stack">
         <Metrics items={[
           { label: 'Level', value: sum.level },
@@ -47,7 +64,8 @@ export default function StudentDetail() {
           { label: 'Experiments', value: `${asArray(sum.experimentsCompleted).length} / ${exps.length}` },
         ]} />
 
-        <Card title="Code Lab">
+        <Card title="Code Lab" extra={<a className="btn btn-small" href="#assign">Manage tasks</a>}>
+          {code.length === 0 ? <p className="muted small">No Code Lab tasks are published yet. Write one under <a href="#assign">Assignments → Code Lab tasks</a>.</p> : (
           <div className="table-scroll">
             <table className="data">
               <thead><tr><th>Task</th><th>Level</th><th>Status</th><th>Result</th><th>Runs</th><th>Best match</th><th>Last run</th><th /></tr></thead>
@@ -67,7 +85,7 @@ export default function StudentDetail() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>)}
         </Card>
 
         <div className="grid-2" style={{ alignItems: 'start' }}>

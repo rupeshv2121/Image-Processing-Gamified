@@ -75,6 +75,54 @@ function useHashRoute() {
 
 const isTyping = (el) => el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
 
+// In-app trail of visited pages for the top bar's Back button. Unlike the
+// browser's back button it never leaves Spatia (to the sign-in page or another
+// site), and redirects (wrong role, signed out) are not recorded.
+const routeOf = (hash) => hash.replace('#', '').split(/[/?]/)[0]
+
+function useBackTrail(route, redirect, home) {
+  const trail = useRef(PAGES[route] ? [window.location.hash || `#${route}`] : [])
+  const goingBack = useRef(false)
+  const [depth, setDepth] = useState(trail.current.length)
+  useEffect(() => {
+    const onHash = () => {
+      const t = trail.current
+      const hash = window.location.hash
+      if (goingBack.current) goingBack.current = false
+      else if (PAGES[routeOf(hash)] && t[t.length - 1] !== hash) t.push(hash)
+      if (t.length > 50) t.splice(0, t.length - 50)
+      setDepth(t.length)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+  // A page this role may not open is replaced at once - forget it
+  useEffect(() => {
+    const t = trail.current
+    if (redirect && t.length && routeOf(t[t.length - 1]) === route) {
+      t.pop()
+      setDepth(t.length)
+    }
+  }, [redirect, route])
+  // Signing in as somebody else starts a new trail
+  useEffect(() => {
+    trail.current = PAGES[routeOf(window.location.hash)] ? [window.location.hash] : []
+    setDepth(trail.current.length)
+  }, [home])
+  const back = () => {
+    const t = trail.current
+    t.pop()
+    const prev = t[t.length - 1] || `#${home}`
+    if (!t.length) t.push(prev)
+    setDepth(t.length)
+    if (prev !== window.location.hash) {
+      goingBack.current = true
+      window.location.hash = prev
+    }
+  }
+  return { canGoBack: depth > 1, back }
+}
+
 function NavLink({ to, icon, label, route }) {
   return (
     <a href={`#${to}`} className={`nav-link ${route === to ? 'active' : ''}`} aria-current={route === to ? 'page' : undefined}>
@@ -116,7 +164,7 @@ function LabsNav({ route }) {
   )
 }
 
-function StudentNav({ route }) {
+function StudentNav({ route, remote }) {
   return (
     <>
       <NavLink to="dashboard" icon="dashboard" label="My dashboard" route={route} />
@@ -127,7 +175,7 @@ function StudentNav({ route }) {
       <NavLink to="animate" icon="play" label="Animations" route={route} />
       <LabsNav route={route} />
       <NavLink to="experiments" icon="file" label="Experiments" route={route} />
-      <NavLink to="code" icon="code" label="Code Lab" route={route} />
+      {!remote && <NavLink to="code" icon="code" label="Code Lab" route={route} />}
 
       <div className="nav-section">Play</div>
       <NavLink to="live" icon="zap" label="Live quiz" route={route} />
@@ -139,6 +187,7 @@ function StudentNav({ route }) {
       <NavLink to="reports" icon="download" label="Reports" route={route} />
       <NavLink to="docs" icon="help" label="Documentation" route={route} />
       <NavLink to="about" icon="info" label="About" route={route} />
+      {remote && <p className="nav-note">The Code Lab runs MATLAB code, so it is only available on the Spatia computer.</p>}
     </>
   )
 }
@@ -170,16 +219,6 @@ function TeacherNav({ route }) {
   )
 }
 
-// A student's own phone / laptop on the classroom network: only the live quiz
-function RemoteNav({ route }) {
-  return (
-    <>
-      <NavLink to="live" icon="zap" label="Live quiz" route={route} />
-      <p className="nav-note">On this device you can join the live quiz. The labs and everything else are on the Spatia computer.</p>
-    </>
-  )
-}
-
 function Sidebar({ route, role, remote }) {
   return (
     <aside className={`sidebar ${role === 'teacher' ? 'sidebar-teacher' : ''}`} id="sidebar">
@@ -188,14 +227,14 @@ function Sidebar({ route, role, remote }) {
         <span><b>{SITE_NAME}</b><small>{role === 'teacher' ? 'Teacher' : 'Image Processing Laboratory'}</small></span>
       </a>
       <nav aria-label="Main">
-        {remote ? <RemoteNav route={route} /> : role === 'teacher' ? <TeacherNav route={route} /> : <StudentNav route={route} />}
+        {role === 'teacher' ? <TeacherNav route={route} /> : <StudentNav route={route} remote={remote} />}
       </nav>
       <div className="sidebar-foot">Spatial-domain image processing · MATLAB</div>
     </aside>
   )
 }
 
-function TopBar({ onMenu, navOpen, navCollapsed }) {
+function TopBar({ onMenu, navOpen, navCollapsed, canGoBack, onBack }) {
   const { matlab, meta, current, progress, role } = useApp()
   const xp = progress?.xp || 0
   const level = progress?.level || 1
@@ -204,6 +243,9 @@ function TopBar({ onMenu, navOpen, navCollapsed }) {
   return (
     <header className="topbar">
       <button className="icon-btn menu-btn" onClick={onMenu} aria-label={navOpen || !navCollapsed ? 'Close menu' : 'Open menu'} aria-expanded={navOpen || !navCollapsed} aria-controls="sidebar"><Icon name="menu" /></button>
+      <button className="icon-btn back-btn" onClick={onBack} disabled={!canGoBack} aria-label="Back to the previous page" title="Back (Alt + ←)">
+        <Icon name="arrow" className="flip" />
+      </button>
       <span className="pill" role="status" title={matlab.ok ? (matlab.ipt ? 'Image Processing Toolbox functions are used' : 'Toolbox not installed — Spatia uses its manual MATLAB implementations') : ''}>
         <span className={`dot ${matlab.ok ? 'ok' : matlab.ready ? 'err' : 'wait'}`} aria-hidden="true" />
         {matlab.ok ? <>MATLAB <b>{matlab.release}</b>{!matlab.ipt && <span className="faint">· manual mode</span>}</> : matlab.ready ? <span style={{ color: 'var(--red-500)' }}>MATLAB unavailable</span> : 'Starting MATLAB…'}
@@ -216,11 +258,11 @@ function TopBar({ onMenu, navOpen, navCollapsed }) {
       <span className="spacer" />
       <ThemeToggle />
       <ProfileMenu />
-      {role === 'teacher' ? <span className="pill teacher-pill"><Icon name="lock" size={14} /> Teacher mode</span> : matlab.remote ? null : (
-      <a className="level-chip" href="#achievements" title={`${xp} XP`} aria-label={`Level ${level}, ${xp} XP — achievements`}>
+      {role === 'teacher' ? <span className="pill teacher-pill"><Icon name="lock" size={14} /> Teacher mode</span> : (
+      <a className="level-chip" href="#achievements" title={`${xp} XP · ${hi - xp} XP to level ${level + 1}`} aria-label={`Level ${level}, ${xp} XP — achievements`}>
         <span className="lv">{level}</span>
         <span>Level {level}</span>
-        <span className="xpbar" aria-hidden="true"><i style={{ width: `${Math.min(100, ((xp - lo) / (hi - lo)) * 100)}%` }} /></span>
+        <span className="xpbar" aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, ((xp - lo) / (hi - lo)) * 100))}%` }} /></span>
       </a>)}
     </header>
   )
@@ -233,6 +275,7 @@ function Shortcuts({ onClose }) {
     ['1 – 4  or  A – D', 'Answer a quiz question'],
     ['Enter', 'Next quiz question'],
     ['← / →  (Shift = bigger steps)', 'Move a before/after slider'],
+    ['Alt + ←', 'Back to the previous page'],
     ['Esc', 'Close a dialog, the theory panel or the menu'],
     ['?', 'Show this list'],
   ]
@@ -252,14 +295,15 @@ export default function App() {
   const { busy, busyLabel, alertMsg, setAlertMsg, toast, undo, redo, canUndo, canRedo, history, index, notify, role, mustChangePassword, matlab } = useApp()
   const remote = matlab.remote
 
-  // Keep each role on its own side of the app (a remote device: live quiz only)
+  // Keep each role on its own side of the app (a student's own device: no Code Lab)
   const redirect = !role ? null
-    : remote && route !== 'live' ? 'live'
+    : remote && route === 'code' ? HOME.student
     : route === 'teacher' || route === 'start' ? HOME[role]
       : role === 'student' && TEACHER_ONLY.includes(route) ? HOME.student
         : role === 'teacher' && STUDENT_ONLY.includes(route) ? HOME.teacher
           : null
   useEffect(() => { if (redirect) window.location.replace(`#${redirect}`) }, [redirect])
+  const { canGoBack, back } = useBackTrail(route, redirect, HOME[role] || 'dashboard')
   const [navOpen, setNavOpen] = useState(false)
   // Wide screens: the menu button hides / shows the sidebar (remembered); small screens: off-canvas menu
   const [navCollapsed, setNavCollapsed] = useState(() => { try { return localStorage.getItem('ilab-nav-collapsed') === '1' } catch { return false } })
@@ -288,7 +332,10 @@ export default function App() {
       if (isTyping(e.target) || document.querySelector('.modal-backdrop')) return
       const mod = e.ctrlKey || e.metaKey
       const k = e.key.toLowerCase()
-      if (mod && k === 'z' && !e.shiftKey) {
+      if (e.altKey && e.key === 'ArrowLeft' && role) {
+        e.preventDefault()             // in-app Back (the browser's would leave Spatia from the first page)
+        if (canGoBack) back()
+      } else if (mod && k === 'z' && !e.shiftKey) {
         if (canUndo) { e.preventDefault(); undo(); notify(`Undo: ${history[index]?.label}`) }
       } else if (mod && (k === 'y' || (k === 'z' && e.shiftKey))) {
         if (canRedo) { e.preventDefault(); redo(); notify(`Redo: ${history[index + 1]?.label}`) }
@@ -298,7 +345,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [navOpen, canUndo, canRedo, undo, redo, history, index, notify])
+  }, [navOpen, canUndo, canRedo, undo, redo, history, index, notify, role, canGoBack, back])
 
   const overlays = (
     <>
@@ -327,8 +374,8 @@ export default function App() {
   // is opened after signing in.
   if (!role) {
     const hash = window.location.hash.replace('#', '')
-    const next = remote ? { student: route === 'live' ? window.location.hash.replace('#', '') : 'live' } : route === 'start' || !PAGES[route] ? {} : {
-      student: TEACHER_ONLY.includes(route) ? undefined : hash,
+    const next = route === 'start' || !PAGES[route] ? {} : {
+      student: TEACHER_ONLY.includes(route) || (remote && route === 'code') ? undefined : hash,
       teacher: STUDENT_ONLY.includes(route) ? undefined : hash,
     }
     return <><Start next={next} />{overlays}</>
@@ -342,7 +389,7 @@ export default function App() {
       <Sidebar route={route} role={role} remote={remote} />
       {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="main-col">
-        <TopBar onMenu={toggleNav} navOpen={navOpen} navCollapsed={navCollapsed} />
+        <TopBar onMenu={toggleNav} navOpen={navOpen} navCollapsed={navCollapsed} canGoBack={canGoBack} onBack={back} />
         <main className="main" id="main-content" ref={main} tabIndex={-1}>
           <Suspense fallback={<PageFallback />}>
             <PageComponent key={route} />

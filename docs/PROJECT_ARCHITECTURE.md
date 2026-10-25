@@ -22,7 +22,7 @@
 |---|---|---|
 | Algorithms | `algorithms/ noise/ histogram/ metrics/ segmentation/ color/ fundamentals/` | Pure MATLAB functions: image in, image out. Reusable from the command line, tests and the Live Script. |
 | Core helpers | `core/` | Type conversion, padding, neighbourhood stacks, fast/loop filtering, toolbox detection (`hasIPT`). |
-| MATLAB content | `experiments/ codelab/ games/ reports/` | Experiment catalogue and runner, Code Lab tasks with their MATLAB graders, image degradations for the games, report generator. |
+| MATLAB content | `experiments/ codelab/ games/ reports/` | Experiment catalogue and runner, the Code Lab runner and grader (the teacher writes the tasks; `codeTasks.m` grades against the teacher's model solution and holds built-in examples as templates), image degradations for the games, report generator. |
 | MATLAB API | `api/` | `ilab_dispatch.m` decodes a JSON request and routes it through one table to a handler file in `api/handlers/` (`imageOps`, `filterOps`, `analysisOps`, `gameOps`, `codeLabOps`, `experimentOps`), which calls the algorithms, stores result images (`ilab_store.m`) and returns JSON. Shared helpers: `ilab_param`, `ilab_img`, `ilab_put`, `ilab_limitSize` … |
 | Backend | `backend/imagelab/` | Python + FastAPI, see below. **No image processing.** |
 | UI | `frontend/` | React (Vite). Pages for every lab; no pixel processing in JavaScript. |
@@ -31,9 +31,9 @@
 
 | Package | Responsibility |
 |---|---|
-| `web/app.py` | FastAPI routes: `/api/status`, `/api/run`, `/api/cancel`, `/api/upload`, result images, reports, the built UI; classroom-network policy (other devices: sign-in and live quiz only) |
+| `web/app.py` | FastAPI routes: `/api/status`, `/api/run`, `/api/cancel`, `/api/upload`, result images, reports, the built UI. Classroom-network policy (`rpc/access.py`): other devices may sign in; signed-in students then get the student side of the app except the Code Lab (it runs arbitrary MATLAB code); no teacher mode |
 | `rpc/` | The `{op, params}` protocol: an operation registry (`handlers/`), access rules in one place (`access.py`), the LRU result cache for deterministic image operations (`cache.py`), the XP rules per operation (`activity.py`) and the dispatcher that builds the `{ok, data}` envelope |
-| `services/` | Application logic: `auth` (PBKDF2 passwords, sessions, lock-out), `profiles`, `progress` (XP, badges), `classroom`, `analytics` (teacher views), `quiz`, `live_quiz`, `games`, `labs` (Code Lab / experiment rules), `records` (leaderboard, kernels, submissions), `exports` (CSV / Excel), `catalog` (catalogues MATLAB owns, read once) |
+| `services/` | Application logic: `auth` (PBKDF2 passwords, sessions, lock-out), `profiles`, `progress` (XP, badges), `classroom`, `analytics` (teacher views), `quiz`, `live_quiz`, `games`, `code_tasks` (the teacher's Code Lab tasks), `labs` (Code Lab / experiment rules), `records` (leaderboard, kernels, submissions), `exports` (CSV / Excel), `catalog` (catalogues MATLAB owns, read once) |
 | `storage/` | SQLite (`data/imagelab.db`, WAL, one transaction per change) behind repositories; `legacy.py` imports the 1.x `.mat` files once via `migration/exportLegacyData.m` |
 | `matlab.py` | The only module that talks to MATLAB: starts or attaches to the engine, one call at a time, cancel |
 | `container.py` | Composition root: builds every service once and wires them |

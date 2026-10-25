@@ -1,7 +1,8 @@
-"""Teacher settings: PIN, self sign-up, and the state of every assignment.
+"""Teacher settings: PIN, self sign-up, and the state of every experiment.
 
-Every experiment and Code Lab task is 'open', 'assigned' (with an optional
-due date and note) or 'locked'. The PIN is never stored, only
+Every experiment is 'open', 'assigned' (with an optional due date and note)
+or 'locked'; the teacher's Code Lab tasks carry their own state
+(code_tasks.py). The PIN is never stored, only
 SHA-256("imagelab:" + salt + ":" + pin) - the same hash the MATLAB version
 wrote, so an existing PIN keeps working after the import.
 """
@@ -58,14 +59,9 @@ class ClassroomService:
         return [{"number": e["number"], "title": e["title"], **_state(s["experiments"].get(str(e["number"])))}
                 for e in self.catalog.experiments()]
 
-    def code_task_states(self, s: dict | None = None) -> list[dict]:
-        s = s or self.settings()
-        return [{"id": t["id"], "title": t["title"], **_state(s["codeTasks"].get(t["id"]))}
-                for t in self.catalog.code_tasks()]
-
     def public_view(self, s: dict | None = None) -> dict:
         s = s or self.settings()
-        return {**self.options_of(s), "experiments": self.experiment_states(s), "codeTasks": self.code_task_states(s)}
+        return {**self.options_of(s), "experiments": self.experiment_states(s)}
 
     @staticmethod
     def options_of(s: dict) -> dict:
@@ -103,11 +99,6 @@ class ClassroomService:
             raise invalid(f"There is no experiment {n}.")
         return self._assign("experiments", str(n), status, due, note)
 
-    def set_code_task(self, task_id: str, status: str, due: str = "", note: str = "") -> dict:
-        if task_id not in {t["id"] for t in self.catalog.code_tasks()}:
-            raise invalid(f'There is no Code Lab task "{task_id}".')
-        return self._assign("codeTasks", task_id, status, due, note)
-
     def _assign(self, kind: str, key: str, status: str, due: str, note: str) -> dict:
         status = (status or "").lower()
         if status not in STATUSES:
@@ -126,11 +117,3 @@ class ClassroomService:
         if _state(self.settings()["experiments"].get(str(n)))["status"] == "locked":
             raise AppError(f"Experiment {n} is locked by your teacher. Ask your teacher to unlock it.",
                            "ImageLab:experimentLocked")
-
-    def assert_code_runnable(self, task_id: str, title: str) -> None:
-        if _state(self.settings()["codeTasks"].get(task_id))["status"] == "locked":
-            raise AppError(f'The task "{title}" is locked by your teacher. Ask your teacher to unlock it.',
-                           "ImageLab:taskLocked")
-
-    def status_of_code_task(self, task_id: str) -> dict:
-        return _state(self.settings()["codeTasks"].get(task_id))

@@ -20,6 +20,7 @@ from .services.analytics import AnalyticsService
 from .services.auth import AuthService
 from .services.catalog import MatlabCatalog
 from .services.classroom import ClassroomService
+from .services.code_tasks import CodeTaskService
 from .services.content import Content
 from .services.exports import ExportService
 from .services.games import GameService
@@ -60,15 +61,18 @@ class Services:
         self.quiz = QuizService(self.content, self.catalog, self.rng)
         self.live = LiveQuizService(self.content, self.quiz, self.progress, self.profiles, r.live_sets,
                                     r.live_results, self.exports, rng=self.rng)
+        self.code_tasks = CodeTaskService(r.code_tasks, self.catalog)
         self.analytics = AnalyticsService(self.profiles, self.progress, self.submissions, self.classroom,
-                                          self.catalog, self.content, self.exports)
+                                          self.code_tasks, self.catalog, self.content, self.exports)
         self.games = GameService(self.matlab, self.content, self.catalog, self.progress)
-        self.codelab = CodeLabService(self.matlab, self.catalog, self.classroom, self.progress, self.submissions,
+        self.codelab = CodeLabService(self.matlab, self.code_tasks, self.progress, self.submissions,
                                       ipt=lambda: bool(self.matlab_info().get("ipt")))
         self.experiments = ExperimentService(self.matlab, self.catalog, self.classroom, self.progress)
-        # A deleted student takes their account, progress and Code Lab work along
+        # A deleted student takes their account, progress, Code Lab work and leaderboard scores along
         for listener in (self.auth.forget, self.progress.remove, self.submissions.remove):
             self.profiles.on_removed(listener)
+        self.profiles.on_removed_profile(self.leaderboard.remove_student)
+        self.profiles.on_renamed(self.leaderboard.rename_student)
 
     # ------------------------------------------------------------ MATLAB facts
     def matlab_info(self) -> dict:

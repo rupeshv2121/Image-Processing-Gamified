@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS leaderboard (
     accuracy    REAL NOT NULL,
     best_streak REAL NOT NULL,
     mode        TEXT NOT NULL,
-    date        TEXT NOT NULL
+    date        TEXT NOT NULL,
+    profile_id  TEXT NOT NULL DEFAULT ''
 );
 -- Saved live-quiz definitions and finished sessions: newest first (seq DESC)
 CREATE TABLE IF NOT EXISTS live_sets (
@@ -79,7 +80,19 @@ CREATE TABLE IF NOT EXISTS live_results (
     seq INTEGER NOT NULL,
     doc TEXT NOT NULL
 );
+-- Code Lab tasks written by the teacher: newest first (seq DESC)
+CREATE TABLE IF NOT EXISTS code_tasks (
+    id  TEXT PRIMARY KEY,
+    seq INTEGER NOT NULL,
+    doc TEXT NOT NULL
+);
 """
+
+# Columns added after a table was first created (CREATE TABLE IF NOT EXISTS
+# never changes an existing table): table -> [(column, definition)]
+ADDED_COLUMNS = {
+    "leaderboard": [("profile_id", "TEXT NOT NULL DEFAULT ''")],
+}
 
 
 def dumps(value: Any) -> str:
@@ -105,6 +118,11 @@ class Database:
         self.conn.executescript(SCHEMA)               # executescript commits by itself
         with self.transaction() as db:
             db.execute("INSERT OR IGNORE INTO meta (key, value) VALUES ('schema', ?)", (str(SCHEMA_VERSION),))
+            for table, columns in ADDED_COLUMNS.items():
+                have = {r["name"] for r in db.execute(f"PRAGMA table_info({table})")}
+                for name, definition in columns:
+                    if name not in have:
+                        db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
 
     # ----------------------------------------------------------- connections
     @property

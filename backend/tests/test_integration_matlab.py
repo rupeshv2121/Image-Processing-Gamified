@@ -136,15 +136,30 @@ def test_every_operation_end_to_end(live_app):
     api.ok("challengeScore", cleanId=c["cleanId"], degradedId=c["degradedId"], timeUsed=20, timeLimit=60,
            steps=[{"block": "median", "k": 3}, {"block": "gaussian", "k": 5}])
 
+    # Code Lab: every built-in example works as a teacher's task, and its own model solution passes
+    templates = api.ok("codeTaskEdit", action="templates")
+    assert len(templates) >= 10
+    tasks = []
+    for t in templates:
+        check = api.ok("codeTaskEdit", action="check", task=t)
+        assert check["ok"], (t["id"], check["message"])
+        tasks.append(api.ok("codeTaskEdit", action="save", task={**t, "status": "open"})["task"])
+
     # classroom + a temporary student's whole cycle
     api.ok("classroom", action="overview")
     new = api.ok("profiles", action="add", name="Integration Student", roll="INT-1")
     st = api.ok("auth", token="", action="login", identifier="int-1", password=new["password"])["token"]
     api.ok("auth", token=st, action="changePassword", oldPassword="", newPassword="int-pass-2")
-    run = api.ok("runCode", token=st, taskId="negative", code="out = 1 - img;")
-    assert run["grade"]["passed"] is True
-    assert "negative" in api.ok("codeTasks", token=st)["solved"]
-    assert api.ok("classroom", action="submission", id=new["id"], taskId="negative")["entry"]["passed"]
+    for task in tasks:
+        run = api.ok("runCode", token=st, taskId=task["id"], code=task["solution"])
+        assert run["grade"]["passed"] is True, (task["title"], run["grade"]["message"])
+    wrong = api.ok("runCode", token=st, taskId=tasks[0]["id"], code="out = img;")
+    assert wrong["grade"]["passed"] is False and wrong["grade"]["diffId"]
+    tid = tasks[0]["id"]
+    assert tid in api.ok("codeTasks", token=st)["solved"]
+    assert api.ok("classroom", action="submission", id=new["id"], taskId=tid)["entry"]["passed"]
+    for task in tasks:
+        api.ok("codeTaskEdit", action="remove", id=task["id"])
     api.ok("runCode", token=st, id=pid, code="J = rgb2gray(img);\nimshow(J)\nout = J;")
     lq = api.ok("live", action="create", quiz={"title": "Integration", "questions": [{"bankId": "FUN2"}]})
     api.ok("live", token=st, action="join", code=lq["code"])

@@ -5,6 +5,7 @@ import { Logo, SITE_NAME, SITE_TAGLINE } from '../components/Brand'
 import Icon from '../components/Icon'
 import ThemeToggle from '../components/ThemeToggle'
 import { MEDALS, UNITS, unitProgress } from '../content/missions'
+import { bestPerStudent } from '../leaderboard'
 import '../landing.css'
 
 // ---------------------------------------------------------------- hero animation
@@ -323,7 +324,7 @@ export default function Landing() {
   const scroller = useRef(null)
   const [top, setTop] = useState([])
   useEffect(() => {
-    if (matlab.ok) run('leaderboard', { action: 'get' }).then((d) => setTop(asArray(d).slice(0, 3))).catch(() => {})
+    if (matlab.ok) run('leaderboard', { action: 'get' }).then((d) => setTop(bestPerStudent(asArray(d)).slice(0, 3))).catch(() => {})
   }, [matlab.ok])
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   const earned = asArray(progress?.badges).filter((b) => b.earned)

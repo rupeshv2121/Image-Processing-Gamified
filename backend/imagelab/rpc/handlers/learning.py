@@ -43,11 +43,14 @@ def register(r: Registry) -> None:
         summary = {**call.app.quiz.score(results), "mode": str(param(p, "mode", "Rapid Fire"))}
         progress = call.app.progress.quiz(c.actor, c.student_id, summary, results)
         board = []
-        name = str(param(p, "name", "")).strip()
-        if name and c.student_id is not None:
-            board = call.app.leaderboard.add({"name": name, "roll": param(p, "roll", ""), "score": summary["score"],
-                                              "accuracy": summary["accuracy"], "bestStreak": summary["bestStreak"],
-                                              "mode": summary["mode"]})
+        # "name" opts in to the leaderboard; the entry carries the signed-in student's
+        # own profile name and roll number, so nobody can post scores as somebody else
+        profile = call.app.profiles.get(c.student_id) if c.student_id is not None else None
+        if str(param(p, "name", "")).strip() and profile is not None:
+            board = call.app.leaderboard.add({"name": profile["name"], "roll": profile["roll"],
+                                              "score": summary["score"], "accuracy": summary["accuracy"],
+                                              "bestStreak": summary["bestStreak"], "mode": summary["mode"],
+                                              "profileId": profile["id"]})
         return {"summary": summary, "progress": progress, "leaderboard": board}
 
     @r.op("live")
@@ -81,11 +84,20 @@ def register(r: Registry) -> None:
         return call.app.games.challenge_score(call.params)
 
     # ------------------------------------------------------------ Code Lab
-    r.matlab("codeWarmup", "codeTaskStart")
+    r.matlab("codeWarmup")
 
     @r.op("codeTasks")
     def code_tasks(call: Call):
         return call.app.codelab.tasks(call.caller)
+
+    @r.op("codeTaskStart")
+    def code_task_start(call: Call):
+        return call.app.codelab.start(call.caller, str(param(call.params, "taskId", "")))
+
+    @r.op("codeTaskEdit")
+    def code_task_edit(call: Call):
+        """The teacher writes the class's Code Lab tasks (teacher only, rpc/access.py)."""
+        return call.app.codelab.edit(str(param(call.params, "action", "list")), call.params)
 
     @r.op("codeTaskSolution")
     def code_task_solution(call: Call):

@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from ..utils import days_since, matlab_round, now_text, plural, today_text
 from .catalog import MatlabCatalog
 from .classroom import ClassroomService
+from .code_tasks import CodeTaskService
 from .content import Content
 from .exports import ExportService
 from .profiles import ProfileService, stats_row
@@ -42,9 +43,11 @@ def last_active(p: dict, subs: dict) -> str:
 
 class AnalyticsService:
     def __init__(self, profiles: ProfileService, progress: ProgressService, submissions: SubmissionService,
-                 classroom: ClassroomService, catalog: MatlabCatalog, content: Content, exports: ExportService):
+                 classroom: ClassroomService, code_tasks: CodeTaskService, catalog: MatlabCatalog, content: Content,
+                 exports: ExportService):
         self.profiles, self.progress, self.submissions = profiles, progress, submissions
-        self.classroom, self.catalog, self.content, self.exports = classroom, catalog, content, exports
+        self.classroom, self.code_tasks, self.catalog = classroom, code_tasks, catalog
+        self.content, self.exports = content, exports
 
     def _collect(self) -> list[Student]:
         docs = self.progress.load_all()
@@ -60,7 +63,7 @@ class AnalyticsService:
         students = self._collect() if students is None else students
         cats = self.content.categories
         experiments = self.classroom.experiment_states()
-        code = self.classroom.code_task_states()
+        code = self.code_tasks.states()
         exp_assigned = [e["number"] for e in experiments if e["status"] == "assigned"]
         code_assigned = [t["id"] for t in code if t["status"] == "assigned"]
         answered = [0] * len(cats)
@@ -88,7 +91,7 @@ class AnalyticsService:
             done = p["experimentsCompleted"]
             for n in exp_done:
                 exp_done[n] += n in done
-            ok = solved(st.subs)
+            ok = [t for t in solved(st.subs) if t in code_done]
             for t in code_done:
                 code_done[t] += t in ok
                 code_tried[t] += t in st.subs
@@ -105,14 +108,13 @@ class AnalyticsService:
         topics = [{"category": c, "answered": answered[i], "correct": correct[i],
                    "accuracy": 100 * correct[i] / answered[i] if answered[i] else None, "struggling": struggling[i]}
                   for i, c in enumerate(cats)]
-        tasks = {t["id"]: t for t in self.catalog.code_tasks()}
+        tasks = {t["id"]: t for t in self.code_tasks.published()}
         return {
             "students": rows, "categories": cats, "topics": topics,
             "weakest": sorted((t for t in topics if t["answered"] > 0), key=lambda t: t["accuracy"]),
             "experiments": [{**e, "completedBy": exp_done[e["number"]]} for e in experiments],
             "codeTasks": [{**t, "solvedBy": code_done[t["id"]], "triedBy": code_tried[t["id"]],
-                           "level": tasks[t["id"]]["level"], "unit": tasks[t["id"]]["unit"],
-                           "topic": tasks[t["id"]]["topic"]} for t in code],
+                           "level": tasks[t["id"]]["level"], "topic": tasks[t["id"]]["topic"]} for t in code],
             "studentCount": len(students), "generated": now_text()}
 
     # ------------------------------------------------------------ dashboard
@@ -125,8 +127,8 @@ class AnalyticsService:
     def _dashboard(self, students: list[Student]) -> dict:
         today = today_text()
         experiments = self.classroom.experiment_states()
-        code = self.classroom.code_task_states()
-        titles = {t["id"]: t["title"] for t in self.catalog.code_tasks()}
+        code = self.code_tasks.states()
+        titles = {t["id"]: t["title"] for t in self.code_tasks.all()}
         overdue = lambda items: [x for x in items if x["status"] == "assigned" and x["due"] and x["due"] < today]  # noqa: E731
         exp_over, code_over = overdue(experiments), overdue(code)
         exp_assigned = [e["number"] for e in experiments if e["status"] == "assigned"]
@@ -135,7 +137,7 @@ class AnalyticsService:
         attention, feed = [], []
         for st in students:
             pr, p = st.profile, st.p
-            ok = solved(st.subs)
+            ok = [t for t in solved(st.subs) if t in titles]
             solved_total += len(ok)
             done_assigned += sum(1 for n in exp_assigned if n in p["experimentsCompleted"]) \
                 + sum(1 for t in code_assigned if t in ok)
@@ -154,7 +156,7 @@ class AnalyticsService:
             if p["questionsAnswered"] >= 10 and pr["accuracy"] < 60:
                 issues.append(f"Quiz accuracy {matlab_round(pr['accuracy'])}%")
             for task, e in st.subs.items():
-                if not e["passed"] and e["attempts"] >= 5:
+                if task in titles and not e["passed"] and e["attempts"] >= 5:
                     issues.append(f'Stuck on "{titles.get(task, task)}" ({e["attempts"]} attempts)')
             if issues:
                 attention.append({"id": pr["id"], "name": pr["name"], "issues": issues, "score": len(issues)})
@@ -171,8 +173,7 @@ class AnalyticsService:
 
     # ------------------------------------------------------------ Code Lab views
     def submissions_matrix(self) -> dict:
-        tasks = self.catalog.code_tasks()
-        status = {t["id"]: t["status"] for t in self.classroom.code_task_states()}
+        tasks = self.code_tasks.published()
         all_subs = self.submissions.summaries()
         keys = ("attempts", "passed", "bestMatch", "lastRun", "firstSolved")
         rows = []
@@ -180,19 +181,18 @@ class AnalyticsService:
             subs = all_subs.get(pr["id"], {})
             rows.append({"id": pr["id"], "name": pr["name"], "roll": pr["roll"],
                          "cells": [{k: {**empty_submission(), **subs.get(t["id"], {})}[k] for k in keys} for t in tasks]})
-        return {"tasks": [{"id": t["id"], "title": t["title"], "level": t["level"], "status": status[t["id"]]}
+        return {"tasks": [{"id": t["id"], "title": t["title"], "level": t["level"], "status": t["status"]}
                           for t in tasks], "students": rows}
 
     def student(self, profile_id: str) -> dict:
         pr = self.profiles.require(profile_id)
         p = self.progress.load(profile_id)
         subs = self.submissions.summary(profile_id)
-        states = {t["id"]: t for t in self.classroom.code_task_states()}
         code = []
-        for t in self.catalog.code_tasks():
+        for t in self.code_tasks.published():
             e = {**empty_submission(), **subs.get(t["id"], {})}
-            code.append({"id": t["id"], "title": t["title"], "level": t["level"], "status": states[t["id"]]["status"],
-                         "due": states[t["id"]]["due"], **{k: e[k] for k in (
+            code.append({"id": t["id"], "title": t["title"], "level": t["level"], "status": t["status"],
+                         "due": t["due"], **{k: e[k] for k in (
                              "attempts", "passed", "bestMatch", "lastRun", "firstSolved", "attemptsToSolve",
                              "lastError")}})
         stats = {c["name"]: c for c in p["categoryStats"]}
@@ -210,7 +210,7 @@ class AnalyticsService:
 
     def submission(self, profile_id: str, task_id: str) -> dict:
         pr = self.profiles.require(profile_id)
-        t = self.catalog.code_task(task_id)
+        t = self.code_tasks.require(task_id, include_drafts=True)
         return {"student": {"id": pr["id"], "name": pr["name"], "roll": pr["roll"]},
                 "task": {"id": t["id"], "title": t["title"], "level": t["level"]},
                 "entry": self.submissions.get(profile_id, task_id)}
