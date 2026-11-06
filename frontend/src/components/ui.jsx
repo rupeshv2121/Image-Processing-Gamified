@@ -222,11 +222,54 @@ function useZoomStyle(zoom, scroller, natural, shown) {
   return { width: Math.round(natural.w * fit * zoom), height: 'auto', maxWidth: 'none', maxHeight: 'none', flex: 'none' }
 }
 
+export const ZOOM_STEPS = [1, 1.5, 2, 3, 4, 6, 8]
+const zoomIn = (z) => ZOOM_STEPS.find((s) => s > z) ?? z
+const zoomOut = (z) => [...ZOOM_STEPS].reverse().find((s) => s < z) ?? ZOOM_STEPS[0]
+
+// Ctrl + wheel zooms, dragging pans once the image is larger than the box
+function usePanZoom(scroller, setZoom, shown) {
+  const drag = useRef(null)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return undefined
+    const wheel = (e) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      setZoom((z) => (e.deltaY < 0 ? zoomIn(z) : zoomOut(z)))
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    return () => el.removeEventListener('wheel', wheel)
+  }, [scroller, setZoom, shown])
+  return {
+    onPointerDown: (e) => {
+      const el = scroller.current
+      if (e.button !== 0 || !el || (el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight)) return
+      drag.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop, moved: false }
+    },
+    onPointerMove: (e) => {
+      const d = drag.current
+      if (!d) return
+      const dx = e.clientX - d.x, dy = e.clientY - d.y
+      if (!d.moved && Math.hypot(dx, dy) < 4) return
+      d.moved = true
+      scroller.current.scrollLeft = d.left - dx
+      scroller.current.scrollTop = d.top - dy
+    },
+    onPointerUp: () => { if (drag.current && !drag.current.moved) drag.current = null },
+    onPointerLeave: () => { drag.current = null },
+    // a drag must not also count as a click on the image
+    onClickCapture: (e) => { if (drag.current?.moved) e.stopPropagation(); drag.current = null },
+  }
+}
+
 export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, height, badge, actions, emptyText, inspectable = true }) {
   const ref = useRef(null)
   const scroller = useRef(null)
   const [natural, setNatural] = useState(null)
-  const zoomStyle = useZoomStyle(zoom, scroller, natural, !!id)
+  const [z, setZ] = useState(zoom)
+  useEffect(() => setZ(zoom), [zoom])
+  const zoomStyle = useZoomStyle(z, scroller, natural, !!id)
+  const pan = usePanZoom(scroller, setZ, !!id)
   const [inspect, setInspect] = useState(false)
   const [pixels, setPixels] = useState(null)
   const [px, setPx] = useState(null)
@@ -268,16 +311,17 @@ export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, hei
       )}
       <div className="imgview-box" style={height ? { height } : undefined}>
         {id ? (
-          <div className="imgview-scroll" ref={scroller}>
+          <div className={`imgview-scroll ${z > 1 ? 'pannable' : ''}`} ref={scroller} {...pan}>
             <img
               ref={ref}
               src={imageUrl(id)}
               alt={title || 'image'}
+              draggable={false}
               onClick={click}
               onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
               onPointerMove={inspect ? move : undefined}
               onPointerLeave={inspect ? () => setPx(null) : undefined}
-              className={`${pixelated || inspect ? 'pixelated' : ''} ${onPick || inspect ? 'pickable' : ''}`}
+              className={`${pixelated || inspect || z > 2 ? 'pixelated' : ''} ${onPick || inspect ? 'pickable' : ''}`}
               style={zoomStyle}
             />
           </div>
@@ -286,6 +330,13 @@ export function ImageView({ id, title, caption, zoom = 1, onPick, pixelated, hei
         )}
         {inspect && pixels && px && <PixelPanel px={px} pixels={pixels} />}
         {inspect && pixels && !px && <div className="pixel-hint">Hover over the image to read pixel values</div>}
+        {id && (
+          <div className="zoom-ctrl">
+            <button className="icon-btn" onClick={() => setZ(zoomOut)} disabled={z <= ZOOM_STEPS[0]} title="Zoom out" aria-label="Zoom out"><Icon name="zoomout" size={16} /></button>
+            <button className="zoom-level" onClick={() => setZ(1)} title="Fit to view (Ctrl + wheel zooms)" aria-label={`Zoom ${Math.round(z * 100)}%, fit to view`}>{Math.round(z * 100)}%</button>
+            <button className="icon-btn" onClick={() => setZ(zoomIn)} disabled={z >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} title="Zoom in" aria-label="Zoom in"><Icon name="zoomin" size={16} /></button>
+          </div>
+        )}
       </div>
       {caption && <div className="imgview-caption">{caption}</div>}
     </figure>

@@ -47,7 +47,7 @@ export default function HistogramLab() {
 
   useEffect(() => {
     if (method === 'match' && shape === 'sample' && !samples.length) {
-      call('samples', {}, { quiet: true }).then((d) => d && setSamples(asArray(d)))
+      call('samples', {}, { quiet: true }).then((d) => d && setSamples(asArray(d).filter((s) => !s.custom)))
     }
   }, [method, shape, samples.length, call])
 

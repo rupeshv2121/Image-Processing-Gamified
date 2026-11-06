@@ -164,7 +164,7 @@ function TaskEditor({ initial, call, onClose, onSaved }) {
   const field = (k) => (e) => set({ [k]: e.target.value })
 
   useEffect(() => {
-    run('samples').then((d) => setSamples(asArray(d).map((s) => s.name))).catch(() => {})
+    run('samples', { all: true }).then((d) => setSamples(asArray(d).filter((s) => !s.custom).map((s) => s.name))).catch(() => {})
     if (!initial.id) call({ action: 'templates' }).then((d) => d && setTemplates(asArray(d)))
   }, [call, initial.id])
 

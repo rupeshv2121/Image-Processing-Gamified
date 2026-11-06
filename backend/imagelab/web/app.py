@@ -6,6 +6,7 @@
     POST /api/upload  {name, data}   base64 image -> MATLAB imread -> image id
     GET  /api/image/<id>.png         result images written by MATLAB
     GET  /api/download/<id>.png      the same as a download
+    GET  /api/sample/<file>          preview of a sample image the teacher uploaded
     GET  /reports/<file>             reports and exports
     GET  /*                          the built React UI (single-page app)
 
@@ -32,6 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
@@ -168,6 +170,9 @@ def create_app(settings: Settings, matlab: MatlabGateway | None = None) -> FastA
                   openapi_url=None)
     app.state.services = services
     app.state.dispatcher = dispatcher
+    # Phones on the classroom Wi-Fi: the UI bundle shrinks to about a third (PNGs are compressed already)
+    app.add_middleware(GZipMiddleware, minimum_size=1024,
+                       exclude_content_types=("text/event-stream", "image/png", "image/jpeg", "application/pdf"))
 
     def remote(request: Request) -> bool:
         return is_remote(request.client.host if request.client else None)
@@ -260,6 +265,14 @@ def create_app(settings: Settings, matlab: MatlabGateway | None = None) -> FastA
     @app.get("/api/download/{name}")
     def download(name: str):
         return local_file(settings.image_dir, name, IMAGE_FILE, filename=f"imagelab_{name}", headers=NO_STORE)
+
+    @app.get("/api/sample/{name}")
+    def sample_preview(name: str):
+        """PNG preview of one of the teacher's sample images."""
+        path = services.samples.preview_file(name)
+        if path is None:
+            return Response("Not found", status_code=404)
+        return FileResponse(path, headers={"Cache-Control": "max-age=86400"})
 
     @app.get("/reports/{name}")
     def report(name: str):

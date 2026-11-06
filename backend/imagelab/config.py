@@ -47,6 +47,11 @@ class Settings:
         return self.runtime_dir / "uploads"
 
     @property
+    def sample_dir(self) -> Path:
+        """The teacher's own sample images (with PNG previews)."""
+        return self.data_dir / "samples"
+
+    @property
     def database_file(self) -> Path:
         return self.data_dir / "imagelab.db"
 

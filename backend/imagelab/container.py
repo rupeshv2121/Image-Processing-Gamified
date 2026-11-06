@@ -30,6 +30,7 @@ from .services.profiles import ProfileService
 from .services.progress import ProgressService
 from .services.quiz import QuizService
 from .services.records import KernelLibrary, LeaderboardService, SubmissionService
+from .services.samples import SampleLibrary
 from .storage.database import Database
 from .storage.repositories import Repositories
 
@@ -68,6 +69,8 @@ class Services:
         self.codelab = CodeLabService(self.matlab, self.code_tasks, self.progress, self.submissions,
                                       ipt=lambda: bool(self.matlab_info().get("ipt")))
         self.experiments = ExperimentService(self.matlab, self.catalog, self.classroom, self.progress)
+        self.samples = SampleLibrary(r.settings, self.matlab, self.settings.sample_dir, self.settings.image_dir,
+                                     self.settings.upload_dir, self.settings.max_upload_bytes)
         # A deleted student takes their account, progress, Code Lab work and leaderboard scores along
         for listener in (self.auth.forget, self.progress.remove, self.submissions.remove):
             self.profiles.on_removed(listener)

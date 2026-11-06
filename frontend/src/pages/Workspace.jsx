@@ -5,10 +5,7 @@ import CameraCapture from '../components/CameraCapture'
 import Icon from '../components/Icon'
 import ImagePair from '../components/ImagePair'
 import { EmptyState } from '../components/LabPage'
-import { Card, CodeButton, Histogram, Modal, Page, Tabs } from '../components/ui'
-
-// Zoom steps (1 = fit the image into the view)
-const ZOOMS = [1, 1.5, 2, 3, 4, 6, 8]
+import { Card, CodeButton, Histogram, Modal, Page, Tabs, ZOOM_STEPS as ZOOMS } from '../components/ui'
 
 export default function Workspace() {
   const app = useApp()
@@ -135,12 +132,15 @@ export default function Workspace() {
           <div className="tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))' }}>
             {samples.map((s) => (
               <button key={s.name} className="tile" onClick={() => pickSample(s.name)}>
-                <span className="ic"><Icon name="image" /></span>
+                {s.preview ? <img className="tile-thumb" src={s.preview} alt="" loading="lazy" /> : <span className="ic"><Icon name="image" /></span>}
                 <b>{s.name}</b>
                 <span>{s.description}</span>
               </button>
             ))}
           </div>
+          {app.role === 'teacher' && (
+            <p className="small mt"><a href="#samplelib" onClick={() => setShowSamples(false)}>Add your own images or hide built-in ones →</a></p>
+          )}
         </Modal>
       )}
 

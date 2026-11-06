@@ -18,6 +18,7 @@ TEACHER_UNLESS = {
     "leaderboard": ("", "get", "add"),
     "live": ("", "join", "state", "answer", "leave"),
     "codeTaskEdit": (),
+    "sampleLibrary": (),
 }
 SIGNED_IN = {"profiles", "progress", "codeTaskSolution", "quizSubmit", "report", "runExperiment", "live"}
 

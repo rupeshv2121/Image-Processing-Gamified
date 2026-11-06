@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useApp } from './AppContext'
-import { cancelRun, imageUrl } from './api'
+import { cancelRun, imageUrl, run } from './api'
 import { Logo, SITE_NAME } from './components/Brand'
 import Icon from './components/Icon'
 import { ProfileMenu } from './components/Profiles'
@@ -48,12 +48,13 @@ const PAGES = {
   submissions: lazy(() => import('./pages/teacher/Submissions')),
   classroom: lazy(() => import('./pages/teacher/ClassSettings')),
   livehost: lazy(() => import('./pages/teacher/LiveHost')),
+  samplelib: lazy(() => import('./pages/teacher/SampleLibrary')),
 }
 
 // Pages that belong to one role only. Everything else (labs, Learn, Code Lab,
 // Arcade ...) is open to both: the teacher uses it to demonstrate, and MATLAB
 // records nothing in teacher mode.
-const TEACHER_ONLY = ['class', 'students', 'student', 'assign', 'submissions', 'classroom', 'livehost']
+const TEACHER_ONLY = ['class', 'students', 'student', 'assign', 'submissions', 'classroom', 'livehost', 'samplelib']
 const STUDENT_ONLY = ['dashboard', 'achievements', 'live']
 const HOME = { student: 'dashboard', teacher: 'class' }
 
@@ -204,6 +205,7 @@ function TeacherNav({ route }) {
 
       <div className="nav-section">Teach & demonstrate</div>
       <NavLink to="workspace" icon="image" label="Workspace" route={route} />
+      <NavLink to="samplelib" icon="upload" label="Sample images" route={route} />
       <NavLink to="learn" icon="book" label="Learn" route={route} />
       <NavLink to="animate" icon="play" label="Animations" route={route} />
       <LabsNav route={route} />
@@ -283,6 +285,37 @@ function Shortcuts({ onClose }) {
     <Modal title="Keyboard shortcuts" onClose={onClose}>
       <table className="data"><tbody>{rows.map(([k, t]) => <tr key={k}><td><kbd>{k}</kbd></td><td>{t}</td></tr>)}</tbody></table>
     </Modal>
+  )
+}
+
+// Students anywhere in the app see when the teacher opens a live quiz (every 5 s; the
+// live quiz page itself polls faster)
+function LiveBanner({ route }) {
+  const { matlab } = useApp()
+  const [live, setLive] = useState(null)
+  const watch = matlab.server && route !== 'live'
+  useEffect(() => {
+    if (!watch) return undefined
+    let stop = false
+    let timer
+    const loop = async () => {
+      const s = await run('live', { action: 'state' }).catch(() => null)
+      if (stop) return
+      setLive(s)
+      timer = setTimeout(loop, 5000)
+    }
+    loop()
+    const wake = () => { if (document.visibilityState === 'visible') { clearTimeout(timer); loop() } }
+    document.addEventListener('visibilitychange', wake)
+    return () => { stop = true; clearTimeout(timer); document.removeEventListener('visibilitychange', wake) }
+  }, [watch])
+  if (!watch || !live?.active || live.phase === 'finished' || !(live.joined || live.canJoin)) return null
+  return (
+    <a className="live-banner" href="#live">
+      <Icon name="zap" size={18} />
+      <span className="grow"><b>{live.joined ? 'Your live quiz is running' : 'A live quiz is open'}</b> · {live.title}</span>
+      <span className="live-banner-go">{live.joined ? 'Back to quiz' : 'Join'} <Icon name="arrow" size={16} /></span>
+    </a>
   )
 }
 
@@ -391,6 +424,7 @@ export default function App() {
       <div className="main-col">
         <TopBar onMenu={toggleNav} navOpen={navOpen} navCollapsed={navCollapsed} canGoBack={canGoBack} onBack={back} />
         <main className="main" id="main-content" ref={main} tabIndex={-1}>
+          {role === 'student' && <LiveBanner route={route} />}
           <Suspense fallback={<PageFallback />}>
             <PageComponent key={route} />
           </Suspense>
