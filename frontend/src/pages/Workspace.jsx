@@ -4,6 +4,7 @@ import { asArray, downloadUrl, fmt } from '../api'
 import CameraCapture from '../components/CameraCapture'
 import Icon from '../components/Icon'
 import ImagePair from '../components/ImagePair'
+import WorkspaceTools from '../components/WorkspaceTools'
 import { EmptyState } from '../components/LabPage'
 import { Card, CodeButton, Histogram, Modal, Page, Tabs, ZOOM_STEPS as ZOOMS } from '../components/ui'
 
@@ -81,7 +82,9 @@ export default function Workspace() {
           <ImagePair height={460} zoom={zoom} pixelated={zoom > 2}
             left={{ id: original, title: 'Original' }}
             right={{ id: current, title: 'Current', badge: index > 0 ? `step ${index}` : null }} />
-          {index === 0 && <p className="tiny faint mt-sm">Slider and error map appear once a lab result has been sent to the workspace. Shortcuts: Ctrl+Z undo · Ctrl+Y redo.</p>}
+          {index === 0 && <p className="tiny faint mt-sm">Slider and error map appear once you apply an operation below or send a lab result here. Shortcuts: Ctrl+Z undo · Ctrl+Y redo.</p>}
+
+          <div className="mt"><WorkspaceTools /></div>
 
           <div className="mt">
             <Tabs tabs={[{ key: 'info', label: 'Information' }, { key: 'hist', label: 'Histogram' }, { key: 'history', label: `History (${history.length})` }]} active={tab} onChange={setTab} />

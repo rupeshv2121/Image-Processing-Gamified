@@ -59,7 +59,7 @@ Or, from an open MATLAB session in the project folder:
 ImageLab
 ```
 
-Sign in as the **teacher** (no PIN is set on a fresh install — set one under *Class settings*) or as a
+Sign in as the **teacher** (the first teacher sign-in creates the PIN and shows a one-time recovery code) or as a
 **student** (the teacher creates accounts, or students sign up themselves).
 
 ---
@@ -366,10 +366,15 @@ message, shown in a dialog.
 ## Security
 
 - **Passwords** are stored only as PBKDF2-HMAC-SHA256 hashes (120 000 iterations, random salt per
-  password); the teacher PIN as a salted SHA-256 hash.
+  password), and so are the teacher PIN and its recovery code. A PIN from ImageLab 1.x (salted
+  SHA-256) still works and is re-hashed with PBKDF2 the first time it is used.
+- **Teacher PIN:** the teacher side is closed until a PIN exists; it can be changed, never removed.
+  Forgot it? *Forgot PIN?* on the sign-in page takes the recovery code (each code works once). Lost the
+  code too? Run `reset_teacher_pin.bat` on the ImageLab computer: it removes only the PIN, and the next
+  teacher sign-in creates a new one. Teacher sign-in, set-up and recovery work on that computer only.
 - **Sessions** are random 256-bit tokens kept in memory (students 12 h, teacher 8 h, renewed while in
   use). A server restart signs everybody out.
-- **Lock-out:** 5 wrong attempts lock sign-in (or the PIN) for 5 minutes; failed sign-ins give one
+- **Lock-out:** 5 wrong attempts lock sign-in (or the PIN, or the recovery code) for 5 minutes; failed sign-ins give one
   generic message, so nobody can find out which roll numbers exist.
 - **Identity** always comes from the session token, never from ids the browser sends. Access rules
   (teacher-only, signed-in only) are defined in one place: `backend/imagelab/rpc/access.py`.

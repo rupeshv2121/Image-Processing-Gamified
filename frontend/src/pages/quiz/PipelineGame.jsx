@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../../AppContext'
 import { asArray, fmtPsnr } from '../../api'
 import { Card, ImageView, NeedImage, Note } from '../../components/ui'
+import { PlayerFields } from '../QuizHub'
 
 export const BLOCKS = [
   { key: 'mean', label: 'Mean' }, { key: 'median', label: 'Median' }, { key: 'gaussian', label: 'Gaussian' },
@@ -11,14 +12,16 @@ export const BLOCKS = [
 ]
 const label = (k) => BLOCKS.find((b) => b.key === k)?.label || k
 
+// A session's score counts each problem once, with its best run (100 right, 40 partly right)
 export default function PipelineGame() {
-  const { current, call } = useApp()
+  const { current, call, profile, role, notify } = useApp()
+  const [name, setName] = useState(() => profile?.name || '')
+  const [best, setBest] = useState({})                // problem id -> {points, correct}
   const [problems, setProblems] = useState([])
   const [problem, setProblem] = useState(null)
   const [start, setStart] = useState(null)
   const [steps, setSteps] = useState([])
   const [res, setRes] = useState(null)
-  const [points, setPoints] = useState(0)
 
   useEffect(() => {
     call('pipelineProblems', {}, { quiet: true }).then((p) => p && setProblems(asArray(p)))
@@ -37,16 +40,34 @@ export default function PipelineGame() {
     const d = await call('pipelineRun', { problemId: problem.id, cleanId: start.cleanId, degradedId: start.degradedId, steps }, { label: 'Running your pipeline' })
     if (d) {
       setRes(d)
-      setPoints((x) => x + d.points)
+      setBest((b) => ({ ...b, [problem.id]: { points: Math.max(b[problem.id]?.points || 0, d.points), correct: b[problem.id]?.correct || d.verdict === 'correct' } }))
     }
   }
   const resSteps = asArray(res?.steps)
+  const tried = Object.values(best)
+  const points = tried.reduce((t, b) => t + b.points, 0)
+  const finish = async () => {
+    if (name.trim() && role === 'student') {
+      const solved = tried.filter((b) => b.correct).length
+      const d = await call('leaderboard', { action: 'add', entry: { score: points, accuracy: (100 * solved) / tried.length, bestStreak: 0, mode: 'Build the Pipeline' } }, { label: 'Saving score' })
+      if (d) notify('Score saved to the leaderboard')
+    }
+    setBest({})
+    setProblem(null)
+    setRes(null)
+  }
 
   return (
     <NeedImage>
       <div className="lab">
         <Card title={`Problems · ${points} points`}>
-          <div className="topic-list">
+          <PlayerFields name={name} setName={setName} />
+          {tried.length > 0 && (
+            <button className="btn btn-primary btn-block mt-sm" onClick={finish}>
+              Finish · {tried.filter((b) => b.correct).length}/{tried.length} solved{name.trim() && role === 'student' ? ' · post score' : ''}
+            </button>
+          )}
+          <div className="topic-list mt-sm">
             {problems.map((p) => (
               <button key={p.id} className={`topic-item ${problem?.id === p.id ? 'active' : ''}`} onClick={() => choose(p)}>{p.title}</button>
             ))}

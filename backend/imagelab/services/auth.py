@@ -5,7 +5,12 @@
   MATLAB version wrote, so imported accounts keep their passwords).
 * Session tokens are 256 random bits, kept only in memory (a restart signs
   everybody out). Students: 12 h, teacher: 8 h, renewed while in use.
-* 5 wrong passwords lock an account for 5 minutes (also the teacher PIN).
+* 5 wrong passwords lock an account for 5 minutes (also the teacher PIN and
+  its recovery code).
+* The teacher side always needs a PIN: the first teacher sign-in creates it
+  (teacher_setup) and shows a one-time recovery code; the code sets a new PIN
+  when the old one is forgotten (teacher_recover). Without the code, the
+  computer's owner runs reset_teacher_pin.bat (python -m imagelab.reset_pin).
 * Failed sign-ins give one generic message, so nobody can find out which
   roll numbers exist.
 The identity of a request is ALWAYS taken from its session, never from
@@ -14,8 +19,6 @@ what the browser claims.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import math
 import re
 import secrets
@@ -27,9 +30,10 @@ from ..errors import AppError, invalid
 from ..storage.repositories import AccountRepository
 from ..utils import now_text, plural
 from .classroom import ClassroomService
+from .hashing import ITERATIONS, pbkdf2
+from .hashing import matches as verify
 from .profiles import ProfileService
 
-ITERATIONS = 120_000
 TTL = {"student": 12 * 3600, "teacher": 8 * 3600}
 MAX_FAILS, LOCK_SECONDS = 5, 300
 RENEW_AFTER = 60
@@ -51,10 +55,6 @@ class Session:
         return self.role == "teacher"
 
 
-def pbkdf2(password: str, salt_hex: str, iterations: int = ITERATIONS) -> str:
-    return hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), bytes.fromhex(salt_hex), iterations, 32).hex()
-
-
 def check_password(password: str) -> None:
     if not 6 <= len(password) <= 64:
         raise invalid("The password must have 6 to 64 characters.")
@@ -65,12 +65,6 @@ def new_account(password: str, must_change: bool, previous: dict | None = None) 
     salt = secrets.token_hex(16)
     return {"salt": salt, "hash": pbkdf2(password, salt), "iterations": ITERATIONS, "mustChange": must_change,
             "lastLogin": (previous or {}).get("lastLogin", ""), "changed": now_text()}
-
-
-def verify(account: dict | None, password: str) -> bool:
-    if not account or not account.get("hash") or not password:
-        return False
-    return hmac.compare_digest(pbkdf2(password, account["salt"], int(account["iterations"])), account["hash"])
 
 
 class AuthService:
@@ -135,6 +129,8 @@ class AuthService:
                 f["until"], f["count"] = self.clock() + LOCK_SECONDS, 0
         if key == "teacher":
             raise AppError("Wrong teacher PIN.", "ImageLab:teacherPin")
+        if key == "recovery":
+            raise AppError("Wrong recovery code.", "ImageLab:teacherPin")
         raise AppError("Wrong roll number / name or password.", "ImageLab:badLogin")
 
     def _clear(self, key: str) -> None:
@@ -185,11 +181,28 @@ class AuthService:
         return self._open("student", profile["id"], profile["name"], False)
 
     def teacher_login(self, pin: str) -> dict:
+        if not self.classroom.has_pin():
+            raise AppError("Create the teacher PIN first.", "ImageLab:noTeacherPin")
         self._check_lock("teacher")
         if not self.classroom.check_pin(pin or ""):
             self._fail("teacher")
         self._clear("teacher")
         return self._open("teacher", "teacher", "Teacher", False)
+
+    def teacher_setup(self, pin: str) -> dict:
+        """First teacher sign-in: create the PIN (only while there is none)."""
+        code = self.classroom.create_pin(pin or "")
+        return {**self._open("teacher", "teacher", "Teacher", False), "recoveryCode": code}
+
+    def teacher_recover(self, code: str, pin: str) -> dict:
+        """Forgot the PIN: the recovery code sets a new one (and is replaced by a new code)."""
+        self._check_lock("recovery")
+        if not self.classroom.check_recovery(code or ""):
+            self._fail("recovery")
+        new_code = self.classroom.reset_pin(code or "", pin or "")
+        self._clear("recovery")
+        self._clear("teacher")
+        return {**self._open("teacher", "teacher", "Teacher", False), "recoveryCode": new_code}
 
     # ------------------------------------------------------------ passwords
     def change_password(self, profile_id: str, old: str, new: str) -> bool:

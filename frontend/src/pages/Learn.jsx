@@ -69,9 +69,6 @@ export default function Learn() {
             <button className="btn btn-small" disabled={idx === 0} onClick={() => setActive(TOPICS[idx - 1].id)}>← Previous</button>
             <button className="btn btn-small" disabled={idx === TOPICS.length - 1} onClick={() => setActive(TOPICS[idx + 1].id)}>Next →</button>
           </div>
-          {topic.unit === 'Unit II' && (
-            <Note>Frequency-domain filtering (FFT, ideal/Butterworth/Gaussian low- and high-pass) is outside the scope of this project — Spatia focuses on spatial-domain processing.</Note>
-          )}
         </Card>
       </div>
     </Page>

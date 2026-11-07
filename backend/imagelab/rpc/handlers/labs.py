@@ -15,7 +15,7 @@ CACHEABLE = ("filter", "histogram", "sharpen", "edges", "segment", "regions", "e
 # Random (noise, sampling of options) or cheap - always computed
 COMPUTED = ("imageInfo", "grayscale", "noise", "gaussianKernel", "correlation", "steps",
             "kernelPreset", "neighborhood", "sampling", "quantize", "guessFilter",
-            "lpiDegrade")
+            "lpiDegrade", "wsApply", "wsCompare")
 
 FUNCTION_NAME = re.compile(r"^[A-Za-z]\w*$")
 

@@ -289,7 +289,7 @@ export default function Animations() {
                   <Segmented value={conn} onChange={setConn} options={[{ value: 4, label: '4-connected' }, { value: 8, label: '8-connected' }]} />
                 </>
               )}
-              <button className="btn btn-primary btn-block" onClick={() => animate()} disabled={!matlab.ok}>▶ Compute steps in MATLAB</button>
+              <button className="btn btn-primary btn-block" onClick={() => animate()} disabled={!matlab.ok}>▶ Compute steps</button>
               {error && <Note kind="error">{error}</Note>}
               <p className="tiny faint">Keyboard: click the player, then Space = play/pause, ← → = step.</p>
             </div>

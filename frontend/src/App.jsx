@@ -35,7 +35,7 @@ const PAGES = {
   quiz: lazy(() => import('./pages/QuizHub')),
   live: lazy(() => import('./pages/LiveQuiz')),
   leaderboard: lazy(() => import('./pages/Leaderboard')),
-  reports: lazy(() => import('./pages/Reports')),
+  history: lazy(() => import('./pages/QuizHistory')),
   docs: lazy(() => import('./pages/Documentation')),
   about: lazy(() => import('./pages/About')),
   animate: lazy(() => import('./pages/Animations')),
@@ -182,10 +182,10 @@ function StudentNav({ route, remote }) {
       <NavLink to="live" icon="zap" label="Live quiz" route={route} />
       <NavLink to="quiz" icon="gamepad" label="Arcade" route={route} />
       <NavLink to="leaderboard" icon="trophy" label="Leaderboard" route={route} />
+      <NavLink to="history" icon="clock" label="Quiz history" route={route} />
       <NavLink to="achievements" icon="award" label="Achievements" route={route} />
 
       <div className="nav-section">More</div>
-      <NavLink to="reports" icon="download" label="Reports" route={route} />
       <NavLink to="docs" icon="help" label="Documentation" route={route} />
       <NavLink to="about" icon="info" label="About" route={route} />
       {remote && <p className="nav-note">The Code Lab runs MATLAB code, so it is only available on the Spatia computer.</p>}
@@ -213,6 +213,7 @@ function TeacherNav({ route }) {
       <NavLink to="code" icon="code" label="Code Lab (preview)" route={route} />
       <NavLink to="quiz" icon="gamepad" label="Arcade & Classroom Mode" route={route} />
       <NavLink to="leaderboard" icon="trophy" label="Leaderboard" route={route} />
+      <NavLink to="history" icon="clock" label="Quiz history" route={route} />
 
       <div className="nav-section">More</div>
       <NavLink to="docs" icon="help" label="Documentation" route={route} />

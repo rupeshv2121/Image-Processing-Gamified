@@ -77,6 +77,6 @@ def api(client: TestClient) -> Api:
 
 @pytest.fixture
 def teacher(api: Api) -> str:
-    """A teacher session (no PIN set yet)."""
-    api.token = api.ok("auth", action="teacherLogin", pin="")["token"]
+    """A teacher session (the first sign-in creates the PIN "teach1")."""
+    api.token = api.ok("auth", action="teacherSetup", pin="teach1")["token"]
     return api.token

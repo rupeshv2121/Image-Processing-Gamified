@@ -39,7 +39,7 @@ def test_access_rules(api, teacher):
     student = api.ok("profiles", action="add", name="Stu", roll="S1")
     s_token = api.ok("auth", token="", action="login", identifier="S1", password=student["password"])["token"]
     assert api.error("classroom", token=s_token, action="overview")["errorId"] == "ImageLab:forbidden"
-    assert api.ok("classroom", token=s_token, action="get")["hasPin"] is False
+    assert api.ok("classroom", token=s_token, action="get")["hasPin"] is True
     assert api.ok("auth", token=s_token, action="me")["name"] == "Stu"
     assert api.error("live", token=s_token, action="start")["errorId"] == "ImageLab:forbidden"   # students do not host
     api.ok("auth", token=s_token, action="logout")
@@ -59,6 +59,17 @@ def test_result_cache_and_activity(api, matlab, teacher):
     assert p["activities"] == {"filters": ["median"]} and p["xp"] == 10
     (matlab.image_dir / f'{first["data"]["id"]}.png').unlink()                    # image cleaned up
     assert api.raw("filter", token=tok, id=img, name="median", k=3)["cached"] is False
+
+
+def test_workspace_operations_count_once_each(api, matlab, teacher):
+    pw = api.ok("profiles", action="add", name="Stu", roll="S1")["password"]
+    tok = api.ok("auth", token="", action="login", identifier="S1", password=pw)["token"]
+    api.ok("wsApply", token=tok, id="x", steps=[{"op": "median", "k": 3}, {"op": "histeq"}, {"op": "median", "k": 5}])
+    api.ok("wsCompare", token=tok, id="x", variants=[{"label": "A", "steps": [{"op": "median"}]},
+                                                     {"label": "B", "steps": [{"op": "gaussian", "sigma": 2}]}])
+    assert matlab.calls[-1][0] == "wsCompare"                                     # never cached (noise is random)
+    p = api.ok("progress", token=tok)
+    assert p["activities"]["workspace"] == ["median", "histeq", "gaussian"] and p["xp"] == 30
 
 
 def test_syllabus_activities_earn_badges(api, teacher):
@@ -227,6 +238,8 @@ def test_students_devices_get_everything_but_the_code_lab(settings, matlab, api,
         assert run("auth", action="options")["ok"]
         assert run("filter", id="x", name="mean")["errorId"] == "ImageLab:remote"         # sign in first
         assert run("auth", action="teacherLogin")["errorId"] == "ImageLab:remote"         # no teacher mode
+        assert run("auth", action="teacherSetup", pin="hijack1")["errorId"] == "ImageLab:remote"
+        assert run("auth", action="teacherRecover", code="x", pin="hijack1")["errorId"] == "ImageLab:remote"
         tok = run("auth", action="login", identifier="S1", password=pw)["data"]["token"]
         assert run("filter", id="x", name="mean", token=tok)["ok"]
         assert run("progress", token=tok)["ok"] and run("live", action="state", token=tok)["ok"]

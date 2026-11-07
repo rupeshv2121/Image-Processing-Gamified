@@ -211,13 +211,20 @@ export default function CodeLab() {
                     <p className="small muted">Not allowed here (write it yourself): {forbidden.map((f) => <code key={f} className="chip-code">{f}</code>)}</p>
                   )}
                   {hints.length > 0 && (
-                    <div>
+                    <div className="stack-sm">
                       {hints.slice(0, hintsShown).map((h, i) => <Note key={i}><b>Hint {i + 1}:</b> {h}</Note>)}
-                      {hintsShown < hints.length && (
-                        <button className="btn btn-small btn-ghost" onClick={() => setHintsShown((n) => n + 1)}>
-                          <Icon name="help" size={15} /> Show hint {hintsShown + 1} of {hints.length}
-                        </button>
-                      )}
+                      <div className="row" style={{ gap: 6 }}>
+                        {hintsShown < hints.length && (
+                          <button className="btn btn-small btn-ghost" onClick={() => setHintsShown((n) => n + 1)}>
+                            <Icon name="help" size={15} /> Show hint {hintsShown + 1} of {hints.length}
+                          </button>
+                        )}
+                        {hintsShown > 0 && (
+                          <button className="btn btn-small btn-ghost" onClick={() => setHintsShown(0)}>
+                            Hide hint{hintsShown > 1 ? 's' : ''}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

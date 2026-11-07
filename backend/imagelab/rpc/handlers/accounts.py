@@ -20,6 +20,10 @@ def register(r: Registry) -> None:
             return a.register(str(param(p, "name", "")), str(param(p, "roll", "")), str(param(p, "password", "")))
         if action == "teacherLogin":
             return a.teacher_login(str(param(p, "pin", "")))
+        if action == "teacherSetup":                 # the first teacher sign-in creates the PIN
+            return a.teacher_setup(str(param(p, "pin", "")))
+        if action == "teacherRecover":               # forgot the PIN: one-time recovery code
+            return a.teacher_recover(str(param(p, "code", "")), str(param(p, "pin", "")))
         if action == "logout":
             return a.logout(call.token)
         if action == "me":
@@ -81,6 +85,7 @@ def register(r: Registry) -> None:
             "submission": lambda: stats.submission(str(param(p, "id", "")), str(param(p, "taskId", ""))),
             "export": stats.export,
             "setPin": lambda: room.set_pin(str(param(p, "pin", "")), str(param(p, "newPin", ""))),
+            "newRecovery": lambda: room.new_recovery(str(param(p, "pin", ""))),
             "setExperiment": lambda: room.set_experiment(param(p, "number", 0), str(param(p, "status", "open")),
                                                          str(param(p, "due", "")), str(param(p, "note", ""))),
         }

@@ -4,6 +4,7 @@ import { run } from '../api'
 import { Logo, SITE_NAME, SITE_TAGLINE } from '../components/Brand'
 import Icon from '../components/Icon'
 import ThemeToggle from '../components/ThemeToggle'
+import RecoveryCode from '../components/RecoveryCode'
 import { Note } from '../components/ui'
 
 // Decorative: one small 6x6 colour image split into its R, G and B channels.
@@ -34,19 +35,22 @@ function Channels() {
 // password; the teacher with the PIN. The backend checks the credentials
 // (services/auth.py) and returns a session token.
 export default function Start({ next }) {
-  const { matlab, login, register, teacherLogin, sessionMessage } = useApp()
+  const { matlab, login, register, teacherLogin, teacherSession, sessionMessage } = useApp()
   const [tab, setTab] = useState('student')
   const [mode, setMode] = useState('login')        // login | claim | register
   const [options, setOptions] = useState({ selfRegister: false, hasPin: true })
-  const [form, setForm] = useState({ identifier: '', password: '', repeat: '', name: '', roll: '', pin: '' })
+  const [form, setForm] = useState({ identifier: '', password: '', repeat: '', name: '', roll: '', pin: '', code: '' })
+  const [teacherMode, setTeacherMode] = useState('login')      // login | recover
+  const [newSession, setNewSession] = useState(null)        // PIN created / recovered: show the recovery code first
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState(null)
   const [info, setInfo] = useState(null)
   const [busy, setBusy] = useState(false)
 
   // Signing in is answered by the server itself - it never waits for MATLAB to start
+  const loadOptions = () => run('auth', { action: 'options' }).then(setOptions).catch(() => {})
   useEffect(() => {
-    if (matlab.server) run('auth', { action: 'options' }).then(setOptions).catch(() => {})
+    if (matlab.server) loadOptions()
   }, [matlab.server])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -80,14 +84,43 @@ export default function Start({ next }) {
     go(next?.student || 'dashboard')
   })
   const teacher = submit(async () => {
-    await teacherLogin(form.pin)
+    try {
+      await teacherLogin(form.pin)
+    } catch (err) {
+      if (err.errorId === 'ImageLab:noTeacherPin') loadOptions()      // the PIN was reset meanwhile
+      throw err
+    }
     go(next?.teacher || 'class')
   })
+  const createPin = submit(async () => {
+    if (form.pin !== form.repeat) throw new Error('The two PINs do not match.')
+    setNewSession(await run('auth', { action: 'teacherSetup', pin: form.pin }))
+  })
+  const recover = submit(async () => {
+    if (form.pin !== form.repeat) throw new Error('The two PINs do not match.')
+    setNewSession(await run('auth', { action: 'teacherRecover', code: form.code, pin: form.pin }))
+  })
+  const enterTeacher = () => {
+    teacherSession(newSession)
+    go(next?.teacher || 'class')
+  }
+  const pinFields = (label) => (
+    <div className="auth-row">
+      <label className="field"><span className="field-label">{label}</span>
+        <input type="password" autoComplete="new-password" value={form.pin} onChange={set('pin')} minLength={6} maxLength={32} placeholder="6+ characters" required /></label>
+      <label className="field"><span className="field-label">Repeat the PIN</span>
+        <input type="password" autoComplete="new-password" value={form.repeat} onChange={set('repeat')} required /></label>
+    </div>
+  )
 
   const switchMode = (m) => { setMode(m); setError(null); setInfo(null); setForm((f) => ({ ...f, password: '', repeat: '' })) }
   const disabled = !matlab.server || busy
 
-  const heading = tab === 'teacher' ? ['Teacher sign in', 'Manage your class, assignments and the live quiz.']
+  const heading = tab === 'teacher'
+    ? newSession ? ['Your recovery code', 'Keep it somewhere safe, away from students.']
+      : !options.hasPin ? ['Create the teacher PIN', 'The teacher side is locked until a PIN is set. You will need it every time you sign in as the teacher.']
+        : teacherMode === 'recover' ? ['Forgot the PIN?', 'Enter the recovery code you saved when the PIN was created, then choose a new PIN.']
+          : ['Teacher sign in', 'Manage your class, assignments and the live quiz.']
     : mode === 'register' ? ['Create your account', 'Join the class with your name and roll number.']
       : mode === 'claim' ? ['Choose a password', 'This is your first sign-in — pick a password for your account.']
         : ['Welcome back', 'Sign in to continue your labs, experiments and quizzes.']
@@ -124,7 +157,7 @@ export default function Start({ next }) {
             <div className="segmented auth-role" role="tablist" aria-label="Sign in as">
               {[['student', 'Student'], ['teacher', 'Teacher']].map(([k, label]) => (
                 <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''}
-                  onClick={() => { setTab(k); setError(null) }}>{label}</button>
+                  onClick={() => { setTab(k); setError(null) }} disabled={!!newSession}>{label}</button>
               ))}
             </div>
           )}
@@ -179,14 +212,34 @@ export default function Start({ next }) {
             </form>
           )}
 
-          {tab === 'teacher' && (
+          {tab === 'teacher' && newSession && <RecoveryCode code={newSession.recoveryCode} onDone={enterTeacher} doneLabel="Continue to the teacher dashboard" />}
+
+          {tab === 'teacher' && !newSession && !options.hasPin && (
+            <form className="signin-form" onSubmit={createPin}>
+              {pinFields('New teacher PIN')}
+              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || form.pin.length < 6 || !form.repeat}>Create PIN</button>
+              <p className="auth-hint">6 to 32 characters (letters and numbers). Next you get a one-time recovery code for the day you forget the PIN.</p>
+            </form>
+          )}
+
+          {tab === 'teacher' && !newSession && options.hasPin && teacherMode === 'login' && (
             <form className="signin-form" onSubmit={teacher}>
-              {options.hasPin ? (
-                <label className="field"><span className="field-label">Teacher PIN</span>
-                  <input type="password" inputMode="numeric" autoComplete="current-password" value={form.pin} onChange={set('pin')} autoFocus required /></label>
-              ) : <Note kind="warn">No teacher PIN is set yet — set one in Class settings right after signing in.</Note>}
-              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || (options.hasPin && !form.pin)}>Sign in as teacher</button>
+              <label className="field"><span className="field-label">Teacher PIN</span>
+                <input type="password" autoComplete="current-password" value={form.pin} onChange={set('pin')} autoFocus required /></label>
+              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || !form.pin}>Sign in as teacher</button>
               <p className="auth-hint">The teacher session ends when this browser tab is closed.</p>
+              <p className="auth-switch"><button type="button" className="link-btn" onClick={() => { setTeacherMode('recover'); setError(null); setForm((f) => ({ ...f, pin: '', repeat: '' })) }}>Forgot PIN?</button></p>
+            </form>
+          )}
+
+          {tab === 'teacher' && !newSession && options.hasPin && teacherMode === 'recover' && (
+            <form className="signin-form" onSubmit={recover}>
+              <label className="field"><span className="field-label">Recovery code</span>
+                <input type="text" autoComplete="off" spellCheck={false} className="recovery-input" placeholder="XXXX-XXXX-XXXX" value={form.code} onChange={set('code')} autoFocus required /></label>
+              {pinFields('New teacher PIN')}
+              <button className="btn btn-primary btn-lg btn-block" type="submit" disabled={disabled || !form.code.trim() || form.pin.length < 6 || !form.repeat}>Set new PIN</button>
+              <p className="auth-hint">Lost the recovery code too? On the {SITE_NAME} computer, run <code>reset_teacher_pin.bat</code> in the ImageLab folder, then create a new PIN here. Students and scores are kept.</p>
+              <p className="auth-switch"><button type="button" className="link-btn" onClick={() => { setTeacherMode('login'); setError(null) }}>← Back to sign in</button></p>
             </form>
           )}
 

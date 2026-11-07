@@ -3,7 +3,7 @@ import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
 import { initials, StudentsModal } from '../components/Profiles'
 import { Card, Modal, Page, Segmented, Tabs } from '../components/ui'
-import { bestPerStudent } from '../leaderboard'
+import { MODES, bestPerStudent, modeOf } from '../leaderboard'
 
 export default function Leaderboard() {
   const { call, matlab, profiles, profileId, refreshProfiles, role } = useApp()
@@ -20,20 +20,24 @@ export default function Leaderboard() {
     const d = await call('leaderboard', { action: 'get' }, { label: 'Loading leaderboard' })
     if (d) setRows(asArray(d))
   }
-  useEffect(() => { if (matlab.ok) load() }, [matlab.ok]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (matlab.server) load() }, [matlab.server]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const clear = async () => {
     const d = await call('leaderboard', { action: 'clear' }, { label: 'Clearing leaderboard' })
     if (d) setRows(asArray(d))
     setConfirm(false)
   }
-  const modes = ['all', ...new Set(rows.map((r) => r.Mode))]
-  const shown = bestPerStudent(rows.filter((r) => mode === 'all' || r.Mode === mode))
+  // every game's tab is always there, even before anybody played it
+  const counts = rows.reduce((c, r) => ({ ...c, [modeOf(r)]: (c[modeOf(r)] || 0) + 1 }), {})
+  const extra = Object.keys(counts).filter((m) => !MODES.some((x) => x.mode === m))
+  const modes = [...MODES, ...extra.map((m) => ({ mode: m }))]
+  const shown = bestPerStudent(rows.filter((r) => mode === 'all' || modeOf(r) === mode))
+  const game = modes.find((m) => m.mode === mode)?.game
 
   return (
     <Page eyebrow="Play" title="Leaderboard" subtitle="Top quiz scores and the class ranking of every student profile on this computer."
       actions={tab === 'scores'
-        ? <><button className="btn" onClick={load}>Refresh</button>{teacher && <button className="btn btn-danger" onClick={() => setConfirm(true)} disabled={!rows.length}>Clear…</button>}</>
+        ? <><a className="btn" href="#history">All attempts</a><button className="btn" onClick={load}>Refresh</button>{teacher && <button className="btn btn-danger" onClick={() => setConfirm(true)} disabled={!rows.length}>Clear…</button>}</>
         : <><button className="btn" onClick={refreshProfiles}>Refresh</button>{teacher && <button className="btn btn-navy" onClick={() => setManage(true)}>Manage students…</button>}</>}>
       <Tabs tabs={[{ key: 'scores', label: 'Quiz scores' }, { key: 'class', label: `Class (${profiles.length})` }]} active={tab} onChange={setTab} />
       {tab === 'class' && (
@@ -56,7 +60,10 @@ export default function Leaderboard() {
         </Card>
       )}
       {tab === 'scores' && <Card>
-        {modes.length > 2 && <div style={{ marginBottom: 12 }}><Segmented value={mode} onChange={setMode} options={modes.map((m) => ({ value: m, label: m === 'all' ? 'All modes' : m }))} /></div>}
+        <div style={{ marginBottom: 12 }}>
+          <Segmented value={mode} onChange={setMode}
+            options={[{ value: 'all', label: `All modes (${rows.length})` }, ...modes.map((m) => ({ value: m.mode, label: `${m.mode} (${counts[m.mode] || 0})` }))]} />
+        </div>
         {shown.length ? (<>
           <table className="data">
             <thead><tr><th>Rank</th><th>Name</th><th>Roll no.</th><th>Best score</th><th>Accuracy</th><th>Best streak</th><th>Mode</th><th>Quizzes</th><th>Date</th></tr></thead>
@@ -71,9 +78,12 @@ export default function Leaderboard() {
               ))}
             </tbody>
           </table>
-          <p className="small muted mt-sm">Each student appears once, with their best {mode === 'all' ? 'score of any mode' : `${mode} score`}. Quizzes = how many {mode === 'all' ? '' : `${mode} `}scores they have posted.</p>
+          <p className="small muted mt-sm">Each student appears once, with their best {mode === 'all' ? 'score of any mode' : `${mode} score`}. Quizzes = how many {mode === 'all' ? '' : `${mode} `}scores they have posted — see every attempt in <a href="#history">Quiz history</a>.</p>
         </>) : (
-          <p className="muted">No scores yet. Play the <a href="#quiz">Rapid Fire Quiz</a> and tick “Post my score” to appear here.</p>
+          <p className="muted">
+            No {mode === 'all' ? '' : `${mode} `}scores yet. Play {game ? <a href={`#quiz?game=${game}`}>{mode}</a> : <>a game in the <a href="#quiz">Arcade</a></>} with
+            “Post my score to the leaderboard” ticked to appear here.
+          </p>
         )}
       </Card>}
       {manage && <StudentsModal onClose={() => setManage(false)} />}

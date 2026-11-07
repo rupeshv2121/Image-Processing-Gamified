@@ -28,7 +28,9 @@ First start takes 10–60 s (MATLAB start-up and graphics warm-up).
     ends with the browser tab. The menu at the top right has **Change password** and **Sign out**.
   * Forgot your password? The teacher resets it (Class settings → Manage students → Reset password).
   * Five wrong passwords lock sign-in for five minutes.
-* **The teacher** signs in with the teacher PIN. The teacher side has its own navigation:
+* **The teacher** signs in with the teacher PIN. The very first teacher sign-in creates the PIN
+  (6–32 characters) and shows a one-time **recovery code** — copy, download or print it. The teacher
+  side has its own navigation:
   * **Class dashboard** — key numbers, students who need attention (overdue work, inactive for a week,
     low quiz accuracy, stuck on a Code Lab task), recent activity of the class and the demo tour.
   * **Students** — roster (search, sort by any column), topic heatmap and weakest topics. Click a name
@@ -39,14 +41,18 @@ First start takes 10–60 s (MATLAB start-up and graphics warm-up).
     cell to read the student's passing code and latest attempt.
   * **Class settings** — add students (each gets a first password, shown once), reset passwords,
     rename or delete students, allow or forbid self sign-up, change the PIN (the current PIN is asked
-    again), export CSV / Excel.
+    again; the PIN cannot be removed), create a new recovery code, export CSV / Excel.
 
   The teacher can also open every lab, the Code Lab (all tasks, with model solutions) and Classroom
   Mode to demonstrate. Nothing done as the teacher is recorded as student progress. The teacher
   session ends when the browser tab is closed or on **Sign out**.
 
-Sessions live in MATLAB's memory: restarting ImageLab signs everybody out. Without a teacher PIN
-anybody can sign in as the teacher — set one under **Class settings**.
+Sessions live in the server's memory: restarting ImageLab signs everybody out.
+
+**Forgot the teacher PIN?** On the sign-in page choose *Teacher → Forgot PIN?*, enter the recovery
+code and choose a new PIN (you get a new recovery code; the old one stops working). Lost the code
+too? On the ImageLab computer run `reset_teacher_pin.bat`: it removes only the PIN, and the next
+teacher sign-in creates a new one. Students, progress and scores are kept.
 
 ## 2. Loading an image
 

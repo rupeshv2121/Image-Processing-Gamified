@@ -42,6 +42,7 @@ if isempty(table)
                          'describeRegion', 'color', 'colorEnhance', 'pseudocolor', 'neighborhood', 'steps'}
         @restorationOps, {'lpiDegrade', 'deconvolve'}
         @gameOps,       {'guessFilter', 'degrade', 'applyPipeline'}
+        @workspaceOps,  {'wsApply', 'wsCompare'}
         @codeLabOps,    {'codeTaskTemplates', 'codeTaskStart', 'codeTaskCheck', 'codeWarmup', 'runCode'}
         @experimentOps, {'experimentCatalog', 'runExperiment', 'report'}};
     table = containers.Map('KeyType', 'char', 'ValueType', 'any');

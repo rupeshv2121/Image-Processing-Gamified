@@ -58,7 +58,7 @@ export default function ChallengeMode() {
     if (d) {
       setResult({ ...d, used })
       if (name.trim() && role === 'student') {
-        await call('leaderboard', { action: 'add', entry: { score: d.score, accuracy: Math.max(0, Math.min(100, 100 * (1 - d.after.mse / d.before.mse))), bestStreak: 0, mode: `Challenge (${level})` } }, { label: 'Saving score' })
+        await call('leaderboard', { action: 'add', entry: { score: d.score, accuracy: Math.max(0, Math.min(100, 100 * (1 - d.after.mse / d.before.mse))), bestStreak: 0, mode: 'Challenge Mode' } }, { label: 'Saving score' })
         notify('Score saved to the leaderboard')
       }
     }

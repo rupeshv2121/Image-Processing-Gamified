@@ -23,6 +23,14 @@ def _fixed(area: str, item: str) -> Rule:
     return lambda p, data: [(area, item)]
 
 
+def _workspace(p: dict, data: Any) -> list[tuple[str, str]]:
+    """Every Workspace operation tried (single step, pipeline or comparison)."""
+    variants = p.get("variants") if isinstance(p.get("variants"), list) else [{"steps": p.get("steps")}]
+    ops = [str(s.get("op")) for v in variants if isinstance(v, dict)
+           for s in (v.get("steps") if isinstance(v.get("steps"), list) else []) if isinstance(s, dict)]
+    return [("workspace", op) for op in dict.fromkeys(ops)]
+
+
 RULES: dict[str, Rule] = {
     "noise": _one("noise", "type", "gaussian"),
     "filter": _one("filters", "name", "mean"),
@@ -48,6 +56,8 @@ RULES: dict[str, Rule] = {
     "pseudocolor": _one("pseudocolor", "method", "slicing"),
     "lpiDegrade": _one("restoration", "psf", "motion"),
     "deconvolve": _one("deblur", "method", "wiener"),
+    "wsApply": _workspace,
+    "wsCompare": _workspace,
 }
 
 

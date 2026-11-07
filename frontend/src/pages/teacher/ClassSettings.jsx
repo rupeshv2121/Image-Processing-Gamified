@@ -3,13 +3,16 @@ import { useApp } from '../../AppContext'
 import { run } from '../../api'
 import Icon from '../../components/Icon'
 import { StudentsModal, useSelfRegister } from '../../components/Profiles'
-import { Card, Note, Page } from '../../components/ui'
+import RecoveryCode from '../../components/RecoveryCode'
+import { Card, Modal, Note, Page } from '../../components/ui'
 import { useTeacher } from './TeacherData'
 
 export default function ClassSettings() {
   const { call, matlab, refreshProfiles, profiles } = useApp()
   const { refresh, overview } = useTeacher()
-  const [hasPin, setHasPin] = useState(null)
+  const [pinInfo, setPinInfo] = useState(null)       // {hasPin, hasRecovery}
+  const [code, setCode] = useState(null)             // a new recovery code, shown once
+  const [recoveryPin, setRecoveryPin] = useState('')
   const [manage, setManage] = useState(false)
   const [files, setFiles] = useState(null)
   const [pinForm, setPinForm] = useState({ current: '', next: '', confirm: '' })
@@ -17,30 +20,42 @@ export default function ClassSettings() {
   const [pinMsg, setPinMsg] = useState(null)
 
   useEffect(() => {
-    if (matlab.ok) run('classroom', { action: 'get' }).then((s) => setHasPin(!!s.hasPin)).catch(() => {})
-  }, [matlab.ok])
+    if (matlab.server) run('classroom', { action: 'get' }).then(setPinInfo).catch(() => {})
+  }, [matlab.server])
 
   const exportReport = async () => {
     const f = await call('classroom', { action: 'export' }, { label: 'Writing CSV and Excel files' })
     if (f) setFiles(f)
   }
-  const changePin = async (e, remove = false) => {
-    e?.preventDefault()
+  // The current PIN is asked again, so nobody can change it at an unattended computer.
+  // The PIN can only be changed, never removed; every change issues a new recovery code.
+  const changePin = async (e) => {
+    e.preventDefault()
     setPinMsg(null)
-    const next = remove ? '' : pinForm.next
-    if (!remove && next !== pinForm.confirm) { setPinMsg({ kind: 'error', text: 'The two PINs do not match.' }); return }
-    // The current PIN is asked again, so nobody can change it at an unattended computer
-    const s = await call('classroom', { action: 'setPin', pin: pinForm.current, newPin: next }, { label: 'Saving the PIN' })
+    if (pinForm.next !== pinForm.confirm) { setPinMsg({ kind: 'error', text: 'The two PINs do not match.' }); return }
+    const s = await call('classroom', { action: 'setPin', pin: pinForm.current, newPin: pinForm.next }, { label: 'Saving the PIN' })
     if (s) {
-      setHasPin(!!s.hasPin)
+      setPinInfo(s)
       setPinForm({ current: '', next: '', confirm: '' })
-      setPinMsg({ kind: 'ok', text: remove ? 'PIN removed — anyone can sign in as the teacher.' : 'PIN saved. Use it the next time you sign in as the teacher.' })
+      setPinMsg({ kind: 'ok', text: 'PIN changed. Use it the next time you sign in as the teacher.' })
+      setCode(s.recoveryCode)
+    }
+  }
+  const newRecovery = async (e) => {
+    e.preventDefault()
+    const s = await call('classroom', { action: 'newRecovery', pin: recoveryPin }, { label: 'Creating a recovery code' })
+    if (s) {
+      setPinInfo(s)
+      setRecoveryPin('')
+      setCode(s.recoveryCode)
     }
   }
 
   return (
     <Page eyebrow="Teacher" title="Class settings" subtitle="Students on this computer, the teacher PIN and report exports.">
-      {hasPin === false && <Note kind="warn">No teacher PIN is set, so students can open the teacher side. Set one below.</Note>}
+      {pinInfo && !pinInfo.hasRecovery && (
+        <Note kind="warn">There is no recovery code for the teacher PIN yet. Create one below, so a forgotten PIN can be reset without help.</Note>
+      )}
       <div className="grid-2 mt-sm" style={{ alignItems: 'start' }}>
         <Card title="Students" extra={<span className="small faint">{profiles.length} on this computer</span>}>
           <p className="small">Add students (each gets a first password), reset forgotten passwords, rename or delete students. Deleting removes the account, progress and Code Lab work.</p>
@@ -62,25 +77,37 @@ export default function ClassSettings() {
           {files && <p className="small muted mt-sm">Saved in reports/output/{files.xlsx}</p>}
         </Card>
 
-        <Card title={hasPin ? 'Change the teacher PIN' : 'Set a teacher PIN'}>
+        <Card title="Change the teacher PIN">
           <form className="pin-form" onSubmit={changePin}>
-            {hasPin && (
-              <label className="field"><span className="field-label">Current PIN</span>
-                <input type="password" autoComplete="current-password" value={pinForm.current} onChange={(e) => setPinForm({ ...pinForm, current: e.target.value })} /></label>
-            )}
-            <label className="field"><span className="field-label">New PIN (4–32 characters)</span>
+            <label className="field"><span className="field-label">Current PIN</span>
+              <input type="password" autoComplete="current-password" value={pinForm.current} onChange={(e) => setPinForm({ ...pinForm, current: e.target.value })} /></label>
+            <label className="field"><span className="field-label">New PIN (6–32 characters)</span>
               <input type="password" autoComplete="new-password" value={pinForm.next} onChange={(e) => setPinForm({ ...pinForm, next: e.target.value })} /></label>
             <label className="field"><span className="field-label">Repeat the PIN</span>
               <input type="password" autoComplete="new-password" value={pinForm.confirm} onChange={(e) => setPinForm({ ...pinForm, confirm: e.target.value })} /></label>
             <div className="row">
-              <button className="btn btn-primary" type="submit" disabled={pinForm.next.length < 4}>Save PIN</button>
-              {hasPin && <button className="btn btn-danger" type="button" onClick={(e) => changePin(e, true)}>Remove PIN</button>}
+              <button className="btn btn-primary" type="submit" disabled={!pinForm.current || pinForm.next.length < 6}>Change PIN</button>
             </div>
           </form>
           {pinMsg && <Note kind={pinMsg.kind}>{pinMsg.text}</Note>}
+          <p className="small muted mt-sm">The teacher side always needs a PIN — it can be changed but not removed.</p>
+        </Card>
+
+        <Card title="Recovery code">
+          <p className="small">If you forget the PIN, the recovery code sets a new one under <b>Forgot PIN?</b> on the sign-in page. A new code makes the old one stop working.</p>
+          <form className="row mt-sm" onSubmit={newRecovery}>
+            <input type="password" autoComplete="current-password" placeholder="Current PIN" aria-label="Current PIN" value={recoveryPin} onChange={(e) => setRecoveryPin(e.target.value)} style={{ maxWidth: 200 }} />
+            <button className="btn" type="submit" disabled={!recoveryPin}>{pinInfo?.hasRecovery ? 'Create a new recovery code' : 'Create a recovery code'}</button>
+          </form>
+          <p className="small muted mt-sm">Lost both? On this computer run <code>reset_teacher_pin.bat</code> in the ImageLab folder; the next teacher sign-in creates a new PIN. Students and scores are kept.</p>
           <p className="small muted mt-sm">Spatia stores only a salted hash of the PIN and of every student password (PBKDF2, data/imagelab.db). Five wrong attempts lock sign-in for five minutes.</p>
         </Card>
       </div>
+      {code && (
+        <Modal title="Your new recovery code" onClose={() => {}}>
+          <RecoveryCode code={code} onDone={() => setCode(null)} doneLabel="Done" />
+        </Modal>
+      )}
       {manage && <StudentsModal onClose={() => { setManage(false); refreshProfiles(); refresh({ force: true }) }} />}
     </Page>
   )

@@ -165,6 +165,8 @@ export function AppProvider({ children }) {
     begin(await run('auth', { action: 'register', name, roll, password }), remember), [begin])
   const teacherLogin = useCallback(async (pin) =>
     begin(await run('auth', { action: 'teacherLogin', pin }), false), [begin])
+  // PIN created or recovered: the sign-in page shows the recovery code first, then starts the session
+  const teacherSession = useCallback((data) => begin(data, false), [begin])
 
   const changePassword = useCallback(async (oldPassword, newPassword) => {
     await run('auth', { action: 'changePassword', oldPassword, newPassword })
@@ -266,10 +268,10 @@ export function AppProvider({ children }) {
     profiles, profileId,
     profile: profiles.find((x) => x.id === profileId) || (profileId ? { id: profileId, name: session.name, level: progress?.level ?? 1, xp: progress?.xp ?? 0 } : null),
     refreshProfiles, editProfiles,
-    session, role, login, register, teacherLogin, signOut, changePassword, mustChangePassword, sessionMessage,
+    session, role, login, register, teacherLogin, teacherSession, signOut, changePassword, mustChangePassword, sessionMessage,
     theme, setTheme,
   }), [matlab, call, notify, progress, refreshProgress, busy, busyLabel, alertMsg, toast, meta, history, index,
     loadSample, upload, push, undo, redo, reset, profiles, profileId, refreshProfiles, editProfiles,
-    session, role, login, register, teacherLogin, signOut, changePassword, mustChangePassword, sessionMessage, theme, setTheme])
+    session, role, login, register, teacherLogin, teacherSession, signOut, changePassword, mustChangePassword, sessionMessage, theme, setTheme])
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

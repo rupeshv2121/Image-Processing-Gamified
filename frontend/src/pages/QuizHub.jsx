@@ -16,7 +16,6 @@ const GAMES = [
   { key: 'guess', icon: '🔍', title: 'Guess the Filter', text: 'See the original and the processed image — which filter produced it?' },
   { key: 'pipeline', icon: '⛓', title: 'Build the Pipeline', text: 'Choose the right sequence of blocks to repair a degraded image.' },
   { key: 'challenge', icon: '⏱', title: 'Challenge Mode', text: 'Improve a noisy image against the clock. Scored on PSNR gain and time.' },
-  { key: 'classroom', icon: '🎓', title: 'Classroom Mode', text: 'Projector mode for juniors: big question, big timer, reveal and explain.' },
 ]
 
 // Opt in to the leaderboard. Scores are always posted under the signed-in
@@ -70,7 +69,8 @@ function QuizSetup({ mode, onStart }) {
 
 // Weak-topic quiz (services/quiz.py): categories are weighted by the error rate
 function WeakPractice() {
-  const { call, refreshProgress, progress } = useApp()
+  const { call, refreshProgress, progress, profile } = useApp()
+  const [name, setName] = useState(() => profile?.name || '')
   const [plan, setPlan] = useState(null)
   const [questions, setQuestions] = useState(null)
   const [running, setRunning] = useState(false)
@@ -88,7 +88,7 @@ function WeakPractice() {
   }
   const finish = async (results) => {
     setRunning(false)
-    const d = await call('quizSubmit', { results, mode: 'Weak-topic practice' }, { label: 'Scoring quiz' })
+    const d = await call('quizSubmit', { results, name, mode: 'Weak-Topic Practice' }, { label: 'Scoring quiz' })
     if (d) {
       setSummary(d)
       refreshProgress()
@@ -106,8 +106,9 @@ function WeakPractice() {
     <Card title="Weak-topic practice">
       <p className="small">
         MATLAB looks at your accuracy per category ({answered} questions answered so far) and draws more questions from the
-        topics you get wrong. Unseen topics are included too. 20 seconds per question — this is practice, so it does not go on the leaderboard.
+        topics you get wrong. Unseen topics are included too. 20 seconds per question.
       </p>
+      <PlayerFields name={name} setName={setName} />
       {answered < 5 && <Note kind="warn">You have answered only {answered} questions. Play a Rapid Fire quiz or two first so the practice can find your weak spots.</Note>}
       {!plan ? (
         <div className="row mt-sm">
@@ -141,7 +142,7 @@ function WeakPractice() {
   )
 }
 
-function Summary({ summary, progress, onAgain }) {
+export function Summary({ summary, progress, onAgain }) {
   return (
     <Card className="quiz-card">
       <div className="big-score">{summary.score}</div>
@@ -194,7 +195,7 @@ function TimedQuiz({ mode }) {
   }
   if (summary) return <Summary summary={summary.summary} progress={summary.progress} onAgain={() => setSummary(null)} />
   return (
-    <Card title={mode === 'kernel' ? 'Kernel Quiz' : mode === 'classroom' ? 'Classroom Mode' : 'Rapid Fire Quiz'}>
+    <Card title={mode === 'kernel' ? 'Kernel Quiz' : 'Rapid Fire Quiz'}>
       {classScore && <Note kind="ok">Class result of the last session: <b>{classScore.correct} / {classScore.total}</b> answered correctly.</Note>}
       {mode === 'classroom'
         ? <p className="small">Put this on the projector. The question and a 10-second timer are shown in large type. Click the option the class chooses (or let the timer run out / "Reveal answer now"), then discuss the explanation.</p>

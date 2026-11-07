@@ -79,7 +79,7 @@ export default function Documentation() {
             <li>Load an image in the <a href="#workspace">Workspace</a> (sample or your own file).</li>
             <li>Open any lab. Results can be sent back to the workspace with <b>➜ Workspace</b>, then undone/redone.</li>
             <li>Use <b>{'</>'} View MATLAB Code</b> buttons to show the real implementation.</li>
-            <li>Run the <a href="#experiments">Experiments</a> and generate <a href="#reports">Reports</a>.</li>
+            <li>Run the <a href="#experiments">Experiments</a> (each one can generate its lab report).</li>
             <li>Play the <a href="#quiz">quizzes and games</a>; scores go to the <a href="#leaderboard">Leaderboard</a>.</li>
           </ol>
           <p className="small muted">Full documents in the docs/ folder: README, USER_GUIDE, ALGORITHMS, EXPERIMENTS, MATLAB_FUNCTION_REFERENCE, QUIZ_SYSTEM, PROJECT_ARCHITECTURE, PROJECT_REPORT_CONTENT.</p>

@@ -3,6 +3,7 @@ import { useApp } from '../../AppContext'
 import { asArray, fmtPsnr } from '../../api'
 import ImagePair from '../../components/ImagePair'
 import { Card, ImageView, Note } from '../../components/ui'
+import { PlayerFields } from '../QuizHub'
 import { BLOCKS } from './PipelineGame'
 
 const label = (k) => BLOCKS.find((b) => b.key === k)?.label || k
@@ -31,7 +32,8 @@ function StreakStrip({ history }) {
 // One "match the target image" puzzle per day: the same date always gives
 // the same image, degradation and noise (MATLAB seeds rng with the date).
 export default function DailyChallenge() {
-  const { call, refreshProgress, matlab } = useApp()
+  const { call, refreshProgress, matlab, profile, role, notify } = useApp()
+  const [name, setName] = useState(() => profile?.name || '')
   const [day, setDay] = useState(null)
   const [steps, setSteps] = useState([])
   const [res, setRes] = useState(null)
@@ -47,6 +49,12 @@ export default function DailyChallenge() {
     if (d) {
       setRes(d)
       const p = d.progress
+      // a new best of the day goes on the leaderboard (one row per student shows the best)
+      if (name.trim() && role === 'student' && d.points > day.bestPoints) {
+        const posted = await call('leaderboard', { action: 'add', entry: { score: d.points, accuracy: { correct: 100, partial: 40 }[d.verdict] || 0,
+          bestStreak: p?.dailyStreak ?? day.streak, mode: 'Daily Challenge' } }, { label: 'Saving score' })
+        if (posted) notify('New best today — saved to the leaderboard')
+      }
       setDay((x) => ({ ...x, solved: x.solved || d.verdict === 'correct', bestPoints: Math.max(x.bestPoints, d.points), attempts: x.attempts + 1, streak: p?.dailyStreak ?? x.streak, history: p?.dailyHistory ?? x.history }))
       refreshProgress()
     }
@@ -96,6 +104,7 @@ export default function DailyChallenge() {
         <div className="row" style={{ marginTop: 12 }}>
           <button className="btn btn-primary" disabled={!steps.length} onClick={runIt}>▶ Run in MATLAB</button>
           <button className="btn" onClick={() => { setSteps([]); setRes(null) }}>Clear</button>
+          <PlayerFields name={name} setName={setName} />
           <span className="small faint">Score: 100 for the right pipeline (40 if partly right) + 10 per dB of PSNR gained. +50 XP the first time you solve it today.</span>
         </div>
       </Card>
