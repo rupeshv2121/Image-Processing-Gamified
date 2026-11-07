@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray } from '../api'
 import { Card, Note, Page } from '../components/ui'
@@ -21,6 +21,18 @@ const UNIT_TITLES = {
 export default function Learn() {
   const { progress, call, refreshProgress, notify } = useApp()
   const [active, setActive] = useState(TOPICS[0].id)
+  const reading = useRef(null)
+  // a new topic starts at its title (the page scrolls inside .main; on phones the list is above it)
+  const open = (id) => {
+    setActive(id)
+    requestAnimationFrame(() => {
+      const main = document.getElementById('main-content')
+      const card = reading.current
+      if (!main || !card) return
+      const top = card.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 16
+      main.scrollTo({ top: window.matchMedia('(max-width: 820px)').matches ? top : 0, behavior: 'smooth' })
+    })
+  }
   const done = asArray(progress?.topicsCompleted)
   const topic = TOPICS.find((t) => t.id === active)
   const idx = TOPICS.indexOf(topic)
@@ -43,7 +55,7 @@ export default function Learn() {
               <div key={u}>
                 <div className="unit-label">{u} · {UNIT_TITLES[u]}</div>
                 {TOPICS.filter((t) => t.unit === u).map((t) => (
-                  <button key={t.id} className={`topic-item ${t.id === active ? 'active' : ''}`} onClick={() => setActive(t.id)}>
+                  <button key={t.id} className={`topic-item ${t.id === active ? 'active' : ''}`} onClick={() => open(t.id)}>
                     <span className={`done ${done.includes(t.title) ? 'yes' : ''}`}>✓</span> {t.title}
                   </button>
                 ))}
@@ -51,6 +63,7 @@ export default function Learn() {
             ))}
           </div>
         </Card>
+        <div ref={reading} className="learn-reading">
         <Card title={topic.title} extra={<span className="badge badge-navy">{topic.unit}</span>}>
           <p className="muted">{topic.summary}</p>
           <div className="prose reading" style={{ marginTop: 16 }}>
@@ -66,10 +79,11 @@ export default function Learn() {
               : <button className="btn btn-primary" onClick={complete}>Mark as completed (+20 XP)</button>}
           </div>
           <div className="row" style={{ marginTop: 14, justifyContent: 'space-between' }}>
-            <button className="btn btn-small" disabled={idx === 0} onClick={() => setActive(TOPICS[idx - 1].id)}>← Previous</button>
-            <button className="btn btn-small" disabled={idx === TOPICS.length - 1} onClick={() => setActive(TOPICS[idx + 1].id)}>Next →</button>
+            <button className="btn btn-small" disabled={idx === 0} onClick={() => open(TOPICS[idx - 1].id)}>← Previous</button>
+            <button className="btn btn-small" disabled={idx === TOPICS.length - 1} onClick={() => open(TOPICS[idx + 1].id)}>Next →</button>
           </div>
         </Card>
+        </div>
       </div>
     </Page>
   )

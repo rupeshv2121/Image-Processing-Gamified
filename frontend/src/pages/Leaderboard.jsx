@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
 import { initials, StudentsModal } from '../components/Profiles'
-import { Card, Modal, Page, Segmented, Tabs } from '../components/ui'
+import { Card, Modal, Page, Pager, Segmented, Tabs, usePager } from '../components/ui'
 import { MODES, bestPerStudent, modeOf } from '../leaderboard'
 
 export default function Leaderboard() {
@@ -33,6 +33,8 @@ export default function Leaderboard() {
   const modes = [...MODES, ...extra.map((m) => ({ mode: m }))]
   const shown = bestPerStudent(rows.filter((r) => mode === 'all' || modeOf(r) === mode))
   const game = modes.find((m) => m.mode === mode)?.game
+  const classPager = usePager(klass, 15)
+  const scorePager = usePager(shown, 15, mode)
 
   return (
     <Page eyebrow="Play" title="Leaderboard" subtitle="Top quiz scores and the class ranking of every student profile on this computer."
@@ -45,7 +47,7 @@ export default function Leaderboard() {
           <table className="data">
             <thead><tr><th>Rank</th><th>Student</th><th>Roll no.</th><th>Level</th><th>XP</th><th>Badges</th><th>Quizzes</th><th>Accuracy</th><th>Best score</th><th>Daily streak</th></tr></thead>
             <tbody>
-              {klass.map((s, i) => (
+              {classPager.rows.map((s, j) => { const i = classPager.start + j; return (
                 <tr key={s.id} className={s.id === profileId ? 'best' : ''}>
                   <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
                   <td><span className="avatar sm">{initials(s.name)}</span> <b>{s.name}</b>{s.id === profileId && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</td>
@@ -53,9 +55,10 @@ export default function Leaderboard() {
                   <td>{s.level}</td><td><b>{s.xp}</b></td><td>{s.badges}</td><td>{s.quizzes}</td>
                   <td>{s.quizzes ? `${fmt(s.accuracy, 0)}%` : '—'}</td><td>{s.bestScore}</td><td>{s.dailyStreak ? `${s.dailyStreak} 🔥` : '—'}</td>
                 </tr>
-              ))}
+              ) })}
             </tbody>
           </table>
+          <Pager pager={classPager} noun="students" />
           {profiles.length < 2 && <p className="small muted mt-sm">Only one student so far. Add classmates with <b>Manage students…</b> — each gets their own XP, badges and streak, and they all appear here.</p>}
         </Card>
       )}
@@ -68,16 +71,17 @@ export default function Leaderboard() {
           <table className="data">
             <thead><tr><th>Rank</th><th>Name</th><th>Roll no.</th><th>Best score</th><th>Accuracy</th><th>Best streak</th><th>Mode</th><th>Quizzes</th><th>Date</th></tr></thead>
             <tbody>
-              {shown.map((r, i) => (
+              {scorePager.rows.map((r, j) => { const i = scorePager.start + j; return (
                 <tr key={r.ProfileId || `${r.Name}|${r.Roll}`} className={i === 0 ? 'best' : ''}>
                   <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
                   <td>{r.Name}{r.ProfileId && r.ProfileId === profileId && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</td>
                   <td>{r.Roll}</td><td><b>{r.Score}</b></td><td>{fmt(r.Accuracy, 1)}%</td>
                   <td>{r.BestStreak}</td><td>{r.Mode}</td><td>{r.Attempts}</td><td className="small muted">{r.Date}</td>
                 </tr>
-              ))}
+              ) })}
             </tbody>
           </table>
+          <Pager pager={scorePager} noun="students" />
           <p className="small muted mt-sm">Each student appears once, with their best {mode === 'all' ? 'score of any mode' : `${mode} score`}. Quizzes = how many {mode === 'all' ? '' : `${mode} `}scores they have posted — see every attempt in <a href="#history">Quiz history</a>.</p>
         </>) : (
           <p className="muted">

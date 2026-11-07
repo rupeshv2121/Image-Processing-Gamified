@@ -3,7 +3,7 @@ import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
 import Icon from '../components/Icon'
 import Ring from '../components/Ring'
-import { Card, Modal, Page, Tabs } from '../components/ui'
+import { Card, Modal, Page, Pager, Tabs, usePager } from '../components/ui'
 import { MEDALS } from '../content/missions'
 
 export default function Achievements() {
@@ -21,6 +21,7 @@ export default function Achievements() {
   const earned = badges.filter((b) => b.earned).length
   const cats = asArray(p.categoryStats)
   const history = asArray(p.quizHistory).slice().reverse()
+  const historyPager = usePager(history, 10)
 
   const reset = async () => {
     const d = await call('progress', { action: 'reset' }, { label: 'Resetting progress' })
@@ -98,9 +99,10 @@ export default function Achievements() {
           {history.length ? (
             <table className="data">
               <thead><tr><th>Date</th><th>Mode</th><th>Score</th><th>Accuracy</th></tr></thead>
-              <tbody>{history.map((h, i) => <tr key={i}><td>{h.date}</td><td>{h.mode}</td><td><b>{h.score}</b></td><td>{fmt(h.accuracy, 0)}%</td></tr>)}</tbody>
+              <tbody>{historyPager.rows.map((h, i) => <tr key={historyPager.start + i}><td>{h.date}</td><td>{h.mode}</td><td><b>{h.score}</b></td><td>{fmt(h.accuracy, 0)}%</td></tr>)}</tbody>
             </table>
           ) : <p className="muted">No quizzes yet — <a href="#quiz">open the Arcade</a>.</p>}
+          <Pager pager={historyPager} noun="quizzes" />
         </Card>
       )}
 

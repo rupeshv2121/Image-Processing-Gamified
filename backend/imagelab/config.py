@@ -66,6 +66,6 @@ class Settings:
             port=int(os.environ.get("IMAGELAB_PORT", "8765")),
             keep_hours=float(os.environ.get("IMAGELAB_KEEP_HOURS", "24")),
             lan="--lan" in argv or _flag("IMAGELAB_LAN"),
-            shared_session=_arg_value(argv, "--connect"),
+            shared_session=_arg_value(argv, "--connect") or os.environ.get("IMAGELAB_CONNECT") or None,
             open_browser="--no-browser" not in argv and not _flag("IMAGELAB_NO_BROWSER"),
         )

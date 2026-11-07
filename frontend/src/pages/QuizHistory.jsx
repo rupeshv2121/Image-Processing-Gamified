@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../AppContext'
 import { asArray, fmt } from '../api'
-import { Card, LineChart, Page, Segmented } from '../components/ui'
+import { Card, LineChart, Page, Pager, Segmented, usePager } from '../components/ui'
 import { MODES, modeOf, withProfileIds } from '../leaderboard'
 
 // Every score posted to the leaderboard, one row per attempt (the Leaderboard
@@ -24,6 +24,7 @@ export default function QuizHistory() {
   const list = all.filter((r) => mode === 'all' || r.Mode === mode).sort((a, b) => String(b.Date).localeCompare(String(a.Date)))
   const scores = list.map((r) => r.Score)
   const game = MODES.find((m) => m.mode === mode)?.game
+  const pager = usePager(list, 15, `${mode}|${whose}`)
 
   return (
     <Page eyebrow="Play" title="Quiz history" subtitle="Every score posted from the Arcade, one row per attempt, by game."
@@ -60,9 +61,9 @@ export default function QuizHistory() {
             <table className="data">
               <thead><tr><th>#</th><th>Date</th>{whose === 'class' && <th>Student</th>}{mode === 'all' && <th>Game</th>}<th>Score</th><th>Accuracy</th><th>Best streak</th></tr></thead>
               <tbody>
-                {list.map((r, i) => (
-                  <tr key={`${r.Date}|${r.ProfileId}|${r.Name}|${r.Score}|${i}`} className={r.Score === Math.max(...scores) ? 'best' : ''}>
-                    <td className="faint">{list.length - i}</td>
+                {pager.rows.map((r, j) => (
+                  <tr key={`${r.Date}|${r.ProfileId}|${r.Name}|${r.Score}|${pager.start + j}`} className={r.Score === Math.max(...scores) ? 'best' : ''}>
+                    <td className="faint">{list.length - pager.start - j}</td>
                     <td className="small">{r.Date}</td>
                     {whose === 'class' && <td>{r.Name}{r.Roll ? <span className="faint"> · {r.Roll}</span> : null}{r.ProfileId && r.ProfileId === profileId && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</td>}
                     {mode === 'all' && <td>{r.Mode}</td>}
@@ -73,6 +74,7 @@ export default function QuizHistory() {
                 ))}
               </tbody>
             </table>
+            <Pager pager={pager} noun="attempts" />
           </div>
         ) : rows && (
           <p className="muted">

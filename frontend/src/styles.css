@@ -5282,3 +5282,10 @@ textarea.live-textarea {
 @media (max-width: 820px) {
   .ws-single { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* pagination (ui.jsx Pager) */
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.pager-buttons { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.pager-gap { display: inline-flex; align-items: center; gap: 4px; }
+.pager .btn-small { min-width: 34px; justify-content: center; }
+.learn-reading { min-width: 0; }

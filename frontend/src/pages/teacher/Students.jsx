@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { asArray, fmt } from '../../api'
 import { initials } from '../../components/Profiles'
-import { Card, Page, Tabs } from '../../components/ui'
+import { Card, Page, Pager, Tabs, usePager } from '../../components/ui'
 import { studentHref, TeacherError, timeAgo, useTeacher } from './TeacherData'
 
 // Accuracy -> cell colour: red below 60 %, amber below 80 %, green above
@@ -36,6 +36,7 @@ function Roster({ students, taskCount }) {
       .sort((a, b) => { const x = col.get(a), y = col.get(b); return (x < y ? -1 : x > y ? 1 : 0) * sort.dir })
   }, [students, query, sort])
   const sortBy = (key) => setSort((s) => ({ key, dir: s.key === key ? -s.dir : key === 'name' || key === 'roll' ? 1 : -1 }))
+  const pager = usePager(rows, 15, `${query}|${sort.key}|${sort.dir}`)
 
   return (
     <Card title={`Students (${students.length})`} extra={
@@ -50,7 +51,7 @@ function Roster({ students, taskCount }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((s) => {
+            {pager.rows.map((s) => {
               const total = s.assignedTotal + s.codeAssignedTotal
               const done = s.assignedDone + s.codeAssignedDone
               return (
@@ -72,6 +73,7 @@ function Roster({ students, taskCount }) {
           </tbody>
         </table>
       </div>
+      <Pager pager={pager} noun="students" />
     </Card>
   )
 }
@@ -79,13 +81,14 @@ function Roster({ students, taskCount }) {
 function Heatmap({ overview }) {
   const cats = asArray(overview.categories)
   const students = asArray(overview.students)
+  const pager = usePager(students, 15)
   return (
     <Card title="Quiz accuracy per student and topic">
       <div className="table-scroll">
         <table className="heatmap">
           <thead><tr><th>Student</th>{cats.map((c) => <th key={c}><span>{c}</span></th>)}</tr></thead>
           <tbody>
-            {students.map((s) => (
+            {pager.rows.map((s) => (
               <tr key={s.id}>
                 <th><a href={studentHref(s.id)}><span className="avatar sm">{initials(s.name)}</span> {s.name}</a></th>
                 {asArray(s.topicAccuracy).map((a, i) => (
@@ -98,6 +101,7 @@ function Heatmap({ overview }) {
           </tbody>
         </table>
       </div>
+      <Pager pager={pager} noun="students" />
       <p className="tiny faint mt-sm">Quiz accuracy (%) per topic. Empty = not tried yet. Red &lt; 60 % · amber &lt; 80 % · green ≥ 80 %.</p>
     </Card>
   )

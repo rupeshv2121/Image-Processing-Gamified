@@ -30,9 +30,11 @@ end
 
 % =========================================================================
 function handler = handlerFor(op)
-% Operation -> handler function (built once per MATLAB session)
+% Operation -> handler function (built once per MATLAB session, and again when
+% an operation is missing - e.g. one added while MATLAB keeps running)
 persistent table
-if isempty(table)
+if isempty(table) || ~isKey(table, op)
+    rehash;                                 % pick up .m files added since the last call
     routes = {
         @imageOps,      {'ping', 'samples', 'loadSample', 'importImage', 'imageInfo', 'grayscale', ...
                          'histogramOf', 'errorMap', 'noise', 'sampling', 'quantize', 'perception', 'spectrum'}

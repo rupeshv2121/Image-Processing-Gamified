@@ -3,7 +3,7 @@ import { useApp } from '../AppContext'
 import { asArray, run } from '../api'
 import { ChangePasswordModal } from './Account'
 import Icon from './Icon'
-import { Modal, Note } from './ui'
+import { Modal, Note, Pager, usePager } from './ui'
 
 export const initials = (name = '') => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?'
 
@@ -61,6 +61,7 @@ export function StudentsModal({ onClose }) {
 
   const q = query.trim().toLowerCase()
   const shown = q ? profiles.filter((p) => p.name.toLowerCase().includes(q) || (p.roll || '').toLowerCase().includes(q)) : profiles
+  const pager = usePager(shown, 10, q)
   return (
     <Modal title={`Students (${profiles.length})`} onClose={onClose} wide>
       <p className="small muted" style={{ marginBottom: 14 }}>
@@ -75,11 +76,11 @@ export function StudentsModal({ onClose }) {
         </Note>
       )}
       {profiles.length > 8 && <input type="search" placeholder="Search name or roll no." value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search students" style={{ margin: '10px 0' }} />}
-      <div className="table-scroll" style={{ maxHeight: '48vh' }}>
+      <div className="table-scroll">
         <table className="data">
           <thead><tr><th>Student</th><th>Roll no.</th><th>Account</th><th>Last sign-in</th><th>XP</th><th /></tr></thead>
           <tbody>
-            {shown.map((p) => (
+            {pager.rows.map((p) => (
               <tr key={p.id}>
                 {editing?.id === p.id ? (
                   <td colSpan={6}>
@@ -109,6 +110,7 @@ export function StudentsModal({ onClose }) {
           </tbody>
         </table>
       </div>
+      <Pager pager={pager} noun="students" />
       <form className="add-student" onSubmit={add}>
         <label className="field"><span className="field-label">New student</span>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={40} /></label>

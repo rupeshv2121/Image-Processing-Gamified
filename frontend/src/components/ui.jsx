@@ -46,6 +46,40 @@ export function Card({ title, extra, children, className = '' }) {
   )
 }
 
+// ------------------------------------------------------------------ pagination
+// Long lists show one page at a time. resetKey: back to page 1 when it changes (a filter).
+//   const pager = usePager(rows, 10, mode)  ->  pager.rows, pager.start; <Pager pager={pager} />
+export function usePager(items, size = 10, resetKey = null) {
+  const [page, setPage] = useState(0)
+  useEffect(() => setPage(0), [resetKey])
+  const total = items.length
+  const pages = Math.max(1, Math.ceil(total / size))
+  const p = Math.min(page, pages - 1)
+  return { rows: items.slice(p * size, (p + 1) * size), start: p * size, page: p, pages, total, size, setPage }
+}
+
+export function Pager({ pager, noun = 'rows' }) {
+  const { page, pages, total, start, size, setPage } = pager
+  if (pages <= 1) return null
+  // first, last, and the pages around the current one
+  const shown = [...new Set([0, page - 1, page, page + 1, pages - 1])].filter((n) => n >= 0 && n < pages).sort((a, b) => a - b)
+  return (
+    <nav className="pager" aria-label="Pages">
+      <span className="small muted">{start + 1}–{Math.min(start + size, total)} of {total} {noun}</span>
+      <span className="pager-buttons">
+        <button className="btn btn-small" onClick={() => setPage(page - 1)} disabled={page === 0} aria-label="Previous page">‹</button>
+        {shown.map((n, i) => (
+          <span key={n} className="pager-gap">
+            {i > 0 && n - shown[i - 1] > 1 && <span className="faint">…</span>}
+            <button className={`btn btn-small ${n === page ? 'btn-primary' : ''}`} onClick={() => setPage(n)} aria-current={n === page ? 'page' : undefined}>{n + 1}</button>
+          </span>
+        ))}
+        <button className="btn btn-small" onClick={() => setPage(page + 1)} disabled={page === pages - 1} aria-label="Next page">›</button>
+      </span>
+    </nav>
+  )
+}
+
 export function Tabs({ tabs, active, onChange }) {
   return (
     <div className="tabs" role="tablist">

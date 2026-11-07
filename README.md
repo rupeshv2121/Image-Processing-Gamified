@@ -388,19 +388,20 @@ message, shown in a dialog.
 
 ## Development
 
-Run the backend and the Vite dev server together for hot reload:
+Double-click **`start_imagelab_dev.bat`** while changing Spatia's code (not in the classroom). It opens
+the website at http://localhost:5173 and:
 
-```bat
-:: terminal 1 — backend on :8765
-cd backend
-..\.venv\Scripts\python.exe -m imagelab --no-browser
+| You change | What happens |
+|---|---|
+| a page or style (`frontend/src`) | shows up at once — no build, no reload (Vite dev server) |
+| Python (`backend/imagelab`) | the backend restarts by itself in ~3 s (`python -m imagelab.dev`, uvicorn auto-reload) |
+| a MATLAB `.m` file | used on the next call — MATLAB starts once and stays running (shared session `ImageLabDev`) |
+| a new MATLAB operation | `ilab_dispatch.m` rebuilds its routing table when it meets an op it does not know |
 
-:: terminal 2 — UI on :5173 (proxies /api and /reports to :8765)
-cd frontend
-npm run dev
-```
-
-Open http://localhost:5173.
+A backend restart signs everybody out (sessions live in memory). `start_imagelab_dev.bat --lan` also
+lets other devices reach the backend. `start_imagelab.bat` / `start_imagelab_lan.bat` serve the built UI
+(`frontend/dist`): after changing the UI there, run `npm run build` in `frontend`, then reload the page;
+after changing Python, restart the server.
 
 **Adding an image operation**
 

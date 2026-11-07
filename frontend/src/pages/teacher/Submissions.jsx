@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useApp } from '../../AppContext'
 import { asArray, fmt, run } from '../../api'
 import { initials } from '../../components/Profiles'
-import { Card, Note, Page } from '../../components/ui'
+import { Card, Note, Page, Pager, usePager } from '../../components/ui'
 import SubmissionModal from './SubmissionModal'
 import { studentHref, timeAgo } from './TeacherData'
 
@@ -33,6 +33,7 @@ export default function Submissions() {
       return true
     })
   }, [data, query, filter])
+  const pager = usePager(rows, 15, `${query}|${filter}`)
   const solvedBy = tasks.map((_, j) => asArray(data?.students).filter((s) => asArray(s.cells)[j]?.passed).length)
 
   return (
@@ -64,7 +65,7 @@ export default function Submissions() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((s) => (
+                {pager.rows.map((s) => (
                   <tr key={s.id}>
                     <th className="sticky-col"><a href={studentHref(s.id)} className="row" style={{ gap: 8, flexWrap: 'nowrap' }}><span className="avatar sm">{initials(s.name)}</span> {s.name}</a></th>
                     {asArray(s.cells).map((c, j) => (
@@ -85,6 +86,7 @@ export default function Submissions() {
               </tfoot>
             </table>
           </div>
+          <Pager pager={pager} noun="students" />
           <p className="tiny faint mt-sm">✓ solved · % = best pixel match so far · n× = number of runs · red = 3+ runs without solving.</p>
         </Card>
       )}

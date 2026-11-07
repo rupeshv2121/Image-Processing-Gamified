@@ -3,7 +3,7 @@ import { useApp } from '../../AppContext'
 import { asArray, run } from '../../api'
 import Icon from '../../components/Icon'
 import { LETTERS, LeaderboardTable, Podium, fmtTime } from '../../components/LiveParts'
-import { Card, Modal } from '../../components/ui'
+import { Card, Modal, Pager, usePager } from '../../components/ui'
 
 // Finished live quizzes (saved by the backend): list, details, Excel export
 
@@ -66,6 +66,7 @@ export default function LiveResults() {
     const h = await call('live', { action: 'deleteResult', id: r.id }, { label: 'Deleting' })
     if (h) setList(asArray(h))
   }
+  const pager = usePager(list || [], 10)
   if (!list) return <p className="muted">Loading…</p>
   if (!list.length) return <Card><p className="muted">No live quiz has been played yet. Results are saved here automatically when a quiz ends.</p></Card>
   return (
@@ -74,7 +75,7 @@ export default function LiveResults() {
         <table className="data clickable">
           <thead><tr><th>Date</th><th>Quiz</th><th className="num">Students</th><th className="num">Questions</th><th className="num">Class accuracy</th><th className="num">Avg time</th><th>Winner</th><th /></tr></thead>
           <tbody>
-            {list.map((r) => (
+            {pager.rows.map((r) => (
               <tr key={r.id} onClick={() => show(r)}>
                 <td className="small">{r.date}</td>
                 <td><b>{r.title}</b></td>
@@ -89,6 +90,7 @@ export default function LiveResults() {
           </tbody>
         </table>
       </div>
+      <Pager pager={pager} noun="quizzes" />
       {open && (
         <Modal title={`${open.title} · ${open.date}`} onClose={() => setOpen(null)} wide>
           <div className="stack">
