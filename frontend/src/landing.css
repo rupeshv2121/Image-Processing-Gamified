@@ -15,11 +15,11 @@
   --lp-accent-soft: var(--accent-soft);
   --lp-accent-ink: var(--accent-ink);
   --lp-on-accent: var(--on-accent);
-  --lp-dark: var(--navy-900);
-  --lp-dark-2: var(--dark-2);
-  --lp-dark-line: var(--dark-line);
-  --lp-dark-ink: var(--dark-ink);
-  --lp-dark-ink-2: var(--dark-ink-2);
+  --lp-dark: var(--chrome-bg);          /* the "dark" bands follow the theme (styles.css chrome tokens) */
+  --lp-dark-2: var(--chrome-2);
+  --lp-dark-line: var(--chrome-line);
+  --lp-dark-ink: var(--chrome-ink);
+  --lp-dark-ink-2: var(--chrome-ink-2);
   --lp-nav-bg: var(--topbar-bg);
 
   height: 100vh; height: 100dvh; overflow-y: auto; overflow-x: hidden;

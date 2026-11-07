@@ -64,13 +64,6 @@ export default function LiveHost() {
   return (
     <Page eyebrow="Teacher" title="Live quiz"
       subtitle="Students join with a code on their own devices, every question has a timer, and MATLAB measures each answer time for the live leaderboard.">
-      {!asArray(matlab.lan).length && (
-        <Note kind="warn">
-          <b>Students’ devices cannot reach Spatia yet.</b> It is running for this computer only. To let phones and laptops on the same
-          Wi-Fi join, close the ImageLab server window and start <code>start_imagelab_lan.bat</code> (or type <code>ImageLab('lan')</code> in MATLAB).
-          Other devices can then only sign in and play the live quiz.
-        </Note>
-      )}
       <Tabs tabs={[{ key: 'build', label: 'New quiz' }, { key: 'saved', label: 'Saved quizzes' }, { key: 'results', label: 'Past results' }]} active={tab} onChange={setTab} />
       <div className="mt-sm">
         {tab === 'build' && <LiveBuilder draft={draft} setDraft={setDraft} opening={opening} onOpen={() => open(toQuiz(draft))} />}

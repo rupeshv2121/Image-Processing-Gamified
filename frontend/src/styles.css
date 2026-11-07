@@ -65,6 +65,26 @@
   --dark-ink: #e9e8e4;
   --dark-ink-2: #a3a8b1;
   --dark-ink-3: #7d828c;
+  /* "chrome": the sidebar, the dashboard welcome, the sign-in side panel and the
+     landing page's bands - light in the light theme, dark in the dark theme */
+  --chrome-bg: #f4f2ee;
+  --chrome-2: #e8e5df;
+  --chrome-line: #d5d1c8;
+  --chrome-ink: #1a1c20;
+  --chrome-ink-2: #50555e;
+  --chrome-ink-3: #7b808a;
+  --chrome-hover: rgba(26, 28, 32, 0.05);
+  --chrome-active: rgba(47, 111, 214, 0.1);
+  --chrome-active-ink: #2559b3;
+  /* the level chip in the top bar */
+  --chip-bg: #f4f2ee;
+  --chip-hover: #e8e5df;
+  --chip-ink: #1a1c20;
+  --chip-line: #d5d1c8;
+  --chip-track: rgba(26, 28, 32, 0.12);
+  --teacher-bg: #f1eff6;
+  --teacher-active: #e2def3;
+  --teacher-active-ink: #4c3fb0;
   --backdrop: rgba(17, 19, 23, 0.45);
   color-scheme: light;
   font-family:
@@ -251,8 +271,9 @@ code {
 .sidebar {
   width: 252px;
   flex-shrink: 0;
-  background: var(--navy-900);
-  color: var(--dark-ink-2);
+  background: var(--chrome-bg);
+  border-right: 1px solid var(--chrome-line);
+  color: var(--chrome-ink-2);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -262,7 +283,7 @@ code {
   gap: 12px;
   align-items: center;
   padding: 22px 20px 18px;
-  color: #fff;
+  color: var(--chrome-ink);
 }
 .brand:hover {
   text-decoration: none;
@@ -273,7 +294,7 @@ code {
   letter-spacing: 0.2px;
 }
 .brand small {
-  color: var(--dark-ink-3);
+  color: var(--chrome-ink-3);
   font-size: 12px;
 }
 .logo {
@@ -304,7 +325,7 @@ code {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1.1px;
-  color: var(--dark-ink-3);
+  color: var(--chrome-ink-3);
   padding: 18px 12px 6px;
 }
 .nav-link {
@@ -313,7 +334,7 @@ code {
   gap: 12px;
   padding: 9px 12px;
   border-radius: 10px;
-  color: var(--dark-ink-2);
+  color: var(--chrome-ink-2);
   font-size: 14.5px;
   border: none;
   background: none;
@@ -323,13 +344,14 @@ code {
   cursor: pointer;
 }
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: var(--chrome-hover);
+  color: var(--chrome-ink);
   text-decoration: none;
 }
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--chrome-active);
+  color: var(--chrome-active-ink);
+  font-weight: 600;
   box-shadow: inset 3px 0 0 var(--accent);
 }
 .nav-link .chev {
@@ -345,7 +367,7 @@ code {
   flex-direction: column;
   gap: 1px;
   padding: 2px 0 6px 20px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid var(--chrome-line);
   margin-left: 21px;
 }
 .nav-sub .nav-link {
@@ -357,14 +379,14 @@ code {
 }
 .nav-unit {
   font-size: 11px;
-  color: var(--dark-ink-3);
+  color: var(--chrome-ink-3);
   padding: 8px 10px 2px;
 }
 .sidebar-foot {
   margin-top: auto;
   padding: 16px 20px 20px;
   font-size: 12px;
-  color: var(--dark-ink-3);
+  color: var(--chrome-ink-3);
 }
 
 .main-col {
@@ -438,13 +460,14 @@ code {
   gap: 10px;
   padding: 5px 14px 5px 5px;
   border-radius: 999px;
-  background: var(--navy-solid);
-  color: #fff;
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-line);
+  color: var(--chip-ink);
   font-size: 13px;
 }
 .level-chip:hover {
   text-decoration: none;
-  background: var(--navy-solid-hover);
+  background: var(--chip-hover);
 }
 .level-chip .lv {
   width: 28px;
@@ -460,7 +483,7 @@ code {
 .level-chip .xpbar {
   width: 70px;
   height: 5px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--chip-track);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -2299,25 +2322,26 @@ pre.code .cm {
   grid-template-columns: 1fr auto;
   gap: 32px;
   align-items: center;
-  background: var(--navy-900);
-  color: var(--dark-ink);
+  background: var(--chrome-bg);
+  border: 1px solid var(--chrome-line);
+  color: var(--chrome-ink);
   border-radius: var(--radius-lg);
   padding: 36px 40px;
   margin-bottom: 28px;
 }
 .welcome h1 {
-  color: #fff;
+  color: var(--chrome-ink);
 }
 .welcome p {
-  color: var(--dark-ink-2);
+  color: var(--chrome-ink-2);
   margin-top: 8px;
   max-width: 560px;
 }
 .welcome .ring .ring-label b {
-  color: #fff;
+  color: var(--chrome-ink);
 }
 .welcome .ring .ring-label span {
-  color: var(--dark-ink-2);
+  color: var(--chrome-ink-2);
 }
 .next-mission {
   display: flex;
@@ -2390,6 +2414,23 @@ pre.code .cm {
   --b-ink: #86adf5;
   --dark-2: #15181c;
   --dark-line: #262a30;
+  --chrome-bg: #0a0b0d;
+  --chrome-2: #15181c;
+  --chrome-line: #262a30;
+  --chrome-ink: #e9e8e4;
+  --chrome-ink-2: #a3a8b1;
+  --chrome-ink-3: #7d828c;
+  --chrome-hover: rgba(255, 255, 255, 0.06);
+  --chrome-active: rgba(255, 255, 255, 0.08);
+  --chrome-active-ink: #fff;
+  --chip-bg: #2a2e35;
+  --chip-hover: #353a42;
+  --chip-ink: #fff;
+  --chip-line: #2a2e35;
+  --chip-track: rgba(255, 255, 255, 0.2);
+  --teacher-bg: #1c1b22;
+  --teacher-active: #6a5acd;
+  --teacher-active-ink: #fff;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
@@ -2443,6 +2484,23 @@ pre.code .cm {
     --b-ink: #86adf5;
     --dark-2: #15181c;
     --dark-line: #262a30;
+    --chrome-bg: #0a0b0d;
+    --chrome-2: #15181c;
+    --chrome-line: #262a30;
+    --chrome-ink: #e9e8e4;
+    --chrome-ink-2: #a3a8b1;
+    --chrome-ink-3: #7d828c;
+    --chrome-hover: rgba(255, 255, 255, 0.06);
+    --chrome-active: rgba(255, 255, 255, 0.08);
+    --chrome-active-ink: #fff;
+    --chip-bg: #2a2e35;
+    --chip-hover: #353a42;
+    --chip-ink: #fff;
+    --chip-line: #2a2e35;
+    --chip-track: rgba(255, 255, 255, 0.2);
+    --teacher-bg: #1c1b22;
+    --teacher-active: #6a5acd;
+    --teacher-active-ink: #fff;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.35);
     --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
@@ -3650,7 +3708,8 @@ pre.console .muted {
   justify-content: space-between;
   align-items: center;
   padding: 0 28px;
-  background: var(--navy-900);
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--chrome-line);
 }
 .start-head .brand {
   padding-left: 0;
@@ -3756,8 +3815,9 @@ pre.console .muted {
   background: var(--bg);
 }
 .auth-side {
-  background: var(--navy-900);
-  color: var(--dark-ink);
+  background: var(--chrome-bg);
+  border-right: 1px solid var(--chrome-line);
+  color: var(--chrome-ink);
   padding: 32px 48px;
   display: flex;
   flex-direction: column;
@@ -3771,7 +3831,7 @@ pre.console .muted {
   max-width: 420px;
 }
 .auth-pitch h2 {
-  color: var(--dark-ink);
+  color: var(--chrome-ink);
   font-size: 30px;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -3784,7 +3844,7 @@ pre.console .muted {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  color: var(--dark-ink-2);
+  color: var(--chrome-ink-2);
   font-size: 14.5px;
 }
 .auth-pitch li {
@@ -3829,7 +3889,7 @@ pre.console .muted {
   background: var(--ch);
 }
 .auth-back {
-  color: var(--dark-ink-2);
+  color: var(--chrome-ink-2);
   font-size: 13.5px;
   display: inline-flex;
   align-items: center;
@@ -3837,7 +3897,7 @@ pre.console .muted {
   align-self: flex-start;
 }
 .auth-back:hover {
-  color: var(--dark-ink);
+  color: var(--chrome-ink);
   text-decoration: none;
 }
 .auth-back .flip {
@@ -3939,10 +3999,12 @@ pre.console .muted {
    Teacher mode
    ========================================================================== */
 .sidebar-teacher {
-  background: #1c1b22;
+  background: var(--teacher-bg);
 }
 .sidebar-teacher .nav-link.active {
-  background: var(--violet-500);
+  background: var(--teacher-active);
+  color: var(--teacher-active-ink);
+  box-shadow: inset 3px 0 0 var(--violet-500);
 }
 .teacher-pill {
   background: var(--violet-100);
@@ -4481,7 +4543,7 @@ table.sub-matrix a {
    ========================================================================== */
 .nav-note {
   font-size: 12px;
-  color: var(--dark-ink-3);
+  color: var(--chrome-ink-3);
   padding: 10px 12px;
   line-height: 1.5;
 }
@@ -5187,24 +5249,6 @@ textarea.live-textarea {
 }
 .logo i:nth-child(6) {
   background: var(--b);
-}
-/* the sidebar and dark bands always use the bright channel colours */
-.sidebar,
-.auth-side,
-.welcome,
-.lp-dark,
-.lp-kanim,
-.lp-cta,
-.lp-foot {
-  --r: #f0675e;
-  --r-soft: #3a1d1b;
-  --r-ink: #ff8a82;
-  --g: #4cc47f;
-  --g-soft: #163322;
-  --g-ink: #6fd89a;
-  --b: #5b8fef;
-  --b-soft: #1a2a48;
-  --b-ink: #86adf5;
 }
 
 /* ==========================================================================

@@ -47,10 +47,10 @@ export default function Dashboard() {
           </p>
           <div className="row" style={{ marginTop: 22 }}>
             <a className="btn btn-primary" href="#code"><Icon name="code" size={16} /> Open the Code Lab</a>
-            <a className="btn" style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }} href="#labs">Browse labs</a>
+            <a className="btn" href="#labs">Browse labs</a>
           </div>
         </div>
-        <Ring value={doneCount / all.length} size={150} stroke={12} track="rgba(255,255,255,0.12)" color="var(--green-400)"
+        <Ring value={doneCount / all.length} size={150} stroke={12} track="var(--chrome-line)" color="var(--green-400)"
           label={`${Math.round((doneCount / all.length) * 100)}%`} sub="quest complete" />
       </section>
 

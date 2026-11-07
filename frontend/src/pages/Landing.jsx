@@ -62,7 +62,7 @@ function KernelAnimation() {
             {Array.from({ length: OUT * OUT }, (_, i) => {
               const filled = done || i <= pos
               const v = filled ? mean(Math.floor(i / OUT), i % OUT) : null
-              return <i key={i} className={!done && i === pos ? 'cur' : ''} style={{ background: v == null ? 'rgba(255,255,255,0.06)' : `rgb(${v},${v},${v})` }} />
+              return <i key={i} className={!done && i === pos ? 'cur' : ''} style={{ background: v == null ? 'var(--chrome-hover)' : `rgb(${v},${v},${v})` }} />
             })}
           </div>
         </div>
