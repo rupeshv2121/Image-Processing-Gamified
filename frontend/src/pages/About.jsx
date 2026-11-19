@@ -13,6 +13,7 @@ export default function About() {
             <p><b>Subtitle:</b> An Interactive MATLAB-Based Image Processing and Learning Laboratory</p>
             <p>Spatia covers the four syllabus units — fundamentals, image enhancement, degradation/restoration/colour, and segmentation/representation — with hands-on labs, 13 experiments, a quiz system and report generation.</p>
             <p><b>Scope:</b> spatial-domain processing only. Frequency-domain filtering (FFT, ideal / Butterworth / Gaussian low- and high-pass filters) is intentionally not included.</p>
+            <p><b>Developed by:</b>Austin Varshney, Rupesh Varshney</p> 
           </div>
         </Card>
         <Card title="Technology">
